@@ -1,17 +1,83 @@
 #!groovy
 
-@Library("Infrastructure")
+@Library("Infrastructure@2.4.8")
 
 def type = "nodejs"
-def product = "rpe"
-def component = "expressjs-template"
+def product = "apim"
+def component = "public-frontend"
 
 def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
 
 withPipeline(type, product, component) {
-  afterSuccess('build') {
-    yarnBuilder.yarn('playwright install')
-    yarnBuilder.yarn('rebuild puppeteer')
+  env.PLAYWRIGHT_WORKERS = 4
+  env.PLAYWRIGHT_REPORTERS = 'list,odhin'
+  env.PLAYWRIGHT_VIDEO_MODE = 'retain-on-failure'
+
+  onPR() {
+    env.ENV = 'preview'
+  }
+
+  afterSuccess('akschartsinstall') {
     yarnBuilder.yarn('build')
+  }
+
+  before('smoketest:preview') {
+    yarnBuilder.yarn('playwright install')
+  }
+
+  before('smoketest:aat') {
+    yarnBuilder.yarn('playwright install')
+  }
+
+  before('functionalTest:preview') {
+    yarnBuilder.yarn('playwright install')
+  }
+
+  before('functionalTest:aat') {
+    yarnBuilder.yarn('playwright install')
+  }
+
+  afterAlways('functionalTest:preview') {
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results',
+      reportFiles           : 'odhin-report/index.html,lighthouse-report-*.html',
+      reportName            : 'Functional Test Report',
+    ]
+  }
+
+  afterAlways('functionalTest:aat') {
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results',
+      reportFiles           : 'odhin-report/index.html,lighthouse-report-*.html',
+      reportName            : 'Functional Test Report',
+    ]
+  }
+
+  afterAlways('smoketest:preview') {
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results',
+      reportFiles           : 'odhin-report/index.html',
+      reportName            : 'Smoke Test Report',
+    ]
+  }
+
+  afterAlways('smoketest:aat') {
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results',
+      reportFiles           : 'odhin-report/index.html',
+      reportName            : 'Smoke Test Report',
+    ]
   }
 }

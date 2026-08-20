@@ -34,6 +34,7 @@ module.exports = {
           options: {
             sassOptions: {
               quietDeps: true,
+              silenceDeprecations: ['legacy-js-api'],
             },
           },
         },

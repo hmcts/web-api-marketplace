@@ -6,3 +6,9 @@ src/main/public/main*.js
 src/main/views/govuk
 .yarn/
 catalog-info.yaml
+
+# Test output directories
+playwright-report/
+test-results/
+functional-output/
+smoke-output/

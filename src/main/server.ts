@@ -4,8 +4,7 @@ import * as https from 'https';
 import * as path from 'path';
 
 import { app } from './app';
-
-const { Logger } = require('@hmcts/nodejs-logging');
+import { Logger } from './modules/logging';
 
 const logger = Logger.getLogger('server');
 
@@ -14,8 +13,7 @@ let httpsServer: https.Server | null = null;
 // used by shutdownCheck in readinessChecks
 app.locals.shutdown = false;
 
-// TODO: set the right port for your application
-const port: number = parseInt(process.env.PORT || '3100', 10);
+const port: number = parseInt(process.env.PORT || '3344', 10);
 
 if (app.locals.ENV === 'development') {
   const sslDirectory = path.join(__dirname, 'resources', 'localhost-ssl');
@@ -43,6 +41,7 @@ function gracefulShutdownHandler(signal: string) {
     // Close server if it's running
     httpsServer?.close(() => {
       logger.info('HTTPS server closed');
+      process.exit(0);
     });
   }, 4000);
 }

@@ -1,0 +1,17 @@
+import { expect } from 'chai';
+import request from 'supertest';
+
+import { app } from '../../main/app';
+
+describe('Cookies page', () => {
+  describe('on GET', () => {
+    test('should return cookies page', async () => {
+      await request(app)
+        .get('/cookies')
+        .expect(res => {
+          expect(res.status).to.equal(200);
+          expect(res.text).to.contain('Cookies');
+        });
+    });
+  });
+});

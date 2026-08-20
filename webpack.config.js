@@ -1,6 +1,6 @@
 const path = require('path');
 
-const sourcePath = path.resolve(__dirname, 'src/main/assets/js');
+const sourcePath = path.resolve(__dirname, 'src/main/bundles');
 const govukFrontend = require(path.resolve(__dirname, 'webpack/govukFrontend'));
 const scss = require(path.resolve(__dirname, 'webpack/scss'));
 const HtmlWebpack = require(path.resolve(__dirname, 'webpack/htmlWebpack'));
@@ -11,14 +11,22 @@ const filename = `[name]${fileNameSuffix}.js`;
 
 module.exports = {
   plugins: [...govukFrontend.plugins, ...scss.plugins, ...HtmlWebpack.plugins],
-  entry: path.resolve(sourcePath, 'index.ts'),
+  entry: {
+    main: path.resolve(sourcePath, 'index.ts'),
+    cookies: path.resolve(sourcePath, 'cookie-preferences.ts'),
+  },
   mode: devMode ? 'development' : 'production',
   module: {
     rules: [
       ...scss.rules,
       {
         test: /\.ts$/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: {
+            onlyCompileBundledFiles: true,
+          },
+        },
         exclude: /node_modules/,
       },
     ],

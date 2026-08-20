@@ -1,1 +1,48 @@
-@import 'govuk-frontend';
+@use 'govuk-frontend';
+
+.govuk-phase-banner__text {
+  width: 100%;
+
+  .apim-language {
+    float: right;
+  }
+}
+
+.cookie-preference-success {
+  display: none;
+}
+
+.phone-link {
+  display: none;
+}
+
+.phone-text {
+  display: inline;
+}
+
+img.court-image {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  .phone-link {
+    display: inline;
+  }
+
+  .phone-text {
+    display: none;
+  }
+}
+
+#alphabet-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+#alphabet-buttons .govuk-button {
+  margin-right: 0;
+  min-width: 40px;
+  max-width: 60px;
+}

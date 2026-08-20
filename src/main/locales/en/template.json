@@ -1,0 +1,52 @@
+{
+  "pageTitle": "API Marketplace - GOV.UK",
+  "serviceName": "API Marketplace",
+  "feedback": "This is a new service – your <a class=\"govuk-link\" href=\"#\">feedback</a> will help us to improve it. ",
+  "languageToggle": "<a href=\"?lng=cy\" class=\"govuk-link apim-language\">Cymraeg</a>",
+  "backLink": "Back",
+  "cookieBannerH1": "Cookies on API Marketplace",
+  "cookieBannerP1": "We use some essential cookies to make this service work.",
+  "cookieBannerP2": "We’d like to set additional cookies so we can remember your settings, understand how people use the service and to improve government services.",
+  "cookieBannerAcceptButton": "Accept additional cookies",
+  "cookieBannerRejectButton": "Reject additional cookies",
+  "cookieBannerHideButton": "Hide this message",
+  "cookieBannerViewCookies": "View cookies",
+  "cookieBannerAnchor": "Set cookie preferences",
+  "footerLinks": [
+    {
+      "text": "Help",
+      "href": "https://www.gov.uk/help"
+    },
+    {
+      "text": "Contact",
+      "href": "https://www.gov.uk/contact"
+    },
+    {
+      "text": "Privacy",
+      "href": "https://www.gov.uk/government/organisations/hm-courts-and-tribunals-service/about/personal-information-charter#hmcts-privacy-policy"
+    },
+    {
+      "text": "Cookies",
+      "href": "/cookies"
+    },
+    {
+      "text": "Accessibility statement",
+      "href": "/accessibility-statement",
+      "attributes": {
+        "id": "accessibility-statement"
+      }
+    },
+    {
+      "text": "Terms and conditions",
+      "href": "https://www.gov.uk/help/terms-conditions"
+    },
+    {
+      "text": "Rhestr o Wasanaethau Cymraeg",
+      "href": "https://www.gov.uk/cymraeg"
+    },
+    {
+      "text": "Government Digital Service",
+      "href": "https://www.gov.uk/government/organisations/government-digital-service"
+    }
+  ]
+}

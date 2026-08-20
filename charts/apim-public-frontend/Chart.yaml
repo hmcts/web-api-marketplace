@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: '1.0'
+description: A Helm chart for apim-public-frontend App
+name: apim-public-frontend
+home: https://github.com/hmcts/frontend-api-marketplace
+version: 0.0.1
+maintainers:
+  - name: DTS API Marketplace
+dependencies:
+  - name: nodejs
+    version: 3.2.1
+    repository: oci://hmctsprod.azurecr.io/helm

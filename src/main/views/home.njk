@@ -1,5 +1,14 @@
 {% extends "template.njk" %}
 
+{% set hideBackLink = true %}
+
 {% block content %}
-  <h1 class="govuk-heading-xl">Default page template</h1>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">{{ heading }}</h1>
+      <p class="govuk-body-m">{{ body }}</p>
+    </div>
+  </div>
+
 {% endblock %}

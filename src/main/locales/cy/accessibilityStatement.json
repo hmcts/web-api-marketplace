@@ -1,0 +1,61 @@
+{
+  "title": "Datganiad hygyrchedd - Dod o hyd i lys neu dribiwnlys - GOV.UK",
+  "serviceName": "Dod o hyd i lys neu dribiwnlys",
+  "h1": "Datganiad hygyrchedd ar gyfer y gwasanaeth ‘Dod o hyd i lys neu dribiwnlys’",
+  "p1": "Mae’r datganiad hygyrchedd hwn yn berthnasol i gynnwys a gyhoeddir ar <a class=\"govuk-link\" href=\"http://www.find-court-tribunal.service.gov.uk/?lng=cy\">www.find-court-tribunal.service.gov.uk/?lng=cy</a>",
+  "p2": "Gwasanaeth Llysoedd a Thribiwnlysoedd EM sy’n gyfrifol am y wefan hon. Rydym eisiau i gymaint o bobl â phosibl allu defnyddio'r wefan hon, felly rydym wedi ceisio ei gwneud mor hygyrch â phosibl. Er enghraifft, golyga hyn y dylech allu:",
+  "bullets": [
+    "newid y lliwiau, y lefelau cyferbyniad a’r ffontiau neu gosodiadau’r dyfais",
+    "gwneud y testun hyd at 400% yn fwy heb iddo ddiflannu oddi ar y sgrin",
+    "mynd drwy’r rhan fwyaf o'r wefan gan ddefnyddio bysellfwrdd yn unig",
+    "mynd drwy’r rhan fwyaf o'r wefan gan ddefnyddio meddalwedd adnabod llais",
+    "gwrando ar y rhan fwyaf o'r wefan gan ddefnyddio darllenydd sgrin (gan gynnwys fersiynau diweddaraf JAWS, NVDA a VoiceOver)"
+  ],
+  "p3": "Rydym hefyd wedi sicrhau ein bod wedi defnyddio iaith syml ar y wefan.",
+  "p4": "Mae gan <a class=\"govuk-link\" href=\"https://mcmw.abilitynet.org.uk/\">AbilityNet</a> gyngor ynghylch gwneud eich dyfais yn haws i’w defnyddio os oes gennych anabledd.",
+  "accessibility_details": {
+    "heading": "Pa mor hygyrch yw'r wefan hon",
+    "intro": "Mae'r gwasanaeth yn defnyddio arddulliau, patrymau ac elfennau cyffredin o System Ddylunio GOV.UK, sy'n cael eu hystyried yn gyffredinol fel bod yn hygyrch.",
+    "sub_heading": "Nid yw cyfeiriadau URL mewn testun plaen yn ddolenni rhyngweithiol",
+    "main_content": {
+      "p1": "Mae rhai tudalennau yn dangos cyfeiriadau gwe fel testun plaen o fewn tudalennau yn hytrach na fel dolenni rhyngweithiol y gellir clicio arnynt. Gall hyn ei gwneud hi'n anoddach i rai grwpiau o ddefnyddwyr lywio tudalennau.",
+      "p2": {
+        "content": "Er bod posib copïo a gludo testun URL i mewn i far chwilio trwy ddefnyddio bysellfwrdd, mae'n golygu defnyddio sawl llwybr byr na fydd efallai pob defnyddiwr yn gyfarwydd â nhw neu'n gallu eu defnyddio'n hawdd - yn enwedig unigolion gyda:",
+        "bullets": [
+          "Namau motor (rheolaeth fanwl dros Shift + saethau)",
+          "Defnyddwyr darllenydd sgrin (efallai na fyddant yn gallu “dewis” testun nad ydynt yn gallu gweld)",
+          "Namau gwybyddol (methu cofio sawl cam wrth ddefnyddio bysellfwrdd)"
+        ]
+      },
+      "p3": "Rydym yn cydnabod bod hyn yn lleihau'n anghymesur gallu rhai defnyddwyr i gyrchu'r dudalen. Rydym yn cynllunio i ddatrys y broblem hon mewn diweddariad sydd ar y gweill - bydd hwn ond yn cynnwys dolenni sy'n gwbl rhyngweithiol."
+    }
+  },
+  "h3": "Adborth a gwybodaeth gyswllt",
+  "p6": "Os ydych angen gwybodaeth sydd ar y wefan hon mewn fformat arall megis ar ffurf PDF hygyrch, print bras, fformat hawdd ei ddarllen neu recordiad sain neu Braille:",
+  "bullet1": "e-bost <a class=\"govuk-link\" href=\"mailto:hmctsfinderfeedback@justice.gov.uk\">hmctsfinderfeedback@justice.gov.uk</a>",
+  "p7": "Byddwn yn ystyried eich cais ac yn ymateb o fewn 10 diwrnod gwaith.",
+  "h4": "Riportio problemau hygyrchedd gyda'r wefan hon",
+  "p8": "Rydym wastad yn ceisio gwella hygyrchedd y wefan hon. Os byddwch yn canfod unrhyw broblemau nad ydynt wedi’u cynnwys ar y dudalen hon, neu’n credu nad ydym yn bodloni’r gofynion o ran hygyrchedd, cysylltwch â:",
+  "h5": "Y Weithdrefn Orfodi",
+  "p9": "Y Comisiwn Cydraddoldeb a Hawliau Dynol (EHRC) sy’n gyfrifol am orfodi Rheoliadau Hygyrchedd Cyrff y Sector Cyhoeddus (Gwefannau a Rhaglenni Symudol) (Rhif 2) 2018 (y ‘rheoliadau hygyrchedd’). Os ydych yn anhapus â’r ffordd rydym yn ymateb i’ch cwyn, <a class=\"govuk-link\" href=\"https://www.equalityadvisoryservice.com/\">cysylltwch â’r Gwasanaeth Cynghori a Chefnogi Cydraddoldeb (EASS) (yn agor mewn ffenest newydd)</a>.",
+  "h6": "Cysylltu â ni dros y ffôn neu ymweld â ni’n bersonol",
+  "p22": "Gellir dod o hyd i fanylion cyswllt yr holl lysoedd a thribiwnlysoedd trwy’r gwasanaeth <a class=\"govuk-link\" href=\"https://www.gov.uk/chwilio-am-lys-neu-dribiwnlys\">Dod o hyd i lys neu dribiwnlys</a>.",
+  "p11": "Rydym yn darparu gwasanaeth cyfnewid negeseuon testun ar gyfer pobl fyddar, pobl sydd â nam ar eu clyw a phobl sydd â nam ar eu lleferydd.",
+  "p12": "Mae yna ddolenni sain yn ein llysoedd a’n tribiwnlysoedd, neu os byddwch yn cysylltu â ni cyn eich ymweliad, gallwn drefnu cyfieithydd Iaith Arwyddion Prydain (BSL) ar eich cyfer.",
+  "h7": "Gwybodaeth dechnegol am hygyrchedd y wefan hon",
+  "p13": "Mae Gwasanaeth Llysoedd a Thribiwnlysoedd EF wedi ymrwymo i sicrhau bod ei wefan yn hygyrch, yn unol â Rheoliadau Hygyrchedd Cyrff y Sector Cyhoeddus (Gwefannau a Rhaglenni Symudol) (Rhif 2) 2018.",
+  "h8": "Statws cydymffurfiaeth",
+  "p14": "Mae’r wefan hon yn cydymffurfio’n llawn â’r Canllawiau Hygyrchedd Cynnwys Gwe fersiwn 2.2 safon AA.",
+  "h14": "Beth rydym yn ei wneud i wella hygyrchedd",
+  "p23": "Rydym yn cynnal profion awtomataidd yn barhaus gan ddefnyddio <a class=\"govuk-link\" href=\"https://pa11y.org/\">Pa11y</a> ym mhob cam o adeiladu. Rydym hefyd yn gweithio gyda thîm mewnol Canolfan Ragoriaeth Hygyrchedd GLlTEF i sicrhau ein bod yn dilyn arferion hygyrchedd gorau ac i gael cymorth gydag archwiliadau.",
+  "h9": "Paratoi’r datganiad hygyrchedd hwn",
+  "p15": "Cafodd y datganiad hwn ei baratoi ar 3 Rhagfyr 2020. Cafodd ei adolygu ddiwethaf ar 8 Ebrill 2025.",
+  "p16": "Cafodd y wefan hon ei harchwilio gan dîm mewnol Canolfan Ragoriaeth Hygyrchedd GLlTEF ar 6 Ionawr 2025 ar draws ystod o dechnolegau cynorthwyol ac offer awtomataidd.",
+  "p17": "Dyma ddyfyniad o’r adroddiad DAC yn esbonio eu methodoleg:",
+  "h10": "Y weithdrefn brofi:",
+  "p18": "“Mae'r gwasanaeth yn cael ei brofi gan dîm o archwilwyr a dadansoddwyr profiadol, llawer ohonynt yn unigolion anabl ac yn ddefnyddwyr technoleg addasol. Mae'r cyfuniad o adborth goddrychol gan ddefnyddwyr anabl ac archwiliadau technegol cynhwysfawr yn ein galluogi i fesur sut mae'r gwasanaeth yn perfformio'n dechnegol ac yn ymarferol, gan gynnig dimensiwn ychwanegol hanfodol i ganlyniadau ein profion na all dulliau eraill o brofi eu darparu.”",
+  "h11": "Profi gyda defnyddwyr:",
+  "p19": "“Cynhaliwyd archwiliadau hygyrchedd â llaw gan dîm o unigolion anabl, gan ddefnyddio ystod o dechnolegau addasol (caledwedd a meddalwedd a gynlluniwyd i hwyluso'r defnydd o gyfrifiaduron gan bobl ag anableddau).”",
+  "h12": "Archwilio technegol:",
+  "p20": "“Mae archwilio technegol yn cynnwys cymhwyso nifer o ddulliau archwilio technegol a safonau asesu cydymffurfiaeth. Mae hyn, ynghyd â gwybodaeth helaeth am WCAG, y broses o’i roi ar waith ac ymarfer byd-eang ehangach, yn rhoi hygrededd ac ansawdd pellach i wefan DAC.”"
+}

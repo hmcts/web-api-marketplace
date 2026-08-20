@@ -1,21 +1,22 @@
 import * as path from 'path';
 
-import { HTTPError } from './HttpError';
-import { AppInsights } from './modules/appinsights';
-import { Helmet } from './modules/helmet';
-import { Nunjucks } from './modules/nunjucks';
-import { PropertiesVolume } from './modules/properties-volume';
-
+import { loadControllers, scopePerRequest } from 'awilix-express';
 import * as bodyParser from 'body-parser';
 import config = require('config');
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import RateLimit from 'express-rate-limit';
-import { glob } from 'glob';
 
-const { setupDev } = require('./development');
-
-const { Logger } = require('@hmcts/nodejs-logging');
+import { HTTPError } from './HttpError';
+import { setupDev } from './development';
+import { AppRequest } from './interfaces/AppRequest';
+import { AppInsights } from './modules/appinsights';
+import { Container } from './modules/awilix';
+import { Helmet } from './modules/helmet';
+import { I18next } from './modules/i18next';
+import { Logger } from './modules/logging';
+import { Nunjucks } from './modules/nunjucks';
+import { PropertiesVolume } from './modules/properties-volume';
 
 const env = process.env.NODE_ENV || 'development';
 const developmentMode = env === 'development';
@@ -32,42 +33,53 @@ const logger = Logger.getLogger('app');
 
 new PropertiesVolume().enableFor(app);
 new AppInsights().enable();
-new Nunjucks(developmentMode).enableFor(app);
+new Nunjucks(config.get('dynatrace'), developmentMode, config.get('analytics.gtmContainerId')).enableFor(app);
 // secure the application by adding various HTTP headers to its responses
-new Helmet(config.get('security')).enableFor(app);
+new Helmet(config.get('security'), developmentMode).enableFor(app);
+new Container().enableFor(app);
 
 app.get('/favicon.ico', limiter, (req, res) => {
-  res.sendFile(path.join(__dirname, '/public/assets/images/favicon.ico'));
+  res.sendFile(path.join(__dirname, '/public/assets/rebrand/images/favicon.ico'));
 });
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
+app.set('trust proxy', 1);
+
+// No server-side session: nothing in this app reads req.session, and an in-memory
+// store would not survive the multi-replica deployment. Add express-session with a
+// shared store (Redis) if a journey ever needs one.
 app.use(cookieParser());
+new I18next().enableFor(app);
+
+app.use(scopePerRequest(app.locals.container));
+app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate, no-store');
   next();
 });
 
-glob
-  .sync(__dirname + '/routes/**/*.+(ts|js)')
-  .map(filename => require(filename))
-  .forEach(route => route.default(app));
-
 setupDev(app, developmentMode);
-// returning "not found" page for requests with paths not resolved by the router
-app.use((req, res) => {
+// returning "not found" for requests with paths not resolved by the router
+app.use((req: express.Request, res: express.Response) => {
+  const appReq = req as AppRequest;
   res.status(404);
-  res.render('not-found');
+  const data = appReq.i18n?.getDataByLanguage(appReq.lng)['not-found'];
+  res.render('not-found', data ?? {});
 });
 
 // error handler
 app.use((err: HTTPError, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const appReq = req as AppRequest;
   logger.error(`${err.stack || err}`);
 
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = env === 'development' ? err : {};
   res.status(err.status || 500);
-  res.render('error');
+  const data = appReq.i18n?.getDataByLanguage(appReq.lng)?.error;
+  res.render('error', data);
 });

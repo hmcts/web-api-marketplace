@@ -1,0 +1,13 @@
+{
+  "secrets": {
+    "apim": {
+      "APP_INSIGHTS_CONNECTION_STRING": "APP_INSIGHTS_CONNECTION_STRING"
+    }
+  },
+  "analytics": {
+    "gtmContainerId": "GTM_CONTAINER_ID"
+  },
+  "dynatrace": {
+    "jstagKey": "DYNATRACE_JSTAG_KEY"
+  }
+}

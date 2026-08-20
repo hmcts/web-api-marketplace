@@ -1,1 +1,1 @@
- <script src="/<%= htmlWebpackPlugin.files.js[0].substr(htmlWebpackPlugin.files.publicPath.length) %>"></script>
+ <script {%- if cspNonce %} nonce="{{ cspNonce }}"{% endif %} src="/<%= htmlWebpackPlugin.files.js[0].substr(htmlWebpackPlugin.files.publicPath.length) %>"></script>

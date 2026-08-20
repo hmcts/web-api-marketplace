@@ -1,14 +1,30 @@
 {
   "useCSRFProtection": true,
-  "appInsights": {
-    "instrumentationKey": false
-  },
   "security": {
     "referrerPolicy": "same-origin",
     "hsts": {
       "maxAge": 31536000,
       "includeSubDomains": true,
       "preload": true
+    }
+  },
+  "secrets": {
+    "apim": {
+      "APP_INSIGHTS_CONNECTION_STRING": ""
+    }
+  },
+  "analytics": {
+    "gtmContainerId": ""
+  },
+  "dynatrace": {
+    "jstagKey": "default",
+    "jstags": {
+      "default": "",
+      "aat": "",
+      "demo": "",
+      "ithc": "",
+      "perftest": "",
+      "prod": ""
     }
   }
 }
