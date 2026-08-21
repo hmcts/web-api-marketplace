@@ -25,7 +25,7 @@ export const utilsFixtures = {
   logger: async ({}, use, testInfo): Promise<void> => {
     await use(
       createLogger({
-        serviceName: 'apim-frontend',
+        serviceName: 'apim-marketplace-web',
         defaultMeta: { testId: `${testInfo.project.name}::${testInfo.title}` },
       })
     );

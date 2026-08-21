@@ -1,4 +1,4 @@
-# frontend-api-marketplace
+# web-api-marketplace
 
 Public frontend for the HMCTS API Marketplace.
 
@@ -9,9 +9,9 @@ remains the reference for the module and testing patterns used here.
 |                     |                                                         |
 | ------------------- | ------------------------------------------------------- |
 | Product / component | `apim` / `frontend`                                     |
-| Helm chart          | `apim-frontend`                                         |
-| Image               | `hmctsprod.azurecr.io/apim/frontend`                    |
-| Jenkins folder      | `HMCTS_d_to_i` (via the `jenkins-cft-d-i` GitHub topic) |
+| Helm chart          | `apim-marketplace-web`                                  |
+| Image               | `hmctsprod.azurecr.io/apim/marketplace-web`             |
+| Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic) |
 | Key vault           | `apim-{env}` — shared with `service-api-marketplace`    |
 | Local port          | 3344 (HTTPS in development)                             |
 
@@ -58,7 +58,7 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   no `azurerm_application_insights` resource for the `apim` product, and the `apim-{env}`
   vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
   the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
-  and `keyVaults` back to `charts/apim-frontend/values.yaml`.
+  and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
 - **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
   language toggle works, but the Welsh content is not translated. Decide whether this service
   needs Welsh at all before commissioning translation.

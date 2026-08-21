@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  frontend:
+  marketplace-web:
     build:
       context: .
       args:
