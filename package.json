@@ -1,5 +1,5 @@
 {
-  "name": "frontend-api-marketplace",
+  "name": "web-api-marketplace",
   "description": "Public Frontend for the Find a Court or Tribunal service",
   "version": "0.0.1",
   "engines": {

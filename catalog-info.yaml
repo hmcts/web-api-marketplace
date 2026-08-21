@@ -1,11 +1,11 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: apim-frontend
+  name: apim-marketplace-web
   description: "Public frontend for the HMCTS API Marketplace"
   annotations:
-    jenkins.io/job-full-name: "cft:HMCTS_d_to_i/frontend-api-marketplace"
-    github.com/project-slug: 'hmcts/frontend-api-marketplace'
+    jenkins.io/job-full-name: "cft:HMCTS_j_to_z/web-api-marketplace"
+    github.com/project-slug: 'hmcts/web-api-marketplace'
   tags:
     - nodejs
   links:
