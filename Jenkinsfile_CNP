@@ -4,7 +4,7 @@
 
 def type = "nodejs"
 def product = "apim"
-def component = "public-frontend"
+def component = "frontend"
 
 def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
 

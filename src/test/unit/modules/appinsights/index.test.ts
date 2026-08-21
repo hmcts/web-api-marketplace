@@ -62,7 +62,7 @@ describe('AppInsights', () => {
 
     new AppInsights().enable();
 
-    expect(process.env.OTEL_SERVICE_NAME).toBe('apim-public-frontend');
+    expect(process.env.OTEL_SERVICE_NAME).toBe('apim-frontend');
     expect(setup).toHaveBeenCalledWith('InstrumentationKey=test');
     expect(defaultClient.config.azureMonitorOpenTelemetryOptions).toEqual({
       instrumentationOptions: {

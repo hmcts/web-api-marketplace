@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  public-frontend:
+  frontend:
     build:
       context: .
       args:

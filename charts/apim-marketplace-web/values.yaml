@@ -14,8 +14,8 @@ nodejs:
       averageUtilization: 70
     memory:
       enabled: false
-  image: 'hmctsprod.azurecr.io/apim/public-frontend:latest'
-  ingressHost: apim-public-frontend.{{ .Values.global.environment }}.platform.hmcts.net
+  image: 'hmctsprod.azurecr.io/apim/frontend:latest'
+  ingressHost: apim-frontend.{{ .Values.global.environment }}.platform.hmcts.net
   # AMP-1031: App Insights is stubbed for initial onboarding — there is no
   # azurerm_application_insights resource for the apim product yet, and the
   # apim-{env} vault holds only the marketplace-POSTGRES-* secrets. Add
