@@ -1,7 +1,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: apim-public-frontend
+  name: apim-frontend
   description: "Public frontend for the HMCTS API Marketplace"
   annotations:
     jenkins.io/job-full-name: "cft:HMCTS_d_to_i/frontend-api-marketplace"

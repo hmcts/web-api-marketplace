@@ -15,7 +15,7 @@ export class AppInsights {
     }
 
     if (appInsightsConnectionString) {
-      process.env.OTEL_SERVICE_NAME ||= 'apim-public-frontend';
+      process.env.OTEL_SERVICE_NAME ||= 'apim-frontend';
 
       const sdk = appInsights.setup(appInsightsConnectionString);
       const httpInstrumentationOptions = {
