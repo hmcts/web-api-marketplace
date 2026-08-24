@@ -7,14 +7,12 @@ const logger = Logger.getLogger('functional-tests');
 
 export interface Config {
   urls: {
-    dataApiUrl: string;
     homePageUrl: string;
   };
 }
 
 export const config: Config = {
   urls: {
-    dataApiUrl: getEnvVar('DATA_API_URL', 'http://localhost:8989'),
     homePageUrl: getEnvVar('TEST_URL', 'https://localhost:3344'),
   },
 };
