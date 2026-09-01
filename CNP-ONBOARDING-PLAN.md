@@ -182,16 +182,17 @@ The AAT ingress already equals the required custom domain, so nothing in flux ch
 Copy the shape of `expressjs-monorepo-template-web` in the same file — the closest analogue,
 a Node GOV.UK frontend.
 
-### Sandbox — 3 PRs
+### Sandbox — ✅ done, except the WAF exclusion
 
-Sandbox is exposable and routine; the golden path walks lab users through it. It needs one
-extra step only because the sbox patch uses the older `.internal` hostname.
+All three landed (the DNS and Front Door PRs were raised by Alex Bance). The site is
+publicly reachable at `https://apim-marketplace-web.sandbox.platform.hmcts.net` with no VPN
+— but see the WAF section below, which still blocks any user who answers the cookie banner.
 
-| #   | Repo                       | File                                       | Change                                                                                                                                          |
-| --- | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5.3 | `cnp-flux-config`          | `apps/apim/apim-marketplace-web/sbox.yaml` | `ingressHost: apim-marketplace-web.sandbox.platform.hmcts.net` — replacing `apim-marketplace-web-sandbox.service.core-compute-sandbox.internal` |
-| 5.4 | `azure-public-dns`         | `environments/sandbox/sandbox.yml`         | CNAME under `cname:`                                                                                                                            |
-| 5.5 | `azure-platform-terraform` | `environments/sbox/sbox.tfvars`            | Front Door entry                                                                                                                                |
+| #      | Repo                       | File                                       | Change                                                                                                                                          |
+| ------ | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5.3 ✅ | `cnp-flux-config`          | `apps/apim/apim-marketplace-web/sbox.yaml` | `ingressHost: apim-marketplace-web.sandbox.platform.hmcts.net` — replacing `apim-marketplace-web-sandbox.service.core-compute-sandbox.internal` |
+| 5.4 ✅ | `azure-public-dns`         | `environments/sandbox/sandbox.yml`         | CNAME under `cname:`                                                                                                                            |
+| 5.5 ✅ | `azure-platform-terraform` | `environments/sbox/sbox.tfvars`            | Front Door entry                                                                                                                                |
 
 ```yaml
 - name: 'apim-marketplace-web'
@@ -212,6 +213,68 @@ extra step only because the sbox patch uses the older `.internal` hostname.
 ```
 
 Result: `https://apim-marketplace-web.sandbox.platform.hmcts.net`, no VPN.
+
+The entry as merged uses `certificate_name = "wildcard-sandbox-platform-hmcts-net"` and
+`shutter_app = true`, and sets no `mode` — the module default turns out to be Prevention,
+which is what causes the WAF problem below.
+
+### The WAF blocks the cookie-consent cookie ⚠️
+
+**Front Door runs its WAF in Prevention mode for this service, and it blocks the cookie
+`@hmcts/cookie-manager` writes.** Any user who answers the cookie banner then gets HTTP 403
+on every request until they clear cookies — a total outage for that user, not a degraded
+experience.
+
+The cookie holds JSON: `apim-cookie-preferences={"analytics":"off","apm":"off"}`. The WAF's
+SQL-injection detector tokenises the value and, past a certain size, resolves it to
+something resembling an injection payload. Measured behaviour:
+
+| Cookie value            | Length | Result  |
+| ----------------------- | ------ | ------- |
+| `off`                   | 3      | 200     |
+| `analytics-off-apm-off` | 21     | 200     |
+| `{"aa":"bb"}`           | 11     | 200     |
+| `{"aaa":"bb"}`          | 12     | **403** |
+| `{"analytics":"off"}`   | 19     | **403** |
+
+It needs both the JSON structure and enough length — long plain values pass, short JSON
+passes. Nothing semantic: `{"aaa":"bb"}` is blocked while `analytics-off-apm-off` is not.
+A textbook false positive.
+
+**Symptom to recognise:** the browser shows a Front Door block page with a reference like
+`20260901T131445Z-15c994b9b97…`, and `fetch` calls fail with
+`Unexpected token '<', "<!DOCTYPE "... is not valid JSON` because the block page is HTML.
+Nothing appears in the pod logs — the request never reaches the service. `curl` without
+cookies succeeds, which makes it easy to misdiagnose as a browser cache problem.
+
+**Fix:** add a `global_exclusions` entry naming the cookie, in
+`azure-platform-terraform` → `environments/sbox/sbox.tfvars` (and `stg/stg.tfvars` for AAT):
+
+```hcl
+global_exclusions = [
+  {
+    match_variable = "RequestCookieNames"
+    operator       = "Equals"
+    selector       = "apim-cookie-preferences"
+  },
+  {
+    match_variable = "RequestCookieNames"
+    operator       = "Equals"
+    selector       = "i18next"
+  },
+]
+```
+
+This is the house pattern — FACT excludes `fact-cookie-preferences`, and
+`nfdiv-cookie-preferences`, `cmc-cookie-preferences` and `money-claims-cookie-preferences`
+all appear the same way. Add the Dynatrace (`dtCookie`, `rxVisitor`, …) and Google Analytics
+(`_ga`, `_gid`) cookies too if those tags are ever configured; FACT excludes them.
+
+`azure-platform-terraform` is PlatOps-owned, so raise it in `#platops-code-review` and quote
+the block reference in `#platops-help` — that is how they identify which rule fired.
+
+> Worth asking why this service's Front Door entry runs WAF in Prevention while others in
+> the same file (`plum`) set no `mode` at all and are unaffected.
 
 ### Order and review
 
