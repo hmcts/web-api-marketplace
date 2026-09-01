@@ -12,6 +12,16 @@ function escape(value: string): string {
   return node.innerHTML;
 }
 
+/**
+ * The route answers 200 when connected and 502 when the backend is unreachable — both
+ * carry JSON. Anything else came from in front of the service.
+ */
+function isJson(response: Response): boolean {
+  return (
+    (response.ok || response.status === 502) && !!response.headers.get('content-type')?.includes('application/json')
+  );
+}
+
 export function initBackendCheck(): void {
   const button = document.getElementById(BUTTON_ID);
   const result = document.getElementById(RESULT_ID);
@@ -27,6 +37,20 @@ export function initBackendCheck(): void {
 
     try {
       const response = await fetch('/backend-check', { headers: { Accept: 'application/json' } });
+
+      // fetch resolves for any HTTP status, so a proxy error, shutter page or WAF block
+      // arrives here as HTML. Report the status rather than letting json() fail on '<'.
+      if (!isJson(response)) {
+        render(
+          result,
+          'govuk-tag--red',
+          'Not connected',
+          `The check request returned HTTP ${response.status} without JSON — ` +
+            'the response came from something in front of this service, not the service itself.'
+        );
+        return;
+      }
+
       const body = await response.json();
 
       if (body.ok) {

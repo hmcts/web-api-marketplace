@@ -53,14 +53,17 @@ app.set('trust proxy', 1);
 app.use(cookieParser());
 new I18next().enableFor(app);
 
-app.use(scopePerRequest(app.locals.container));
-app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
-
-app.use(express.static(path.join(__dirname, 'public')));
+// Registered before the controllers: a controller that renders ends the middleware
+// chain, so a header set after them never reaches an actual page or API response.
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate, no-store');
   next();
 });
+
+app.use(scopePerRequest(app.locals.container));
+app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 setupDev(app, developmentMode);
 // returning "not found" for requests with paths not resolved by the router
