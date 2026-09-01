@@ -1,5 +1,10 @@
 {
   "pageTitle": "API Marketplace - GOV.UK",
   "heading": "Hello world",
-  "body": "This is the API Marketplace public frontend."
+  "body": "This is the API Marketplace public frontend.",
+  "backendCheck": {
+    "heading": "Backend connection",
+    "intro": "Check that this service can reach the API Marketplace backend.",
+    "buttonText": "Check backend connection"
+  }
 }
