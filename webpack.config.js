@@ -16,6 +16,10 @@ module.exports = {
     cookies: path.resolve(sourcePath, 'cookie-preferences.ts'),
   },
   mode: devMode ? 'development' : 'production',
+  // Webpack's development default is an eval-based devtool, which requires 'unsafe-eval'
+  // in the CSP. Use a plain source map so dev runs under the same script-src policy as
+  // production, and CSP problems surface locally rather than after deployment.
+  devtool: devMode ? 'source-map' : false,
   module: {
     rules: [
       ...scss.rules,

@@ -9,5 +9,9 @@
   },
   "dynatrace": {
     "jstagKey": "DYNATRACE_JSTAG_KEY"
+  },
+  "backend": {
+    "url": "API_URL",
+    "path": "API_PATH"
   }
 }

@@ -1,3 +1,5 @@
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
 {% extends "template.njk" %}
 
 {% set hideBackLink = true %}
@@ -8,6 +10,17 @@
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">{{ heading }}</h1>
       <p class="govuk-body-m">{{ body }}</p>
+
+      <h2 class="govuk-heading-m">{{ backendCheck.heading }}</h2>
+      <p class="govuk-body-m">{{ backendCheck.intro }}</p>
+
+      {{ govukButton({
+        text: backendCheck.buttonText,
+        classes: "govuk-button--secondary",
+        attributes: { id: "backend-check-button" }
+      }) }}
+
+      <div id="backend-check-result" role="status" aria-live="polite"></div>
     </div>
   </div>
 
