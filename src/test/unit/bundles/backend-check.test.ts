@@ -26,6 +26,9 @@ describe('backend check bundle', () => {
 
   test('a_successful_check_should_show_connected_with_the_url_and_latency', async () => {
     global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
       json: async () => ({ ok: true, url: 'http://backend/', latencyMs: 12, detail: 'API Marketplace' }),
     }) as unknown as typeof fetch;
 
@@ -41,6 +44,9 @@ describe('backend check bundle', () => {
 
   test('a_failed_check_should_show_not_connected_with_the_detail', async () => {
     global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
       json: async () => ({ ok: false, url: 'http://backend/', detail: 'ECONNREFUSED' }),
     }) as unknown as typeof fetch;
 
@@ -66,6 +72,9 @@ describe('backend check bundle', () => {
 
   test('html_in_the_backend_response_should_be_escaped_not_rendered', async () => {
     global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
       json: async () => ({ ok: false, url: 'http://backend/', detail: '<img src=x onerror=alert(1)>' }),
     }) as unknown as typeof fetch;
 
@@ -91,7 +100,12 @@ describe('backend check bundle', () => {
 
     expect(button.hasAttribute('disabled')).toBe(true);
 
-    release({ json: async () => ({ ok: true, url: 'http://backend/', latencyMs: 1, detail: 'ok' }) });
+    release({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ ok: true, url: 'http://backend/', latencyMs: 1, detail: 'ok' }),
+    });
     await flush();
 
     expect(button.hasAttribute('disabled')).toBe(false);
@@ -101,5 +115,39 @@ describe('backend check bundle', () => {
     document.body.innerHTML = '<div></div>';
 
     expect(() => initBackendCheck()).not.toThrow();
+  });
+
+  test('an_html_response_from_a_proxy_should_report_the_http_status', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: { get: () => 'text/html' },
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    }) as unknown as typeof fetch;
+
+    const { button, result } = setupPage();
+    button.click();
+    await flush();
+
+    expect(result.innerHTML).toContain('Not connected');
+    expect(result.innerHTML).toContain('HTTP 403');
+    expect(result.innerHTML).not.toContain('Unexpected token');
+  });
+
+  test('a_502_from_our_own_route_should_still_be_parsed_as_json', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      headers: { get: () => 'application/json; charset=utf-8' },
+      json: async () => ({ ok: false, url: 'http://backend/', detail: 'ECONNREFUSED' }),
+    }) as unknown as typeof fetch;
+
+    const { button, result } = setupPage();
+    button.click();
+    await flush();
+
+    expect(result.innerHTML).toContain('ECONNREFUSED');
   });
 });
