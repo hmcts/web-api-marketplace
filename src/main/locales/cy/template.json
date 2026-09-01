@@ -51,5 +51,16 @@
       "text": "Gwasanaeth Digidol y Llywodraeth",
       "href": "https://www.gov.uk/government/organisations/government-digital-service"
     }
-  ]
+  ],
+  "nav": {
+    "catalogue": "API catalogue",
+    "getStarted": "Get started",
+    "documentation": "Documentation",
+    "publish": "Publish an API",
+    "help": "Help and support"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "catalogue": "API catalogue"
+  }
 }

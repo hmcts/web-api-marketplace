@@ -6,12 +6,28 @@ const welshI18n = require('../../../../main/locales/cy/home.json');
 const i18n = require('../../../../main/locales/en/home.json');
 
 describe('Home page', () => {
-  test('rendering_the_home_page_should_show_the_heading_and_body', () => {
+  test('rendering_the_home_page_should_show_the_heading_and_lede', () => {
     const html = env.render('home.njk', i18n);
 
     expect(html).toContain(i18n.pageTitle);
     expect(html).toContain(i18n.heading);
-    expect(html).toContain(i18n.body);
+    expect(html).toContain(i18n.lede);
+  });
+
+  test('rendering_the_home_page_should_list_every_card', () => {
+    const html = env.render('home.njk', i18n);
+
+    for (const card of i18n.cards) {
+      expect(html).toContain(card.heading);
+      expect(html).toContain(card.href);
+    }
+  });
+
+  test('rendering_the_home_page_should_keep_the_backend_check', () => {
+    const html = env.render('home.njk', i18n);
+
+    expect(html).toContain('backend-check-button');
+    expect(html).toContain(i18n.backendCheck.buttonText);
   });
 
   test('rendering_the_home_page_should_not_show_a_back_link', () => {

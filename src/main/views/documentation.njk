@@ -1,0 +1,41 @@
+{% extends "template.njk" %}
+
+{% set section = "documentation" %}
+{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <h1 class="govuk-heading-xl">{{ heading }}</h1>
+      <p class="govuk-body-l">{{ lede }}</p>
+
+      <h2 class="govuk-heading-l" id="journey">{{ journey.heading }}</h2>
+
+      <ol class="govuk-list govuk-list--number">
+        {% for step in journey.steps %}
+          <li>{{ step }}</li>
+        {% endfor %}
+      </ol>
+
+      <p class="govuk-body">{{ journey.afterHtml | safe }}</p>
+
+      {% for group in sections %}
+        <h2 class="govuk-heading-l" id="{{ group.id }}">{{ group.heading }}</h2>
+        <ul class="govuk-list">
+          {% for link in group.links %}
+            <li>
+              <a class="govuk-link" href="{{ link.href }}">{{ link.text }}</a> &mdash; {{ link.description }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+
+      <h2 class="govuk-heading-l" id="a-to-z">{{ everything.heading }}</h2>
+      <p class="govuk-body">{{ everything.html | safe }}</p>
+
+    </div>
+  </div>
+
+{% endblock %}
