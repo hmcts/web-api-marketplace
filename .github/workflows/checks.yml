@@ -16,5 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - run: corepack enable && yarn --version
+      - run: corepack enable
+      # Install before `yarn run`: with the node-modules linker Yarn needs the install
+      # state to resolve a script, and `cichecks` cannot install itself into existence.
+      - run: yarn install --immutable
       - run: yarn cichecks
