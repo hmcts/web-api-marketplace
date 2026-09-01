@@ -8271,18 +8271,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-playwright@npm:2.10.5":
-  version: 2.10.5
-  resolution: "eslint-plugin-playwright@npm:2.10.5"
-  dependencies:
-    globals: "npm:^17.3.0"
-  peerDependencies:
-    eslint: ">=8.40.0"
-  checksum: 10/c6b35fa3d004930ad62e11636f98fb195599177f537b558f695e12378283339bf2b7f6544effd532c63759ca1b4cd13bb32a55a92ef307958ad432fad99a7516
-  languageName: node
-  linkType: hard
-
-"eslint-plugin-playwright@npm:^2.5.1":
+"eslint-plugin-playwright@npm:2.11.0, eslint-plugin-playwright@npm:^2.5.1":
   version: 2.11.0
   resolution: "eslint-plugin-playwright@npm:2.11.0"
   dependencies:
@@ -15322,7 +15311,7 @@ __metadata:
     eslint-config-prettier: "npm:10.1.8"
     eslint-plugin-import: "npm:2.32.0"
     eslint-plugin-jest: "npm:29.16.1"
-    eslint-plugin-playwright: "npm:2.10.5"
+    eslint-plugin-playwright: "npm:2.11.0"
     express: "npm:5.2.1"
     express-rate-limit: "npm:8.6.2"
     get-port: "npm:^7.2.0"
