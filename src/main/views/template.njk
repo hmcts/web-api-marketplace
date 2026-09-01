@@ -3,6 +3,7 @@
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
 {% from "govuk/components/cookie-banner/macro.njk" import govukCookieBanner %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 {% from "./components/back-link.njk" import goBack %}
 
 {% block pageTitle %}{{ pageTitle }}{% endblock %}
@@ -100,9 +101,17 @@
     containerClasses: "govuk-width-container"
   }) }}
 
+  {# Pages set `section` to highlight the current navigation item. #}
   {{ govukServiceNavigation({
     serviceName: serviceName | safe,
-    serviceUrl: (globals.basePath if globals.basePath) + "/"
+    serviceUrl: (globals.basePath if globals.basePath) + "/",
+    navigation: [
+      { href: "/api-catalogue", text: nav.catalogue,     active: section == "catalogue" },
+      { href: "/get-started",   text: nav.getStarted,    active: section == "get-started" },
+      { href: "/documentation", text: nav.documentation, active: section == "documentation" },
+      { href: "/publish",       text: nav.publish,       active: section == "publish" },
+      { href: "/help",          text: nav.help,          active: section == "help" }
+    ] if nav else []
   }) }}
 
 {% endblock %}
@@ -114,7 +123,10 @@
     },
     html: feedback + languageToggle
   }) }}
-  {% if not hideBackLink %}
+  {# Pages set `breadcrumbs` to a govukBreadcrumbs items array, or leave it unset. #}
+  {% if breadcrumbs %}
+    {{ govukBreadcrumbs({ items: breadcrumbs }) }}
+  {% elif not hideBackLink %}
     {{ goBack(text = backLink, cspNonce = cspNonce) }}
   {% endif %}
 {% endblock %}

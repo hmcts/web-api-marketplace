@@ -10,6 +10,7 @@ export interface AppRequest extends Request {
       notFound: object;
       error: object;
       accessibilityStatement: object;
+      documentation: object;
     };
   };
   lng?: string;
