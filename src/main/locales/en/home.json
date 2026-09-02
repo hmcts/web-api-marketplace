@@ -29,10 +29,5 @@
       "href": "/publish",
       "body": "If your team owns an API, list it in the marketplace so other teams can find it, understand it, and request access."
     }
-  ],
-  "backendCheck": {
-    "heading": "Backend connection",
-    "intro": "Check that this service can reach the API Marketplace backend.",
-    "buttonText": "Check backend connection"
-  }
+  ]
 }

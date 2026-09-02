@@ -23,13 +23,6 @@ describe('Home page', () => {
     }
   });
 
-  test('rendering_the_home_page_should_keep_the_backend_check', () => {
-    const html = env.render('home.njk', i18n);
-
-    expect(html).toContain('backend-check-button');
-    expect(html).toContain(i18n.backendCheck.buttonText);
-  });
-
   test('rendering_the_home_page_should_not_show_a_back_link', () => {
     const html = env.render('home.njk', i18n);
 
