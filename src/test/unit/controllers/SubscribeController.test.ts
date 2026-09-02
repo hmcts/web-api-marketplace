@@ -1,6 +1,6 @@
 import SubscribeController from '../../../main/controllers/SubscribeController';
 import { DECLARATIONS } from '../../../main/services/AccessRequest';
-import { mockRequest } from '../mocks/mockRequest';
+import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/ApiCatalogue', () => ({ getCatalogueApis: jest.fn() }));
@@ -21,21 +21,6 @@ const completeBody = {
   'use-case': 'Ingesting documents for the case bundle service.',
   oauth: 'yes',
   declarations: DECLARATIONS.map(declaration => declaration.value),
-};
-
-const SIGNED_IN = { email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
-
-/** Both journeys require an account, so the default request in these tests carries one. */
-const signedIn = (body: Record<string, unknown> = {}) => {
-  const req = mockRequest({}, { user: SIGNED_IN as never });
-  req.body = body;
-  return req;
-};
-
-const signedOut = (body: Record<string, unknown> = {}) => {
-  const req = mockRequest({});
-  req.body = body;
-  return req;
 };
 
 describe('SubscribeController', () => {
@@ -124,32 +109,5 @@ describe('SubscribeController', () => {
     expect(res.redirected).toBe('/subscribe');
   });
 
-  test('a_signed_out_visitor_should_be_redirected_away_from_the_form', () => {
-    const res = mockResponse();
-
-    new SubscribeController().get(signedOut(), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-  });
-
-  test('a_signed_out_visitor_should_not_be_able_to_submit_the_form', async () => {
-    // The point of the guard: hiding the navigation link does not stop a POST.
-    const res = mockResponse();
-
-    await new SubscribeController().post(signedOut(completeBody), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-    expect(res.statusCode).toBeUndefined();
-  });
-
-  test('a_signed_out_visitor_should_not_be_able_to_submit_checked_answers', async () => {
-    const res = mockResponse();
-
-    await new SubscribeController().submit(signedOut(completeBody), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-  });
+  describeSignInGuard(() => new SubscribeController(), completeBody);
 });

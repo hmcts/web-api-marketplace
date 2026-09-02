@@ -1,6 +1,6 @@
 import PublishController from '../../../main/controllers/PublishController';
 import { PUBLISH_DECLARATIONS } from '../../../main/services/PublicationRequest';
-import { mockRequest } from '../mocks/mockRequest';
+import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
 
 const completeBody = {
@@ -10,21 +10,6 @@ const completeBody = {
   'spec-url': 'https://raw.githubusercontent.com/hmcts/api-cp-crime-slc/main/openapi-spec.yml',
   classification: 'official',
   declarations: PUBLISH_DECLARATIONS.map(declaration => declaration.value),
-};
-
-const SIGNED_IN = { email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
-
-/** Both journeys require an account, so the default request in these tests carries one. */
-const signedIn = (body: Record<string, unknown> = {}) => {
-  const req = mockRequest({}, { user: SIGNED_IN as never });
-  req.body = body;
-  return req;
-};
-
-const signedOut = (body: Record<string, unknown> = {}) => {
-  const req = mockRequest({});
-  req.body = body;
-  return req;
 };
 
 describe('PublishController', () => {
@@ -97,32 +82,5 @@ describe('PublishController', () => {
     expect(res.redirected).toBe('/publish');
   });
 
-  test('a_signed_out_visitor_should_be_redirected_away_from_the_form', () => {
-    const res = mockResponse();
-
-    new PublishController().get(signedOut(), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-  });
-
-  test('a_signed_out_visitor_should_not_be_able_to_submit_the_form', async () => {
-    // The point of the guard: hiding the navigation link does not stop a POST.
-    const res = mockResponse();
-
-    await new PublishController().post(signedOut(completeBody), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-    expect(res.statusCode).toBeUndefined();
-  });
-
-  test('a_signed_out_visitor_should_not_be_able_to_submit_checked_answers', async () => {
-    const res = mockResponse();
-
-    await new PublishController().submit(signedOut(completeBody), res);
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-  });
+  describeSignInGuard(() => new PublishController(), completeBody);
 });
