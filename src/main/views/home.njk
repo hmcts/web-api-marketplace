@@ -31,19 +31,4 @@
     {% endfor %}
   </div>
 
-  <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
-      <h2 class="govuk-heading-m">{{ backendCheck.heading }}</h2>
-      <p class="govuk-body-m">{{ backendCheck.intro }}</p>
-
-      {{ govukButton({
-        text: backendCheck.buttonText,
-        classes: "govuk-button--secondary",
-        attributes: { id: "backend-check-button" }
-      }) }}
-
-      <div id="backend-check-result" role="status" aria-live="polite"></div>
-    </div>
-  </div>
-
 {% endblock %}
