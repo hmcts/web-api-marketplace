@@ -1,11 +1,10 @@
 {% extends "template.njk" %}
 
 {% set pageTitle = "Check your answers - HMCTS API Marketplace - GOV.UK" %}
-{% set section = "publish" %}
+{% set section = "subscribe" %}
 {% set breadcrumbs = [
   { text: breadcrumb.home, href: "/" },
-  { text: breadcrumb.publish, href: "/publish" },
-  { text: "Submit an API", href: "/publish/submit" }
+  { text: breadcrumb.subscribe, href: "/subscribe" }
 ] %}
 
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
@@ -33,7 +32,7 @@
       them straight back means the journey survives a refresh and works with JavaScript
       unavailable; they are validated again on the way through.
     #}
-    <form method="post" action="/publish/submit/check-answers" id="publish-submit-submit-form">
+    <form method="post" action="/subscribe/check-answers" id="access-request-submit-form">
 
       {% for name, value in answers %}
         {% if value is string %}
@@ -50,7 +49,7 @@
     </form>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/publish/submit">Change your answers</a>
+      <a class="govuk-link" href="/subscribe">Change your answers</a>
     </p>
 
   </div>

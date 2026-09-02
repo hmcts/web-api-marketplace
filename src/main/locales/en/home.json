@@ -2,32 +2,17 @@
   "pageTitle": "HMCTS API Marketplace - GOV.UK",
   "heading": "HMCTS API Marketplace",
   "lede": "Discover, request and integrate the APIs powering justice sector software.",
-  "startButton": "Get started",
+  "startButton": "Subscribe to an API",
   "cards": [
     {
-      "heading": "API and integration catalogue",
-      "href": "/api-catalogue",
-      "body": "An A to Z list of HMCTS APIs and other integrations, with plain-English descriptions of what each one returns."
-    },
-    {
-      "heading": "Getting started with our APIs",
-      "href": "/get-started",
-      "body": "A step-by-step introduction to what our APIs can do and how your team can get connected."
-    },
-    {
-      "heading": "Documentation, guides and tutorials",
-      "href": "/documentation",
-      "body": "Learn about APIs and the standards we use, and how to make the most of our developer resources."
-    },
-    {
-      "heading": "Help and support building software",
-      "href": "/help",
-      "body": "Get help at any point in your project, to make sure your integration with our APIs goes smoothly."
+      "heading": "Subscribe to an API",
+      "href": "/subscribe",
+      "body": "Tell us about your use case and the API you need. The API owner reviews every request."
     },
     {
       "heading": "Publish an API",
       "href": "/publish",
-      "body": "If your team owns an API, list it in the marketplace so other teams can find it, understand it, and request access."
+      "body": "If your team owns an API, list it in the marketplace so other teams can find it and request access."
     }
   ],
   "backendCheck": {

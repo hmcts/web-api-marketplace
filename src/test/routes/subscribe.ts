@@ -23,16 +23,16 @@ async function completeAnswers(): Promise<Record<string, string | string[]>> {
   };
 }
 
-describe('Request API access', () => {
+describe('Subscribe to an API', () => {
   test('getting_the_form_should_return_200', async () => {
     await request(app)
-      .get('/get-started/request-api')
+      .get('/subscribe')
       .expect(res => expect(res.status).to.equal(200));
   });
 
   test('posting_an_empty_form_should_return_400_with_an_error_summary', async () => {
     await request(app)
-      .post('/get-started/request-api')
+      .post('/subscribe')
       .send({})
       .expect(res => {
         expect(res.status).to.equal(400);
@@ -43,16 +43,16 @@ describe('Request API access', () => {
 
   test('opening_check_answers_directly_should_redirect_to_the_form', async () => {
     await request(app)
-      .get('/get-started/request-api/check-answers')
+      .get('/subscribe/check-answers')
       .expect(res => {
         expect(res.status).to.equal(302);
-        expect(res.headers.location).to.equal('/get-started/request-api');
+        expect(res.headers.location).to.equal('/subscribe');
       });
   });
 
   test('posting_valid_answers_should_render_the_check_answers_page', async () => {
     await request(app)
-      .post('/get-started/request-api')
+      .post('/subscribe')
       .send(await completeAnswers())
       .expect(res => {
         expect(res.status).to.equal(200);
@@ -63,7 +63,7 @@ describe('Request API access', () => {
 
   test('submitting_the_checked_answers_should_render_the_confirmation', async () => {
     await request(app)
-      .post('/get-started/request-api/check-answers')
+      .post('/subscribe/check-answers')
       .send(await completeAnswers())
       .expect(res => {
         expect(res.status).to.equal(200);

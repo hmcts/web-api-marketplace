@@ -4,7 +4,7 @@ import request from 'supertest';
 import { app } from '../../main/app';
 import { PUBLISH_DECLARATIONS } from '../../main/services/PublicationRequest';
 
-const pages = ['/publish', '/publish/producer-standards', '/publish/data-governance', '/publish/submit'];
+const pages = ['/publish'];
 
 const completeAnswers = {
   'api-name': 'Court Schedule',
@@ -24,7 +24,7 @@ describe('Publish an API', () => {
 
   test('posting_an_empty_form_should_return_400_with_an_error_summary', async () => {
     await request(app)
-      .post('/publish/submit')
+      .post('/publish')
       .send({})
       .expect(res => {
         expect(res.status).to.equal(400);
@@ -35,7 +35,7 @@ describe('Publish an API', () => {
 
   test('posting_a_secret_classification_should_be_refused_with_the_reason', async () => {
     await request(app)
-      .post('/publish/submit')
+      .post('/publish')
       .send({ ...completeAnswers, classification: 'secret' })
       .expect(res => {
         expect(res.status).to.equal(400);
@@ -45,7 +45,7 @@ describe('Publish an API', () => {
 
   test('posting_valid_answers_should_render_the_check_answers_page', async () => {
     await request(app)
-      .post('/publish/submit')
+      .post('/publish')
       .send(completeAnswers)
       .expect(res => {
         expect(res.status).to.equal(200);
@@ -57,7 +57,7 @@ describe('Publish an API', () => {
 
   test('submitting_the_checked_answers_should_render_the_confirmation', async () => {
     await request(app)
-      .post('/publish/submit/check-answers')
+      .post('/publish/check-answers')
       .send(completeAnswers)
       .expect(res => {
         expect(res.status).to.equal(200);
@@ -68,10 +68,10 @@ describe('Publish an API', () => {
 
   test('opening_check_answers_directly_should_redirect_to_the_form', async () => {
     await request(app)
-      .get('/publish/submit/check-answers')
+      .get('/publish/check-answers')
       .expect(res => {
         expect(res.status).to.equal(302);
-        expect(res.headers.location).to.equal('/publish/submit');
+        expect(res.headers.location).to.equal('/publish');
       });
   });
 });

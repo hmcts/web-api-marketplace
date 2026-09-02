@@ -107,11 +107,8 @@
     serviceName: serviceName | safe,
     serviceUrl: (globals.basePath if globals.basePath) + "/",
     navigation: [
-      { href: "/api-catalogue", text: nav.catalogue,     active: section == "catalogue" },
-      { href: "/get-started",   text: nav.getStarted,    active: section == "get-started" },
-      { href: "/documentation", text: nav.documentation, active: section == "documentation" },
-      { href: "/publish",       text: nav.publish,       active: section == "publish" },
-      { href: "/help",          text: nav.help,          active: section == "help" },
+      { href: "/subscribe", text: nav.subscribe, active: section == "subscribe" },
+      { href: "/publish",   text: nav.publish,   active: section == "publish" },
       {
         href: "/account" if user else "/sign-in",
         text: nav.account if user else nav.signIn,

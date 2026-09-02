@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 
 import { Logger } from '../modules/logging';
 
+import { logNotImplemented } from './submissions';
+
 const logger = Logger.getLogger('access-request');
 
 export interface Choice {
@@ -55,11 +57,11 @@ export const DECLARATIONS: Choice[] = [
     value: 'dsa-dpa',
     text: 'A Data Sharing Agreement or Data Processing Agreement is in place or being arranged for APIs containing personal data',
   },
-  {
-    value: 'governance',
-    text: 'I have read and accept the Data Governance Standards',
-    hint: { html: 'See the <a class="govuk-link" href="/publish/data-governance">Data Governance Standards</a>.' },
-  },
+  // The Data Governance Standards page was dropped with the rest of the static content,
+  // so this declaration no longer links anywhere. Anyone ticking it is accepting a
+  // document this service does not publish — worth restoring a link to wherever the
+  // standards actually live before this is asked of real users.
+  { value: 'governance', text: 'I have read and accept the Data Governance Standards' },
 ];
 
 /** Field names match the prototype's, so the answers keep one shape end to end. */
@@ -183,9 +185,7 @@ export function summaryRows(answers: AccessRequestAnswers, apiTitle: string): Su
 export async function submitAccessRequest(answers: AccessRequestAnswers): Promise<string> {
   const reference = newReference();
 
-  logger.info(
-    `Access request ${reference} for ${answers['api-name']} (${answers.environment}) was not persisted: no backend endpoint yet`
-  );
+  logNotImplemented(logger, 'Access request', `${reference} for ${answers['api-name']}, ${answers.environment}`);
 
   return reference;
 }

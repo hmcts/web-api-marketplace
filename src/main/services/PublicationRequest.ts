@@ -9,6 +9,7 @@ import {
   toAnswerList,
   toAnswerText,
 } from './answers';
+import { logNotImplemented } from './submissions';
 
 const logger = Logger.getLogger('publication-request');
 
@@ -117,8 +118,10 @@ export function publicationSummaryRows(answers: PublicationRequestAnswers): Summ
 export async function submitPublicationRequest(answers: PublicationRequestAnswers): Promise<string> {
   const reference = newReference();
 
-  logger.info(
-    `Publication request ${reference} for ${answers['api-name']} from ${answers['owning-team']} was not persisted: no backend endpoint yet`
+  logNotImplemented(
+    logger,
+    'Publication request',
+    `${reference} for ${answers['api-name']}, ${answers['owning-team']}`
   );
 
   return reference;
