@@ -65,7 +65,8 @@
     "home": "Home",
     "catalogue": "API catalogue",
     "getStarted": "Get started",
-    "publish": "Cyhoeddi API"
+    "publish": "Cyhoeddi API",
+    "help": "Cymorth a chefnogaeth"
   },
   "phaseTag": "Beta"
 }

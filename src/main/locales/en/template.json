@@ -62,7 +62,8 @@
     "home": "Home",
     "catalogue": "API catalogue",
     "getStarted": "Get started",
-    "publish": "Publish an API"
+    "publish": "Publish an API",
+    "help": "Help and support"
   },
   "phaseTag": "Beta"
 }
