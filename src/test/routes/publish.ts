@@ -1,10 +1,10 @@
-import { expect } from 'chai';
-import request from 'supertest';
+jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
 
-import { app } from '../../main/app';
+import { expect } from 'chai';
+
 import { PUBLISH_DECLARATIONS } from '../../main/services/PublicationRequest';
 
-import { describeFormJourney } from './helpers/formJourney';
+import { describeFormJourney, signedInAgent } from './helpers/formJourney';
 
 const completeAnswers = {
   'api-name': 'Court Schedule',
@@ -26,7 +26,9 @@ describeFormJourney({
 
 describe('Publish an API, eligibility', () => {
   test('posting_a_secret_classification_should_be_refused_with_the_reason', async () => {
-    await request(app)
+    await (
+      await signedInAgent()
+    )
       .post('/publish')
       .send({ ...completeAnswers, classification: 'secret' })
       .expect(res => {

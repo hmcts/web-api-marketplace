@@ -1,6 +1,8 @@
 import { GET, POST, route } from 'awilix-express';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
+import { AppRequest } from '../interfaces/AppRequest';
+import { requireSignIn } from '../modules/session';
 import {
   CLASSIFICATIONS,
   PUBLISH_DECLARATIONS,
@@ -17,17 +19,23 @@ import { FieldError } from '../services/answers';
  *
  * The same shape as the access request journey — answers are posted on as hidden fields
  * rather than held in a session, so the journey survives a refresh and works with
- * JavaScript unavailable. See RequestApiController for the reasoning.
+ * JavaScript unavailable. See SubscribeController for the reasoning.
  */
 @route('/publish')
 export default class PublishController {
   @GET()
-  public get(req: Request, res: Response): void {
+  public get(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     res.render('publish/form', this.formData(toPublicationAnswers({}), []));
   }
 
   @POST()
-  public post(req: Request, res: Response): void {
+  public post(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const answers = toPublicationAnswers(req.body as Record<string, unknown>);
     const errors = validatePublication(answers);
 
@@ -41,14 +49,20 @@ export default class PublishController {
 
   @route('/check-answers')
   @GET()
-  public checkAnswers(req: Request, res: Response): void {
+  public checkAnswers(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     // Reached directly, with no answers to check — send the user back to fill the form in.
     res.redirect('/publish');
   }
 
   @route('/check-answers')
   @POST()
-  public async submit(req: Request, res: Response): Promise<void> {
+  public async submit(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const answers = toPublicationAnswers(req.body as Record<string, unknown>);
     const errors = validatePublication(answers);
 
@@ -64,7 +78,10 @@ export default class PublishController {
 
   @route('/confirmation')
   @GET()
-  public confirmation(req: Request, res: Response): void {
+  public confirmation(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     res.redirect('/publish');
   }
 

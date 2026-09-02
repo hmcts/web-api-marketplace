@@ -14,5 +14,6 @@
       "href": "/publish",
       "body": "If your team owns an API, list it in the marketplace so other teams can find it and request access."
     }
-  ]
+  ],
+  "signInButton": "Sign in"
 }

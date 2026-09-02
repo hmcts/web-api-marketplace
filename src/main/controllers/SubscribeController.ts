@@ -1,6 +1,8 @@
 import { GET, POST, route } from 'awilix-express';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
+import { AppRequest } from '../interfaces/AppRequest';
+import { requireSignIn } from '../modules/session';
 import {
   AccessRequestAnswers,
   CALL_VOLUMES,
@@ -26,12 +28,18 @@ import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
 @route('/subscribe')
 export default class SubscribeController {
   @GET()
-  public async get(req: Request, res: Response): Promise<void> {
+  public async get(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     res.render('subscribe/index', await this.formData(toAnswers({}), []));
   }
 
   @POST()
-  public async post(req: Request, res: Response): Promise<void> {
+  public async post(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const apis = await getCatalogueApis();
     const answers = toAnswers(req.body as Record<string, unknown>);
     const errors = validate(
@@ -52,14 +60,20 @@ export default class SubscribeController {
 
   @route('/check-answers')
   @GET()
-  public checkAnswers(req: Request, res: Response): void {
+  public checkAnswers(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     // Reached directly, with no answers to check — send the user back to fill the form in.
     res.redirect('/subscribe');
   }
 
   @route('/check-answers')
   @POST()
-  public async submit(req: Request, res: Response): Promise<void> {
+  public async submit(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const apis = await getCatalogueApis();
     const answers = toAnswers(req.body as Record<string, unknown>);
     const errors = validate(
@@ -81,7 +95,10 @@ export default class SubscribeController {
 
   @route('/confirmation')
   @GET()
-  public confirmation(req: Request, res: Response): void {
+  public confirmation(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     res.redirect('/subscribe');
   }
 

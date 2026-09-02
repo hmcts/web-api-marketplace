@@ -1,3 +1,5 @@
+jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
+
 import { DECLARATIONS } from '../../main/services/AccessRequest';
 import { getCatalogueApis } from '../../main/services/ApiCatalogue';
 

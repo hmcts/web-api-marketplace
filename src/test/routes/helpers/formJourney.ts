@@ -3,6 +3,29 @@ import request from 'supertest';
 
 import { app } from '../../../main/app';
 
+const SIGNED_IN_USER = {
+  email: 'joe.bloggs@justice.gov.uk',
+  firstName: 'Joe',
+  lastName: 'Bloggs',
+  orgName: 'HMCTS DTS',
+};
+
+/**
+ * A supertest agent carrying a session, because both journeys require one.
+ *
+ * The caller must mock the SignIn service — jest.mock is per test file and cannot be
+ * declared here. Signing in through the real form rather than forging a cookie means these
+ * tests exercise the same session the guard reads.
+ */
+export async function signedInAgent(): Promise<ReturnType<typeof request.agent>> {
+  const { signIn } = require('../../../main/services/SignIn');
+  (signIn as jest.Mock).mockResolvedValue({ ok: true, user: SIGNED_IN_USER });
+
+  const agent = request.agent(app);
+  await agent.post('/sign-in').send({ email: SIGNED_IN_USER.email, password: 'any' });
+  return agent;
+}
+
 export interface FormJourney {
   /** What the describe block is called. */
   name: string;
@@ -29,13 +52,13 @@ export interface FormJourney {
 export function describeFormJourney(journey: FormJourney): void {
   describe(journey.name, () => {
     test('getting_the_form_should_return_200', async () => {
-      await request(app)
-        .get(journey.path)
-        .expect(res => expect(res.status).to.equal(200));
+      await (await signedInAgent()).get(journey.path).expect(res => expect(res.status).to.equal(200));
     });
 
     test('posting_an_empty_form_should_return_400_with_an_error_summary', async () => {
-      await request(app)
+      await (
+        await signedInAgent()
+      )
         .post(journey.path)
         .send({})
         .expect(res => {
@@ -46,7 +69,9 @@ export function describeFormJourney(journey: FormJourney): void {
     });
 
     test('posting_valid_answers_should_render_the_check_answers_page', async () => {
-      await request(app)
+      await (
+        await signedInAgent()
+      )
         .post(journey.path)
         .send(await journey.answers())
         .expect(res => {
@@ -59,7 +84,9 @@ export function describeFormJourney(journey: FormJourney): void {
     });
 
     test('submitting_the_checked_answers_should_render_the_confirmation', async () => {
-      await request(app)
+      await (
+        await signedInAgent()
+      )
         .post(`${journey.path}/check-answers`)
         .send(await journey.answers())
         .expect(res => {
@@ -70,12 +97,10 @@ export function describeFormJourney(journey: FormJourney): void {
     });
 
     test('opening_check_answers_directly_should_redirect_to_the_form', async () => {
-      await request(app)
-        .get(`${journey.path}/check-answers`)
-        .expect(res => {
-          expect(res.status).to.equal(302);
-          expect(res.headers.location).to.equal(journey.path);
-        });
+      await (await signedInAgent()).get(`${journey.path}/check-answers`).expect(res => {
+        expect(res.status).to.equal(302);
+        expect(res.headers.location).to.equal(journey.path);
+      });
     });
   });
 }

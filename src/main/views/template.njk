@@ -101,20 +101,25 @@
     containerClasses: "govuk-width-container"
   }) }}
 
-  {# Pages set `section` to highlight the current navigation item. The last item is the
-     signed-in state: `user` comes from the session, via res.locals in app.ts. #}
+  {# Pages set `section` to highlight the current navigation item. `user` comes from the
+     session, via res.locals in app.ts. Both journeys need an account, so they are only
+     offered once someone has one — see requireSignIn, which is what actually refuses a
+     signed-out request rather than merely declining to advertise it. #}
   {{ govukServiceNavigation({
     serviceName: serviceName | safe,
     serviceUrl: (globals.basePath if globals.basePath) + "/",
-    navigation: [
-      { href: "/subscribe", text: nav.subscribe, active: section == "subscribe" },
-      { href: "/publish",   text: nav.publish,   active: section == "publish" },
+    navigation: (
+      [
+        { href: "/subscribe", text: nav.subscribe, active: section == "subscribe" },
+        { href: "/publish",   text: nav.publish,   active: section == "publish" }
+      ] if user else []
+    ).concat([
       {
         href: "/account" if user else "/sign-in",
         text: nav.account if user else nav.signIn,
         active: section == "account"
       }
-    ] if nav else []
+    ]) if nav else []
   }) }}
 
 {% endblock %}

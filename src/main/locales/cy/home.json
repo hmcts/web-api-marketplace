@@ -14,5 +14,6 @@
       "href": "/publish",
       "body": "Os yw eich tîm yn berchen ar API, rhestrwch ef yn y farchnad fel y gall timau eraill ddod o hyd iddo a gofyn am fynediad."
     }
-  ]
+  ],
+  "signInButton": "Mewngofnodi"
 }
