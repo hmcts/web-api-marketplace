@@ -8,6 +8,10 @@ import { signIn } from '../services/SignIn';
 export default class SignInController {
   @GET()
   public get(req: AppRequest, res: Response): void {
+    if (req.session?.user) {
+      res.redirect('/account');
+      return;
+    }
     res.render('sign-in', req.i18n?.getDataByLanguage(req.lng)?.signIn);
   }
 
@@ -31,6 +35,16 @@ export default class SignInController {
       return;
     }
 
-    res.redirect('/');
+    // A new session id on sign in, so a session id an attacker planted before the user
+    // signed in cannot be used afterwards.
+    req.session.regenerate(error => {
+      if (error) {
+        res.status(500).render('sign-in', { ...content, error: content?.errorRejected as string, email });
+        return;
+      }
+
+      req.session.user = result.user;
+      req.session.save(() => res.redirect('/account'));
+    });
   }
 }

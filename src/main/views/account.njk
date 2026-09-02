@@ -1,0 +1,33 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Your account - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <h1 class="govuk-heading-xl">{{ heading }}</h1>
+
+      {{ govukSummaryList({
+        rows: [
+          { key: { text: "Name" },         value: { text: user.firstName + " " + user.lastName } },
+          { key: { text: "Email" },        value: { text: user.email } },
+          { key: { text: organisation },   value: { text: user.orgName } }
+        ]
+      }) }}
+
+      {# POST, so no link or prefetcher can sign the user out. #}
+      <form method="post" action="/sign-out">
+        {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
+      </form>
+
+    </div>
+  </div>
+
+{% endblock %}

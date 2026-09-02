@@ -72,7 +72,7 @@ describe('SignInController', () => {
     expect(res.data?.error).toBe(content.errorRejected);
   });
 
-  test('a_successful_sign_in_should_redirect_home', async () => {
+  test('a_successful_sign_in_should_store_the_user_and_redirect_to_the_account', async () => {
     (signIn as jest.Mock).mockResolvedValue({ ok: true, user: { email: 'joe@example.com' } });
     const controller = new SignInController();
     const res = mockResponse();
@@ -81,7 +81,31 @@ describe('SignInController', () => {
 
     await controller.post(req, res);
 
-    expect(res.redirected).toBe('/');
+    expect(req.session.user).toEqual({ email: 'joe@example.com' });
+    expect(res.redirected).toBe('/account');
+  });
+
+  test('a_successful_sign_in_should_regenerate_the_session_id', async () => {
+    (signIn as jest.Mock).mockResolvedValue({ ok: true, user: { email: 'joe@example.com' } });
+    const controller = new SignInController();
+    const res = mockResponse();
+    const req = mockRequest({ signIn: content });
+    const regenerate = jest.spyOn(req.session, 'regenerate');
+    req.body = { email: 'joe@example.com', password: 'any' };
+
+    await controller.post(req, res);
+
+    // Guards against session fixation: an id planted before sign in must not survive it.
+    expect(regenerate).toHaveBeenCalled();
+  });
+
+  test('visiting_sign_in_while_already_signed_in_should_redirect_to_the_account', () => {
+    const controller = new SignInController();
+    const res = mockResponse();
+
+    controller.get(mockRequest({ signIn: content }, { user: { email: 'joe@example.com' } as never }), res);
+
+    expect(res.redirected).toBe('/account');
   });
 
   test('the_email_should_be_returned_to_the_page_on_error_but_never_the_password', async () => {
