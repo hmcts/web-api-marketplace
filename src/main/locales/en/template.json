@@ -61,5 +61,6 @@
     "home": "Home",
     "catalogue": "API catalogue",
     "getStarted": "Get started"
-  }
+  },
+  "phaseTag": "Beta"
 }
