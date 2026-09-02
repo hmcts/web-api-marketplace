@@ -110,7 +110,8 @@
       { href: "/get-started",   text: nav.getStarted,    active: section == "get-started" },
       { href: "/documentation", text: nav.documentation, active: section == "documentation" },
       { href: "/publish",       text: nav.publish,       active: section == "publish" },
-      { href: "/help",          text: nav.help,          active: section == "help" }
+      { href: "/help",          text: nav.help,          active: section == "help" },
+      { href: "/sign-in",       text: nav.signIn,        active: section == "account" }
     ] if nav else []
   }) }}
 
@@ -119,7 +120,7 @@
 {% block beforeContent %}
   {{ govukPhaseBanner({
     tag: {
-      text: "beta"
+      text: phaseTag
     },
     html: feedback + languageToggle
   }) }}

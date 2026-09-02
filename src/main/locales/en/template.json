@@ -1,10 +1,10 @@
 {
-  "pageTitle": "API Marketplace - GOV.UK",
-  "serviceName": "API Marketplace",
+  "pageTitle": "HMCTS API Marketplace - GOV.UK",
+  "serviceName": "HMCTS API Marketplace",
   "feedback": "This is a new service – your <a class=\"govuk-link\" href=\"#\">feedback</a> will help us to improve it. ",
   "languageToggle": "<a href=\"?lng=cy\" class=\"govuk-link apim-language\">Cymraeg</a>",
   "backLink": "Back",
-  "cookieBannerH1": "Cookies on API Marketplace",
+  "cookieBannerH1": "Cookies on HMCTS API Marketplace",
   "cookieBannerP1": "We use some essential cookies to make this service work.",
   "cookieBannerP2": "We’d like to set additional cookies so we can remember your settings, understand how people use the service and to improve government services.",
   "cookieBannerAcceptButton": "Accept additional cookies",
@@ -54,10 +54,13 @@
     "getStarted": "Get started",
     "documentation": "Documentation",
     "publish": "Publish an API",
-    "help": "Help and support"
+    "help": "Help and support",
+    "signIn": "Sign in"
   },
   "breadcrumb": {
     "home": "Home",
-    "catalogue": "API catalogue"
-  }
+    "catalogue": "API catalogue",
+    "getStarted": "Get started"
+  },
+  "phaseTag": "Beta"
 }
