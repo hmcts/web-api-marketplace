@@ -1,0 +1,117 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Submit an API for publication - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "publish" %}
+{% set breadcrumbs = [
+  { text: breadcrumb.home, href: "/" },
+  { text: breadcrumb.publish, href: "/publish" }
+] %}
+
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {# Rendered server-side, so the form reports errors with JavaScript unavailable. #}
+    {% if errors.length %}
+      {% set errorList = [] %}
+      {% for error in errors %}
+        {% set errorList = (errorList.push({ text: error.text, href: "#" + error.name }), errorList) %}
+      {% endfor %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Submit an API for publication</h1>
+
+    <p class="govuk-body">
+      Check your API against the
+      <a class="govuk-link" href="/publish/producer-standards">producer standards</a> before you
+      start. You will be able to review your answers before submitting.
+    </p>
+
+    <form method="post" action="/publish/submit" novalidate>
+
+      {{ govukInput({
+        label: { text: "API name", classes: "govuk-label--m" },
+        hint: { text: "The human-readable name, not the repository slug. For example, Court Schedule." },
+        id: "api-name",
+        name: "api-name",
+        value: answers["api-name"],
+        errorMessage: { text: errorFor["api-name"] } if errorFor["api-name"],
+        autocomplete: "off"
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Owning team", classes: "govuk-label--m" },
+        hint: { text: "The team that builds and runs the API, and will answer access requests." },
+        id: "owning-team",
+        name: "owning-team",
+        value: answers["owning-team"],
+        errorMessage: { text: errorFor["owning-team"] } if errorFor["owning-team"],
+        autocomplete: "organization"
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Team contact email", classes: "govuk-label--m" },
+        hint: { text: "A team inbox that will still be monitored in six months - not a personal address." },
+        id: "contact-email",
+        name: "contact-email",
+        value: answers["contact-email"],
+        errorMessage: { text: errorFor["contact-email"] } if errorFor["contact-email"],
+        type: "email",
+        autocomplete: "email",
+        spellcheck: false
+      }) }}
+
+      {{ govukInput({
+        label: { text: "OpenAPI specification URL", classes: "govuk-label--m" },
+        hint: { text: "The raw GitHub URL of your openapi-spec.yml, on a public HMCTS repository." },
+        id: "spec-url",
+        name: "spec-url",
+        value: answers["spec-url"],
+        errorMessage: { text: errorFor["spec-url"] } if errorFor["spec-url"],
+        autocomplete: "off",
+        spellcheck: false
+      }) }}
+
+      {{ govukRadios({
+        name: "classification",
+        fieldset: {
+          legend: {
+            text: "Highest data classification the API returns",
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        hint: { text: "Secret and Top Secret APIs cannot be listed in the marketplace." },
+        items: classifications,
+        value: answers.classification,
+        errorMessage: { text: errorFor.classification } if errorFor.classification
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "declarations",
+        fieldset: {
+          legend: {
+            text: "Declarations",
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: declarations,
+        values: answers.declarations,
+        errorMessage: { text: errorFor.declarations } if errorFor.declarations
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

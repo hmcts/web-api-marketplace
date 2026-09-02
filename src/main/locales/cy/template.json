@@ -64,7 +64,8 @@
   "breadcrumb": {
     "home": "Home",
     "catalogue": "API catalogue",
-    "getStarted": "Get started"
+    "getStarted": "Get started",
+    "publish": "Cyhoeddi API"
   },
   "phaseTag": "Beta"
 }

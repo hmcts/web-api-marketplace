@@ -61,7 +61,8 @@
   "breadcrumb": {
     "home": "Home",
     "catalogue": "API catalogue",
-    "getStarted": "Get started"
+    "getStarted": "Get started",
+    "publish": "Publish an API"
   },
   "phaseTag": "Beta"
 }
