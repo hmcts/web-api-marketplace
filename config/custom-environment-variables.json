@@ -16,5 +16,8 @@
   },
   "session": {
     "secret": "SESSION_SECRET"
+  },
+  "catalogue": {
+    "url": "CATALOGUE_URL"
   }
 }

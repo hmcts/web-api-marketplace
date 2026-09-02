@@ -1,0 +1,176 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Request API access - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "get-started" %}
+{% set breadcrumbs = [
+  { text: breadcrumb.home, href: "/" },
+  { text: breadcrumb.getStarted, href: "/get-started" }
+] %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {# Rendered server-side, so the form reports errors with JavaScript unavailable. #}
+    {% if errors.length %}
+      {% set errorList = [] %}
+      {% for error in errors %}
+        {% set errorList = (errorList.push({ text: error.text, href: "#" + error.name }), errorList) %}
+      {% endfor %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Request API access</h1>
+
+    <p class="govuk-body">
+      Tell us about your use case and the API you need. The API owner reviews every request.
+    </p>
+
+    <form method="post" action="/get-started/request-api" novalidate>
+
+      <h2 class="govuk-heading-l">Your details</h2>
+
+      {{ govukInput({
+        label: { text: "Full name", classes: "govuk-label--m" },
+        id: "full-name",
+        name: "full-name",
+        value: answers["full-name"],
+        autocomplete: "name",
+        errorMessage: { text: errorFor["full-name"] } if errorFor["full-name"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Organisation", classes: "govuk-label--m" },
+        hint: { text: "For example, HMCTS DTS or Ministry of Justice Digital." },
+        id: "organisation",
+        name: "organisation",
+        value: answers.organisation,
+        autocomplete: "organization",
+        errorMessage: { text: errorFor.organisation } if errorFor.organisation
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Work email address", classes: "govuk-label--m" },
+        id: "email",
+        name: "email",
+        type: "email",
+        value: answers.email,
+        autocomplete: "email",
+        spellcheck: false,
+        errorMessage: { text: errorFor.email } if errorFor.email
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Job title", classes: "govuk-label--m" },
+        hint: { text: "For example, Senior Developer or Technical Architect." },
+        id: "job-title",
+        name: "job-title",
+        value: answers["job-title"],
+        autocomplete: "organization-title",
+        errorMessage: { text: errorFor["job-title"] } if errorFor["job-title"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Phone number (optional)", classes: "govuk-label--m" },
+        hint: { text: "In case we need to contact you urgently about your request." },
+        id: "phone",
+        name: "phone",
+        type: "tel",
+        value: answers.phone,
+        autocomplete: "tel"
+      }) }}
+
+      <h2 class="govuk-heading-l">API details</h2>
+
+      {#
+        Options come from the same live catalogue feed the API catalogue itself lists, so
+        this always offers exactly the APIs actually published, with no separately
+        maintained list to fall out of step. The fetch happens on the server — see
+        services/ApiCatalogue.
+      #}
+      {{ govukSelect({
+        id: "api-name",
+        name: "api-name",
+        label: { text: "Which API do you need access to?", classes: "govuk-label--m" },
+        hint: { text: "Select from the API catalogue." },
+        items: apiOptions,
+        value: answers["api-name"],
+        errorMessage: { text: errorFor["api-name"] } if errorFor["api-name"]
+      }) }}
+
+      {{ govukRadios({
+        name: "environment",
+        fieldset: {
+          legend: { text: "Environment", classes: "govuk-fieldset__legend--m" }
+        },
+        items: environments,
+        value: answers.environment,
+        errorMessage: { text: errorFor.environment } if errorFor.environment
+      }) }}
+
+      {{ govukRadios({
+        name: "call-volume",
+        fieldset: {
+          legend: { text: "Expected call volume", classes: "govuk-fieldset__legend--m" }
+        },
+        items: callVolumes,
+        value: answers["call-volume"],
+        errorMessage: { text: errorFor["call-volume"] } if errorFor["call-volume"]
+      }) }}
+
+      <h2 class="govuk-heading-l">Your use case</h2>
+
+      {{ govukTextarea({
+        id: "use-case",
+        name: "use-case",
+        label: {
+          text: "Describe what you are building and why you need this API",
+          classes: "govuk-label--m"
+        },
+        hint: { text: "Include what data you need, how it will be used, and any relevant project name." },
+        value: answers["use-case"],
+        errorMessage: { text: errorFor["use-case"] } if errorFor["use-case"]
+      }) }}
+
+      {{ govukRadios({
+        name: "oauth",
+        fieldset: {
+          legend: {
+            text: "Can your system implement OAuth 2.0 with JWT bearer tokens?",
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: oauthAnswers,
+        value: answers.oauth,
+        errorMessage: { text: errorFor.oauth } if errorFor.oauth
+      }) }}
+
+      <h2 class="govuk-heading-l">Declaration</h2>
+
+      {{ govukCheckboxes({
+        name: "declarations",
+        fieldset: {
+          legend: { text: "Declarations", classes: "govuk-visually-hidden" }
+        },
+        items: declarations,
+        values: answers.declarations,
+        errorMessage: { text: errorFor.declarations } if errorFor.declarations
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

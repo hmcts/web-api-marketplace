@@ -34,5 +34,8 @@
   "session": {
     "secret": "",
     "maxAgeMinutes": 20
+  },
+  "catalogue": {
+    "url": "https://hmcts.github.io/amp-catalog/apis.json"
   }
 }

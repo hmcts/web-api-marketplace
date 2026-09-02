@@ -1,6 +1,5 @@
-import { Response } from 'express';
-
 import BackendCheckController from '../../../main/controllers/BackendCheckController';
+import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/BackendHealth', () => ({
   backendUrl: 'http://backend:8080',
@@ -9,19 +8,6 @@ jest.mock('../../../main/services/BackendHealth', () => ({
 }));
 
 const { checkBackendHealth } = require('../../../main/services/BackendHealth');
-
-function mockResponse(): Response & { statusCode?: number; body?: unknown } {
-  const res: Record<string, unknown> = {};
-  res.status = jest.fn().mockImplementation((code: number) => {
-    res.statusCode = code;
-    return res;
-  });
-  res.json = jest.fn().mockImplementation((body: unknown) => {
-    res.body = body;
-    return res;
-  });
-  return res as unknown as Response & { statusCode?: number; body?: unknown };
-}
 
 describe('BackendCheckController', () => {
   test('a_reachable_backend_should_return_200_with_the_greeting_and_url', async () => {

@@ -1,7 +1,6 @@
-import { Response } from 'express';
-
 import SignInController from '../../../main/controllers/SignInController';
 import { mockRequest } from '../mocks/mockRequest';
+import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/SignIn', () => ({ signIn: jest.fn() }));
 
@@ -12,27 +11,6 @@ const content = {
   errorMissing: 'Enter your email address and password',
   errorRejected: 'Incorrect email or password',
 };
-
-function mockResponse(): Response & {
-  statusCode?: number;
-  view?: string;
-  data?: Record<string, unknown>;
-  redirected?: string;
-} {
-  const res: Record<string, unknown> = {};
-  res.status = jest.fn().mockImplementation((code: number) => {
-    res.statusCode = code;
-    return res;
-  });
-  res.render = jest.fn().mockImplementation((view: string, data: Record<string, unknown>) => {
-    res.view = view;
-    res.data = data;
-  });
-  res.redirect = jest.fn().mockImplementation((to: string) => {
-    res.redirected = to;
-  });
-  return res as never;
-}
 
 describe('SignInController', () => {
   beforeEach(() => (signIn as jest.Mock).mockReset());
