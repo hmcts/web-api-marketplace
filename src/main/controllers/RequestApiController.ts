@@ -1,0 +1,112 @@
+import { GET, POST, route } from 'awilix-express';
+import { Request, Response } from 'express';
+
+import {
+  AccessRequestAnswers,
+  CALL_VOLUMES,
+  DECLARATIONS,
+  ENVIRONMENTS,
+  FieldError,
+  OAUTH_ANSWERS,
+  submitAccessRequest,
+  summaryRows,
+  toAnswers,
+  validate,
+} from '../services/AccessRequest';
+import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
+
+/**
+ * The "Request API access" journey: form, check your answers, confirmation.
+ *
+ * The prototype carries answers between the three pages in sessionStorage. There is no
+ * session store here, so each page posts the answers on to the next as hidden fields.
+ * That keeps the journey working with JavaScript unavailable and leaves no server state
+ * to expire, at the cost of the answers travelling with each request.
+ */
+@route('/get-started/request-api')
+export default class RequestApiController {
+  @GET()
+  public async get(req: Request, res: Response): Promise<void> {
+    res.render('get-started/request-api/index', await this.formData(toAnswers({}), []));
+  }
+
+  @POST()
+  public async post(req: Request, res: Response): Promise<void> {
+    const apis = await getCatalogueApis();
+    const answers = toAnswers(req.body as Record<string, unknown>);
+    const errors = validate(
+      answers,
+      apis.map(api => api.name)
+    );
+
+    if (errors.length) {
+      res.status(400).render('get-started/request-api/index', await this.formData(answers, errors, apis));
+      return;
+    }
+
+    res.render('get-started/request-api/check-answers', {
+      answers,
+      rows: summaryRows(answers, this.titleOf(apis, answers['api-name'])),
+    });
+  }
+
+  @route('/check-answers')
+  @GET()
+  public checkAnswers(req: Request, res: Response): void {
+    // Reached directly, with no answers to check — send the user back to fill the form in.
+    res.redirect('/get-started/request-api');
+  }
+
+  @route('/check-answers')
+  @POST()
+  public async submit(req: Request, res: Response): Promise<void> {
+    const apis = await getCatalogueApis();
+    const answers = toAnswers(req.body as Record<string, unknown>);
+    const errors = validate(
+      answers,
+      apis.map(api => api.name)
+    );
+
+    // The hidden fields came from a page we rendered, so a failure here means they were
+    // tampered with or the catalogue changed underneath. Either way, back to the form.
+    if (errors.length) {
+      res.status(400).render('get-started/request-api/index', await this.formData(answers, errors, apis));
+      return;
+    }
+
+    const reference = await submitAccessRequest(answers);
+
+    res.render('get-started/request-api/confirmation', { reference });
+  }
+
+  @route('/confirmation')
+  @GET()
+  public confirmation(req: Request, res: Response): void {
+    res.redirect('/get-started/request-api');
+  }
+
+  private async formData(
+    answers: AccessRequestAnswers,
+    errors: FieldError[],
+    apis?: CatalogueApi[]
+  ): Promise<Record<string, unknown>> {
+    const catalogue = apis ?? (await getCatalogueApis());
+
+    return {
+      answers,
+      errors,
+      errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
+      apiOptions: [{ value: '', text: 'Choose an API' }].concat(
+        catalogue.map(api => ({ value: api.name, text: api.title }))
+      ),
+      environments: ENVIRONMENTS,
+      callVolumes: CALL_VOLUMES,
+      oauthAnswers: OAUTH_ANSWERS,
+      declarations: DECLARATIONS,
+    };
+  }
+
+  private titleOf(apis: CatalogueApi[], name: string): string {
+    return apis.find(api => api.name === name)?.title ?? name;
+  }
+}

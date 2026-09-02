@@ -1,0 +1,59 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Check your answers - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "get-started" %}
+{% set breadcrumbs = [
+  { text: breadcrumb.home, href: "/" },
+  { text: breadcrumb.getStarted, href: "/get-started" },
+  { text: "Request API access", href: "/get-started/request-api" }
+] %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Check your answers before submitting</h1>
+
+    {% set summaryRows = [] %}
+    {% for row in rows %}
+      {% set summaryRows = (summaryRows.push({
+        key: { text: row.key },
+        value: { text: row.value }
+      }), summaryRows) %}
+    {% endfor %}
+
+    {{ govukSummaryList({ rows: summaryRows }) }}
+
+    {#
+      There is no session holding the answers, so they travel with the request. Posting
+      them straight back means the journey survives a refresh and works with JavaScript
+      unavailable; they are validated again on the way through.
+    #}
+    <form method="post" action="/get-started/request-api/check-answers" id="access-request-submit-form">
+
+      {% for name, value in answers %}
+        {% if value is string %}
+          <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% else %}
+          {% for item in value %}
+            <input type="hidden" name="{{ name }}" value="{{ item }}">
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+
+      {{ govukButton({ text: "Accept and submit", attributes: { id: "request-submit" } }) }}
+
+    </form>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/get-started/request-api">Change your answers</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
