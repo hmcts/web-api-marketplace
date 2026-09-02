@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Request } from 'express';
 
 import RequestApiController from '../../../main/controllers/RequestApiController';
 import { DECLARATIONS } from '../../../main/services/AccessRequest';
+import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/ApiCatalogue', () => ({ getCatalogueApis: jest.fn() }));
 
@@ -22,27 +23,6 @@ const completeBody = {
   oauth: 'yes',
   declarations: DECLARATIONS.map(declaration => declaration.value),
 };
-
-function mockResponse(): Response & {
-  statusCode?: number;
-  view?: string;
-  data?: Record<string, never>;
-  redirected?: string;
-} {
-  const res: Record<string, unknown> = {};
-  res.status = jest.fn().mockImplementation((code: number) => {
-    res.statusCode = code;
-    return res;
-  });
-  res.render = jest.fn().mockImplementation((view: string, data: Record<string, unknown>) => {
-    res.view = view;
-    res.data = data;
-  });
-  res.redirect = jest.fn().mockImplementation((to: string) => {
-    res.redirected = to;
-  });
-  return res as never;
-}
 
 const mockRequest = (body: Record<string, unknown> = {}) => ({ body }) as Request;
 
