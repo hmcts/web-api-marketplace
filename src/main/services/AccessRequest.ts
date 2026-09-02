@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { Logger } from '../modules/logging';
 
 const logger = Logger.getLogger('access-request');
@@ -90,7 +92,9 @@ export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = [
 ];
 
 export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnswers {
-  const text = (name: string) => String(body?.[name] ?? '').trim();
+  // Only strings count. A JSON body can carry an object or an array under any of these
+  // names, and String()-ing one would produce "[object Object]" and pass validation.
+  const text = (name: string) => (typeof body?.[name] === 'string' ? (body[name] as string).trim() : '');
 
   return {
     'full-name': text('full-name'),
@@ -124,7 +128,7 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
 
   if (!answers.email) {
     errors.push({ name: 'email', text: 'Enter your work email address' });
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email)) {
+  } else if (!looksLikeAnEmailAddress(answers.email)) {
     errors.push({ name: 'email', text: 'Enter a work email address in the correct format, like name@example.gov.uk' });
   }
 
@@ -186,11 +190,30 @@ export async function submitAccessRequest(answers: AccessRequestAnswers): Promis
   return reference;
 }
 
-function toList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map(item => String(item));
+/**
+ * Deliberately not a regular expression: the obvious one backtracks, and no pattern
+ * decides whether an address is real anyway. This rejects the shapes a person could only
+ * have typed by mistake, and delivery decides the rest.
+ */
+function looksLikeAnEmailAddress(value: string): boolean {
+  const parts = value.split('@');
+
+  if (parts.length !== 2) {
+    return false;
   }
-  return value === undefined || value === null || value === '' ? [] : [String(value)];
+
+  const [local, domain] = parts;
+
+  return local.length > 0 && domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
+}
+
+function toList(value: unknown): string[] {
+  // Checkboxes arrive as a string when one is ticked and an array when several are, and
+  // only string entries are meaningful — anything else is not an answer this form offered.
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  return typeof value === 'string' && value !== '' ? [value] : [];
 }
 
 function requireChoice(errors: FieldError[], name: string, value: string, choices: Choice[], text: string): void {
@@ -203,7 +226,10 @@ function labelFor(choices: Choice[], value: string): string {
   return choices.find(choice => choice.value === value)?.text ?? value;
 }
 
+/**
+ * Unguessable rather than merely unique: the reference is quoted back to the user and
+ * will become the key their request is looked up by, so Math.random() is not good enough.
+ */
 function newReference(): string {
-  const suffix = Math.random().toString(36).toUpperCase().slice(2, 8);
-  return `AMP-${suffix}`;
+  return `AMP-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }

@@ -80,6 +80,39 @@ describe('AccessRequest', () => {
     expect(toAnswers({ declarations: 'in-scope' }).declarations).toEqual(['in-scope']);
   });
 
+  test('an_object_sent_in_place_of_a_text_answer_should_be_read_as_empty', () => {
+    // A JSON body can carry an object here; String()-ing one would pass validation as
+    // the literal "[object Object]".
+    const answers = toAnswers({ ...completeBody, 'full-name': { $ne: null } });
+
+    expect(answers['full-name']).toBe('');
+    expect(validate(answers, apiNames)).toEqual([{ name: 'full-name', text: 'Enter your full name' }]);
+  });
+
+  test('a_non_string_declaration_should_be_discarded_rather_than_stringified', () => {
+    expect(toAnswers({ declarations: [{ toString: () => 'in-scope' }] }).declarations).toEqual([]);
+  });
+
+  test.each([
+    ['no at sign', 'joe.example.gov.uk'],
+    ['two at signs', 'joe@@justice.gov.uk'],
+    ['nothing before the at sign', '@justice.gov.uk'],
+    ['no dot in the domain', 'joe@justice'],
+    ['a domain starting with a dot', 'joe@.gov.uk'],
+    ['a domain ending with a dot', 'joe@justice.'],
+  ])('an_address_with_%s_should_be_rejected', (_description: string, email: string) => {
+    const errors = validate(toAnswers({ ...completeBody, email }), apiNames);
+
+    expect(errors.map(error => error.name)).toEqual(['email']);
+  });
+
+  test.each([['joe.bloggs@justice.gov.uk'], ['j@a.b'], ["o'brien+tag@sub.domain.gov.uk"]])(
+    'a_valid_address_%s_should_be_accepted',
+    (email: string) => {
+      expect(validate(toAnswers({ ...completeBody, email }), apiNames)).toEqual([]);
+    }
+  );
+
   test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
     expect(toAnswers(completeBody)['full-name']).toBe('Joe Bloggs');
   });
@@ -103,6 +136,6 @@ describe('AccessRequest', () => {
   test('submitting_a_request_should_return_a_reference', async () => {
     const reference = await submitAccessRequest(toAnswers(completeBody));
 
-    expect(reference).toMatch(/^AMP-[0-9A-Z]{1,6}$/);
+    expect(reference).toMatch(/^AMP-[0-9A-F]{8}$/);
   });
 });
