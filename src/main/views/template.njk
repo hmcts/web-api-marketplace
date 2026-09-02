@@ -101,7 +101,8 @@
     containerClasses: "govuk-width-container"
   }) }}
 
-  {# Pages set `section` to highlight the current navigation item. #}
+  {# Pages set `section` to highlight the current navigation item. The last item is the
+     signed-in state: `user` comes from the session, via res.locals in app.ts. #}
   {{ govukServiceNavigation({
     serviceName: serviceName | safe,
     serviceUrl: (globals.basePath if globals.basePath) + "/",
@@ -111,7 +112,11 @@
       { href: "/documentation", text: nav.documentation, active: section == "documentation" },
       { href: "/publish",       text: nav.publish,       active: section == "publish" },
       { href: "/help",          text: nav.help,          active: section == "help" },
-      { href: "/sign-in",       text: nav.signIn,        active: section == "account" }
+      {
+        href: "/account" if user else "/sign-in",
+        text: nav.account if user else nav.signIn,
+        active: section == "account"
+      }
     ] if nav else []
   }) }}
 

@@ -58,7 +58,8 @@
     "documentation": "Documentation",
     "publish": "Publish an API",
     "help": "Help and support",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "account": "Eich cyfrif"
   },
   "breadcrumb": {
     "home": "Home",

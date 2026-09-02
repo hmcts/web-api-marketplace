@@ -17,6 +17,7 @@ import { I18next } from './modules/i18next';
 import { Logger } from './modules/logging';
 import { Nunjucks } from './modules/nunjucks';
 import { PropertiesVolume } from './modules/properties-volume';
+import { Session } from './modules/session';
 
 const env = process.env.NODE_ENV || 'development';
 const developmentMode = env === 'development';
@@ -47,10 +48,16 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 app.set('trust proxy', 1);
 
-// No server-side session: nothing in this app reads req.session, and an in-memory
-// store would not survive the multi-replica deployment. Add express-session with a
-// shared store (Redis) if a journey ever needs one.
 app.use(cookieParser());
+new Session(config.get('session')).enableFor(app);
+
+// Every page's navigation needs to know whether anyone is signed in, so the user goes on
+// res.locals rather than being passed by each controller that happens to render.
+app.use(((req: AppRequest, res: express.Response, next: express.NextFunction) => {
+  res.locals.user = req.session?.user;
+  next();
+}) as express.RequestHandler);
+
 new I18next().enableFor(app);
 
 // Registered before the controllers: a controller that renders ends the middleware
