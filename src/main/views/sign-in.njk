@@ -1,0 +1,55 @@
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% extends "template.njk" %}
+
+{% set section = "account" %}
+{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {# Rendered server-side, so the form reports errors with JavaScript unavailable. #}
+      {% if error %}
+        {{ govukErrorSummary({
+          titleText: errorSummaryTitle,
+          errorList: [{ text: error, href: "#email" }]
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-xl">{{ heading }}</h1>
+
+      <p class="govuk-body">{{ introHtml | safe }}</p>
+
+      <form method="post" action="/sign-in" novalidate>
+
+        {{ govukInput({
+          label: { text: emailLabel, classes: "govuk-label--m" },
+          id: "email",
+          name: "email",
+          type: "email",
+          value: email,
+          autocomplete: "email",
+          spellcheck: false,
+          errorMessage: { text: error } if error
+        }) }}
+
+        {{ govukInput({
+          label: { text: passwordLabel, classes: "govuk-label--m" },
+          id: "password",
+          name: "password",
+          type: "password",
+          autocomplete: "current-password"
+        }) }}
+
+        {{ govukButton({ text: submitButton, attributes: { id: "sign-in-submit" } }) }}
+
+      </form>
+
+    </div>
+  </div>
+
+{% endblock %}

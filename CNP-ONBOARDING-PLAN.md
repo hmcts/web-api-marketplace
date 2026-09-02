@@ -159,64 +159,52 @@ No certificate work either — Microsoft-managed certificates are mandatory on F
 are generated from the config. Only if a domain fails to reach `deployed` do you add a
 validation TXT record in `azure-public-dns`.
 
-### AAT — 2 PRs
+### All environments — ⏳ two PRs raised, awaiting PlatOps
 
-The AAT ingress already equals the required custom domain, so nothing in flux changes.
+Both are PlatOps-owned, so they need real review — they cannot be self-merged.
+**The DNS PR must merge first:** Front Door validates domain ownership through the DNS
+record, and the managed certificate will not deploy without it.
 
-| #   | Repo                       | File                           | Change                                                     |
-| --- | -------------------------- | ------------------------------ | ---------------------------------------------------------- |
-| 5.1 | `azure-public-dns`         | `environments/staging/aat.yml` | CNAME `apim-marketplace-web` → the AAT Front Door endpoint |
-| 5.2 | `azure-platform-terraform` | `environments/stg/stg.tfvars`  | Front Door entry (note: directory is `stg`, not `aat`)     |
+| #   | PR                                  | Change                                                              | Status                 |
+| --- | ----------------------------------- | ------------------------------------------------------------------- | ---------------------- |
+| 5.1 | hmcts/azure-public-dns#2478         | CNAMEs for demo, AAT and prod                                       | ⏳ raised, merge first |
+| 5.2 | hmcts/azure-platform-terraform#3114 | Front Door entries for demo, AAT, prod + WAF exclusions on all four | ⏳ raised              |
 
-```hcl
-{
-  name              = "apim-marketplace-web"
-  custom_domain     = "apim-marketplace-web.aat.platform.hmcts.net"
-  dns_zone_name     = "aat.platform.hmcts.net"
-  backend_domain    = ["firewall-prod-int-palo-cftaat.uksouth.cloudapp.azure.com"]
-  disabled_rules    = {}
-  global_exclusions = []
-},
-```
+Sandbox already had its DNS record and Front Door entry (raised by Alex Bance); 5.2 adds the
+missing WAF exclusions to it.
 
-Copy the shape of `expressjs-monorepo-template-web` in the same file — the closest analogue,
-a Node GOV.UK frontend.
+Per-environment values, all following the dominant convention in each file. `custom_domain`
+must equal the flux `ingressHost` exactly — Front Door routes through the firewall to the
+App Gateway, which dispatches on host header.
 
-### Sandbox — ✅ done, except the WAF exclusion
+| Env  | custom_domain                                     | backend_domain       | certificate                           |
+| ---- | ------------------------------------------------- | -------------------- | ------------------------------------- |
+| sbox | `apim-marketplace-web.sandbox.platform.hmcts.net` | `…palo-sbox`         | `wildcard-sandbox-platform-hmcts-net` |
+| demo | `apim-marketplace-web.demo.platform.hmcts.net`    | `…cftdemoappgateway` | `wildcard-demo-platform-hmcts-net`    |
+| stg  | `apim-marketplace-web.aat.platform.hmcts.net`     | `…cftaat`            | `wildcard-aat-platform-hmcts-net`     |
+| prod | `apim-marketplace-web.platform.hmcts.net`         | `…cftprod`           | `wildcard-platform-hmcts-net`         |
 
-All three landed (the DNS and Front Door PRs were raised by Alex Bance). The site is
-publicly reachable at `https://apim-marketplace-web.sandbox.platform.hmcts.net` with no VPN
-— but see the WAF section below, which still blocks any user who answers the cookie banner.
+Note the AAT directory is `environments/stg/`, not `aat`.
 
-| #      | Repo                       | File                                       | Change                                                                                                                                          |
-| ------ | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5.3 ✅ | `cnp-flux-config`          | `apps/apim/apim-marketplace-web/sbox.yaml` | `ingressHost: apim-marketplace-web.sandbox.platform.hmcts.net` — replacing `apim-marketplace-web-sandbox.service.core-compute-sandbox.internal` |
-| 5.4 ✅ | `azure-public-dns`         | `environments/sandbox/sandbox.yml`         | CNAME under `cname:`                                                                                                                            |
-| 5.5 ✅ | `azure-platform-terraform` | `environments/sbox/sbox.tfvars`            | Front Door entry                                                                                                                                |
+**Production is deliberately ahead of the deployment.** There is no `apim` overlay for prod
+in `cnp-flux-config`, so nothing runs there and both records are inert until it does.
+Including them now means enabling production later is a flux change alone, rather than
+another round of DNS and Front Door review.
 
-```yaml
-- name: 'apim-marketplace-web'
-  ttl: 300
-  record: 'hmcts-sbox-gufqadefbjgbhkhv.z01.azurefd.net'
-```
+### Sandbox — ✅ already exposed
 
-```hcl
-{
-  product             = "apim"
-  name                = "apim-marketplace-web"
-  custom_domain       = "apim-marketplace-web.sandbox.platform.hmcts.net"
-  mode                = "Prevention"
-  dns_zone_name       = "sandbox.platform.hmcts.net"
-  backend_domain      = ["firewall-sbox-int-palo-sbox.uksouth.cloudapp.azure.com"]
-  cipher_suite_policy = "TLS12_2023"
-},
-```
+Sandbox went public first, raised by Alex Bance: the CNAME in
+`azure-public-dns environments/sandbox/sandbox.yml` and the Front Door entry in
+`azure-platform-terraform environments/sbox/sbox.tfvars`, plus a flux change moving the
+`sbox.yaml` ingressHost from the older `.internal` form onto
+`apim-marketplace-web.sandbox.platform.hmcts.net`.
 
-Result: `https://apim-marketplace-web.sandbox.platform.hmcts.net`, no VPN.
+Live at `https://apim-marketplace-web.sandbox.platform.hmcts.net`, no VPN — but see the WAF
+section below: it still 403s any user who answers the cookie banner, which 5.2 fixes.
 
-The entry as merged uses `certificate_name = "wildcard-sandbox-platform-hmcts-net"` and
-`shutter_app = true`, and sets no `mode` — the module default turns out to be Prevention,
-which is what causes the WAF problem below.
+That entry sets no `mode`, so the module default applies — and the default turns out to be
+Prevention, which is why the WAF is blocking at all. Worth asking PlatOps why, when `plum`
+in the same file also sets no `mode` and is unaffected.
 
 ### The WAF blocks the cookie-consent cookie ⚠️
 
@@ -247,44 +235,39 @@ A textbook false positive.
 Nothing appears in the pod logs — the request never reaches the service. `curl` without
 cookies succeeds, which makes it easy to misdiagnose as a browser cache problem.
 
-**Fix:** add a `global_exclusions` entry naming the cookie, in
-`azure-platform-terraform` → `environments/sbox/sbox.tfvars` (and `stg/stg.tfvars` for AAT):
+**Fix:** `global_exclusions` on the Front Door entry, naming each cookie. Raised as
+hmcts/azure-platform-terraform#3114 for all four environments.
 
-```hcl
-global_exclusions = [
-  {
-    match_variable = "RequestCookieNames"
-    operator       = "Equals"
-    selector       = "apim-cookie-preferences"
-  },
-  {
-    match_variable = "RequestCookieNames"
-    operator       = "Equals"
-    selector       = "i18next"
-  },
-]
+Thirteen cookies are excluded, not two. `connect.sid` and `_csrf` are listed ahead of adding
+sessions and CSRF protection, and the Google Analytics and Dynatrace cookies ahead of
+enabling those tags — across the environment tfvars those names are already excluded by
+dozens of services (`connect.sid` by 58, `_csrf` by 16), so each would hit the same 403. An
+exclusion for a cookie that is never set does nothing; the alternative is rediscovering this
+once per cookie.
+
+```
+apim-cookie-preferences  i18next  connect.sid  _csrf
+_ga  _gid  _gat
+dtCookie  dtLatC  dtPC  dtSa  rxVisitor  rxvt
 ```
 
 This is the house pattern — FACT excludes `fact-cookie-preferences`, and
 `nfdiv-cookie-preferences`, `cmc-cookie-preferences` and `money-claims-cookie-preferences`
-all appear the same way. Add the Dynatrace (`dtCookie`, `rxVisitor`, …) and Google Analytics
-(`_ga`, `_gid`) cookies too if those tags are ever configured; FACT excludes them.
+all appear the same way.
 
-`azure-platform-terraform` is PlatOps-owned, so raise it in `#platops-code-review` and quote
-the block reference in `#platops-help` — that is how they identify which rule fired.
+> **The selector must match the cookie name exactly.** It is set in
+> `src/main/bundles/cookie-preferences.ts` and shown to users in `views/cookies.njk`.
+> Renaming it without a matching PlatOps PR silently restores the outage.
 
 > Worth asking why this service's Front Door entry runs WAF in Prevention while others in
 > the same file (`plum`) set no `mode` at all and are unaffected.
 
-### Order and review
+### Beyond platform.hmcts.net
 
-Public DNS merges before the Front Door PR — Front Door validates domain ownership through
-the DNS record. `azure-public-dns` and `azure-platform-terraform` are PlatOps-owned, so
-raise them in `#platops-code-review`; the flux change you can self-merge.
-
-Going fully public on a `service.gov.uk` domain is a separate GDS process, plus the Shutter
-and Operational Acceptance Testing pages in path-to-live. Neither is needed for an internal
-demo.
+These hostnames are on `platform.hmcts.net`, which is publicly resolvable but is not a
+service domain. Going live on a `service.gov.uk` address is a separate GDS process, plus the
+Shutter and Operational Acceptance Testing pages in path-to-live. Neither is needed for an
+internal demo or for the work above.
 
 ---
 

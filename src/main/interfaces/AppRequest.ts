@@ -11,6 +11,7 @@ export interface AppRequest extends Request {
       error: object;
       accessibilityStatement: object;
       documentation: object;
+      signIn: object;
     };
   };
   lng?: string;
