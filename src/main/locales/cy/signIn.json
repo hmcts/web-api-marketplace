@@ -1,0 +1,11 @@
+{
+  "pageTitle": "Sign in - HMCTS API Marketplace - GOV.UK",
+  "heading": "Sign in",
+  "introHtml": "If you do not already have an account, <a class=\"govuk-link\" href=\"/register\">create a developer account</a>.",
+  "emailLabel": "Email address",
+  "passwordLabel": "Password",
+  "submitButton": "Sign in",
+  "errorSummaryTitle": "There is a problem",
+  "errorMissing": "Enter your email address and password",
+  "errorRejected": "Incorrect email or password"
+}
