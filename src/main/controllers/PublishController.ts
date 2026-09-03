@@ -5,11 +5,13 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { requireSignIn } from '../modules/session';
 import {
   PublicationRequestAnswers,
+  Requester,
   publicationSummaryRows,
   submitPublicationRequest,
   toPublicationAnswers,
   validatePublication,
 } from '../services/PublicationRequest';
+import { SignedInUser } from '../services/SignIn';
 import { FieldError } from '../services/answers';
 
 /**
@@ -71,7 +73,19 @@ export default class PublishController {
       return;
     }
 
-    res.render('publish/confirmation', { reference: await submitPublicationRequest(answers) });
+    const result = await submitPublicationRequest(answers, this.requester(req));
+
+    if (!result.ok) {
+      // The answers are still on the page, so the user can try again without retyping.
+      res.status(502).render('publish/check-answers', {
+        answers,
+        rows: publicationSummaryRows(answers),
+        error: 'Your submission could not be sent. Try again in a few minutes.',
+      });
+      return;
+    }
+
+    res.render('publish/confirmation', { reference: result.reference });
   }
 
   @route('/confirmation')
@@ -81,6 +95,22 @@ export default class PublishController {
       return;
     }
     res.redirect('/publish');
+  }
+
+  /**
+   * Read from the session, never from the body. The check-answers page posts the answers
+   * on as hidden fields, so anything taken from the body there could be edited — the
+   * requester has to come from the account that is actually signed in.
+   */
+  private requester(req: AppRequest): Requester {
+    const user = req.session.user as SignedInUser;
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      orgName: user.orgName,
+    };
   }
 
   private formData(answers: PublicationRequestAnswers, errors: FieldError[]): Record<string, unknown> {

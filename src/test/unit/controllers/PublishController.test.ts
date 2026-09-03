@@ -1,3 +1,8 @@
+jest.mock('../../../main/services/PublicationRequest', () => ({
+  ...jest.requireActual('../../../main/services/PublicationRequest'),
+  submitPublicationRequest: jest.fn(),
+}));
+
 import PublishController from '../../../main/controllers/PublishController';
 import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
@@ -9,7 +14,14 @@ const completeBody = {
   'spec-url': 'https://raw.githubusercontent.com/hmcts/api-cp-crime-slc/main/openapi-spec.yml',
 };
 
+const { submitPublicationRequest } = require('../../../main/services/PublicationRequest');
+
 describe('PublishController', () => {
+  beforeEach(() => {
+    (submitPublicationRequest as jest.Mock).mockReset();
+    (submitPublicationRequest as jest.Mock).mockResolvedValue({ ok: true, reference: 'e6a1c0de-0000' });
+  });
+
   test('getting_the_page_should_render_the_form', () => {
     const res = mockResponse();
 
@@ -51,7 +63,7 @@ describe('PublishController', () => {
     await new PublishController().submit(signedIn(completeBody), res);
 
     expect(res.view).toBe('publish/confirmation');
-    expect(res.data?.reference).toMatch(/^AMP-/);
+    expect(res.data?.reference).toBe('e6a1c0de-0000');
   });
 
   test('submitting_tampered_answers_should_return_400_rather_than_a_confirmation', async () => {
@@ -80,4 +92,26 @@ describe('PublishController', () => {
   });
 
   describeSignInGuard(() => new PublishController(), completeBody);
+
+  test('a_backend_failure_should_keep_the_answers_and_say_so_rather_than_confirm', async () => {
+    (submitPublicationRequest as jest.Mock).mockResolvedValue({ ok: false });
+    const res = mockResponse();
+
+    await new PublishController().submit(signedIn(completeBody), res);
+
+    expect(res.view).toBe('publish/check-answers');
+    expect(res.statusCode).toBe(502);
+    expect(res.data?.error).toContain('could not be sent');
+    expect(res.data?.answers).toBeDefined();
+  });
+
+  test('submitting_should_pass_the_signed_in_user_to_the_backend', async () => {
+    const res = mockResponse();
+
+    await new PublishController().submit(signedIn(completeBody), res);
+
+    const [, requester] = (submitPublicationRequest as jest.Mock).mock.calls[0];
+    expect(requester.id).toBe(7);
+    expect(requester.email).toBe('joe@example.com');
+  });
 });
