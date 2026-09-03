@@ -4563,6 +4563,59 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@redis/bloom@npm:6.2.1":
+  version: 6.2.1
+  resolution: "@redis/bloom@npm:6.2.1"
+  peerDependencies:
+    "@redis/client": ^6.2.1
+  checksum: 10/c99949d089147934d9247a6903e83c1a656693cfa24db00e2c61e6caf5d9c7803df4a1d969514f02bee0b75bbb5bc2dbf14b00a973ff16503b2cb2bb22ba0683
+  languageName: node
+  linkType: hard
+
+"@redis/client@npm:6.2.1":
+  version: 6.2.1
+  resolution: "@redis/client@npm:6.2.1"
+  dependencies:
+    cluster-key-slot: "npm:1.1.2"
+  peerDependencies:
+    "@node-rs/xxhash": ^1.1.0
+    "@opentelemetry/api": ">=1 <2"
+  peerDependenciesMeta:
+    "@node-rs/xxhash":
+      optional: true
+    "@opentelemetry/api":
+      optional: true
+  checksum: 10/ebee48006a32cf3403a5bab50d8342b868de51bfddea398dfde0566a6f63d6569f7914777e7306499eb9f4ffb7c4b6dd2f24657fc77a68dc82e4efa705ea29b4
+  languageName: node
+  linkType: hard
+
+"@redis/json@npm:6.2.1":
+  version: 6.2.1
+  resolution: "@redis/json@npm:6.2.1"
+  peerDependencies:
+    "@redis/client": ^6.2.1
+  checksum: 10/522bc6a750d9083944996944469f4d2111a0c87fafc64ad5d353fd7cd7b70202aec8eb7dec2b1ea7c8a100def242bd7d2d26b36c0e91d3fc2d9f98381e20a6e2
+  languageName: node
+  linkType: hard
+
+"@redis/search@npm:6.2.1":
+  version: 6.2.1
+  resolution: "@redis/search@npm:6.2.1"
+  peerDependencies:
+    "@redis/client": ^6.2.1
+  checksum: 10/1460dea8c7ab73e4f2a5c35a239b4ed80f31df01904e7eeb8942fe790120724accd7017fb02d505b754f2c6ac44ed6fb70f64373c1e11dae596f79a7c02f7bee
+  languageName: node
+  linkType: hard
+
+"@redis/time-series@npm:6.2.1":
+  version: 6.2.1
+  resolution: "@redis/time-series@npm:6.2.1"
+  peerDependencies:
+    "@redis/client": ^6.2.1
+  checksum: 10/c099ecfd748879d40d00db88a662a8ba723fcfcd7e9c4bce97977336e78df26ea1045ac0dd43c8548cb7469f3329b5501cf934b6e2d182680bec7b61d43cbd2c
+  languageName: node
+  linkType: hard
+
 "@rtsao/scc@npm:^1.1.0":
   version: 1.1.0
   resolution: "@rtsao/scc@npm:1.1.0"
@@ -7198,6 +7251,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cluster-key-slot@npm:1.1.2":
+  version: 1.1.2
+  resolution: "cluster-key-slot@npm:1.1.2"
+  checksum: 10/516ed8b5e1a14d9c3a9c96c72ef6de2d70dfcdbaa0ec3a90bc7b9216c5457e39c09a5775750c272369070308542e671146120153062ab5f2f481bed5de2c925f
+  languageName: node
+  linkType: hard
+
 "co@npm:^4.6.0":
   version: 4.6.0
   resolution: "co@npm:4.6.0"
@@ -7353,6 +7413,16 @@ __metadata:
     graceful-fs: "npm:^4.2.11"
     xdg-basedir: "npm:^5.1.0"
   checksum: 10/0b5958a3e7a9eebddfea64564e49bb60d3948c9a6b4d160bddf00862316e16b4566fe1f23962cdd28cd5c05ee93776324667dfa6530d74fb92dd7e8c54719eae
+  languageName: node
+  linkType: hard
+
+"connect-redis@npm:^10.0.0":
+  version: 10.0.0
+  resolution: "connect-redis@npm:10.0.0"
+  peerDependencies:
+    express-session: ">=1"
+    redis: ">=5"
+  checksum: 10/6263130357f9fb29e612e181137bce3493d7a57a2f25481cb737d62020401007d934da99e4ccdded7b4401ba8431d5df38a9abd4356342d498afc704b12c0991
   languageName: node
   linkType: hard
 
@@ -13441,6 +13511,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"redis@npm:^6.2.1":
+  version: 6.2.1
+  resolution: "redis@npm:6.2.1"
+  dependencies:
+    "@redis/bloom": "npm:6.2.1"
+    "@redis/client": "npm:6.2.1"
+    "@redis/json": "npm:6.2.1"
+    "@redis/search": "npm:6.2.1"
+    "@redis/time-series": "npm:6.2.1"
+  checksum: 10/b1a5afa76a0268b6f7636929f5366a8ee7d570d98f54471734ed9a4a1683216f2ea36a9a213b16154a5b90f2c018181cefc03cca77310bfc6d9330656019733e
+  languageName: node
+  linkType: hard
+
 "reflect.getprototypeof@npm:^1.0.6, reflect.getprototypeof@npm:^1.0.9":
   version: 1.0.10
   resolution: "reflect.getprototypeof@npm:1.0.10"
@@ -15627,6 +15710,7 @@ __metadata:
     chai: "npm:6.2.2"
     chokidar: "npm:5.0.0"
     config: "npm:4.4.2"
+    connect-redis: "npm:^10.0.0"
     cookie-parser: "npm:1.4.7"
     copy-webpack-plugin: "npm:14.0.0"
     css-loader: "npm:7.1.5"
@@ -15662,6 +15746,7 @@ __metadata:
     playwright-core: "npm:1.61.1"
     playwright-lighthouse: "npm:^4.0.0"
     prettier: "npm:3.9.6"
+    redis: "npm:^6.2.1"
     sass: "npm:1.102.0"
     sass-loader: "npm:16.0.8"
     sinon: "npm:22.0.0"

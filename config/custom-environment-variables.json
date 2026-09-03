@@ -15,7 +15,16 @@
     "path": "API_PATH"
   },
   "session": {
-    "secret": "SESSION_SECRET"
+    "secret": "SESSION_SECRET",
+    "redis": {
+      "host": "REDIS_HOST",
+      "port": "REDIS_PORT",
+      "key": "REDIS_KEY",
+      "tls": {
+        "__name": "REDIS_TLS",
+        "__format": "json"
+      }
+    }
   },
   "catalogue": {
     "url": "CATALOGUE_URL"
