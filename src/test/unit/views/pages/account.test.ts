@@ -37,32 +37,38 @@ describe('Account page', () => {
     expect(html).toContain('<form method="post" action="/sign-out">');
   });
 
-  test('submitted_requests_should_be_listed_in_a_table', () => {
-    const subscriptions = [
+  test('submitted_requests_of_both_kinds_should_be_listed_in_one_table', () => {
+    const myRequests = [
       {
-        id: 'e6a1c0de-0000-4000-8000-000000000001',
+        reference: 'e6a1c0de-0000-4000-8000-000000000001',
+        type: 'SUBSCRIPTION',
+        submittedOn: '3 September 2026',
         status: 'NEW',
-        api: 'CP Crime Hearing API',
-        apiShortCode: 'api-cp-crime-hearing',
-        environment: 'sandbox',
+      },
+      {
+        reference: 'b2c3d4e5-0000-4000-8000-000000000002',
+        type: 'PUBLISH',
+        submittedOn: '2 September 2026',
+        status: 'NEW',
       },
     ];
 
-    const html = env.render('account.njk', { ...i18n, user, subscriptions });
+    const html = env.render('account.njk', { ...i18n, user, myRequests });
 
-    expect(html).toContain('CP Crime Hearing API');
-    expect(html).toContain('sandbox');
-    expect(html).toContain('NEW');
     expect(html).toContain('e6a1c0de-0000-4000-8000-000000000001');
+    expect(html).toContain('b2c3d4e5-0000-4000-8000-000000000002');
+    expect(html).toContain(i18n.requests.types.SUBSCRIPTION);
+    expect(html).toContain(i18n.requests.types.PUBLISH);
+    expect(html).toContain('3 September 2026');
     expect(html).not.toContain('You have not submitted any requests yet');
   });
 
-  test('a_request_with_no_api_title_should_fall_back_to_its_short_code', () => {
-    const subscriptions = [{ id: 'a', status: 'NEW', api: '', apiShortCode: 'pcd', environment: 'SBOX' }];
+  test('an_unrecognised_type_should_show_its_code_rather_than_nothing', () => {
+    const myRequests = [{ reference: 'a', type: 'SUPPORT', submittedOn: '3 September 2026', status: 'NEW' }];
 
-    const html = env.render('account.njk', { ...i18n, user, subscriptions });
+    const html = env.render('account.njk', { ...i18n, user, myRequests });
 
-    expect(html).toContain('pcd');
+    expect(html).toContain('SUPPORT');
   });
 
   test('a_failed_lookup_should_say_so_rather_than_claim_there_are_none', () => {

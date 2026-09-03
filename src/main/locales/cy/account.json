@@ -10,9 +10,13 @@
     "emptyHtml": "Nid ydych wedi cyflwyno unrhyw geisiadau eto. Dechreuwch o <a class=\"govuk-link\" href=\"/subscribe\">Tanysgrifio i API</a> neu <a class=\"govuk-link\" href=\"/publish\">Cyhoeddi API</a>.",
     "unavailable": "Nid oedd modd llwytho eich ceisiadau ar hyn o bryd. Rhowch gynnig arall arni ymhen ychydig funudau.",
     "tableCaption": "Ceisiadau rydych wedi’u cyflwyno",
-    "columnApi": "API",
-    "columnEnvironment": "Amgylchedd",
     "columnStatus": "Statws",
-    "columnReference": "Cyfeirnod"
+    "columnReference": "Cyfeirnod",
+    "columnType": "Math",
+    "columnSubmitted": "Cyflwynwyd",
+    "types": {
+      "SUBSCRIPTION": "Tanysgrifio i API",
+      "PUBLISH": "Cyhoeddi API"
+    }
   }
 }

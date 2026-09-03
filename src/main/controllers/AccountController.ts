@@ -2,7 +2,7 @@ import { GET, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
-import { getSubscriptionsFor } from '../services/Subscriptions';
+import { RequestSummary, getRequestsFor } from '../services/Requests';
 
 @route('/account')
 export default class AccountController {
@@ -13,15 +13,31 @@ export default class AccountController {
       return;
     }
 
-    const requests = await getSubscriptionsFor(req.session.user.email);
+    const result = await getRequestsFor(req.session.user.id);
 
     res.render('account', {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
       user: req.session.user,
-      subscriptions: requests.subscriptions,
-      // Told apart on the page: having submitted nothing is not the same as being unable
-      // to find out, and only one of them is the user's own doing.
-      couldNotLoad: !requests.ok,
+      myRequests: result.requests.map(request => this.forDisplay(request, req.lng)),
+      couldNotLoad: !result.ok,
     });
+  }
+
+  private forDisplay(request: RequestSummary, language: string | undefined) {
+    return { ...request, submittedOn: this.formatDate(request.submittedAt, language) };
+  }
+
+  private formatDate(submittedAt: string, language: string | undefined): string {
+    const date = new Date(submittedAt);
+
+    if (Number.isNaN(date.getTime())) {
+      return submittedAt;
+    }
+
+    return new Intl.DateTimeFormat(language === 'cy' ? 'cy-GB' : 'en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
   }
 }

@@ -10,9 +10,13 @@
     "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/publish\">Publish an API</a>.",
     "unavailable": "Your requests could not be loaded just now. Try again in a few minutes.",
     "tableCaption": "Requests you have submitted",
-    "columnApi": "API",
-    "columnEnvironment": "Environment",
     "columnStatus": "Status",
-    "columnReference": "Reference"
+    "columnReference": "Reference",
+    "columnType": "Type",
+    "columnSubmitted": "Submitted",
+    "types": {
+      "SUBSCRIPTION": "Subscribe to an API",
+      "PUBLISH": "Publish an API"
+    }
   }
 }

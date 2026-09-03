@@ -37,16 +37,15 @@
         <p class="govuk-body">{{ requests.intro }}</p>
 
         {% if couldNotLoad %}
-          {# Not the same as having submitted nothing, so it must not read like it. #}
           <p class="govuk-body" id="requests-unavailable">{{ requests.unavailable }}</p>
-        {% elif subscriptions.length %}
+        {% elif myRequests.length %}
           {% set rows = [] %}
-          {% for subscription in subscriptions %}
+          {% for request in myRequests %}
             {% set rows = (rows.push([
-              { text: subscription.api or subscription.apiShortCode },
-              { text: subscription.environment },
-              { text: subscription.status },
-              { html: '<span class="apim-reference">' + subscription.id + '</span>' }
+              { html: '<span class="apim-reference">' + request.reference + '</span>' },
+              { text: requests.types[request.type] or request.type },
+              { text: request.submittedOn },
+              { text: request.status }
             ]), rows) %}
           {% endfor %}
 
@@ -54,10 +53,10 @@
             caption: requests.tableCaption,
             captionClasses: "govuk-visually-hidden",
             head: [
-              { text: requests.columnApi },
-              { text: requests.columnEnvironment },
-              { text: requests.columnStatus },
-              { text: requests.columnReference }
+              { text: requests.columnReference },
+              { text: requests.columnType },
+              { text: requests.columnSubmitted },
+              { text: requests.columnStatus }
             ],
             rows: rows
           }) }}
