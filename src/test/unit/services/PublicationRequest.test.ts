@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import {
   publicationSummaryRows,
   submitPublicationRequest,
@@ -12,7 +14,21 @@ const completeBody = {
   'spec-url': 'https://raw.githubusercontent.com/hmcts/api-cp-crime-slc/main/openapi-spec.yml',
 };
 
+jest.mock('axios');
+
+const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>;
+
+const REQUESTER = {
+  id: 1,
+  firstName: 'Joe',
+  lastName: 'Bloggs',
+  email: 'joe.bloggs@justice.gov.uk',
+  orgName: 'HMCTS DTS',
+};
+
 describe('PublicationRequest', () => {
+  beforeEach(() => mockedPost.mockReset());
+
   test('a_complete_submission_should_produce_no_errors', () => {
     expect(validatePublication(toPublicationAnswers(completeBody))).toEqual([]);
   });
@@ -55,7 +71,61 @@ describe('PublicationRequest', () => {
     ]);
   });
 
-  test('submitting_a_publication_request_should_return_a_reference', async () => {
-    expect(await submitPublicationRequest(toPublicationAnswers(completeBody))).toMatch(/^AMP-[0-9A-F]{8}$/);
+  test('submitting_should_send_the_user_id_as_a_header_and_not_the_identity', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'e6a1c0de-0000-4000-8000-000000000001' } });
+
+    const result = await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER);
+
+    expect(result).toEqual({ ok: true, reference: 'e6a1c0de-0000-4000-8000-000000000001' });
+
+    const [, body, options] = mockedPost.mock.calls[0];
+    expect((options as { headers: Record<string, string> }).headers.requestingUserId).toBe('1');
+    // The backend derives these from the user id, so sending them would offer it a second,
+    // forgeable copy of what it already knows.
+    expect(JSON.stringify(body)).not.toContain(REQUESTER.email);
+    expect(JSON.stringify(body)).not.toContain('Bloggs');
+  });
+
+  test('submitting_should_map_the_answers_onto_the_backend_fields', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'abc' } });
+
+    await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER);
+
+    expect(mockedPost.mock.calls[0][1]).toEqual({
+      apiName: 'Court Schedule',
+      owningTeam: 'Scheduling and Listing',
+      contactEmail: 'sandl-api@justice.gov.uk',
+      specUrl: 'https://raw.githubusercontent.com/hmcts/api-cp-crime-slc/main/openapi-spec.yml',
+    });
+  });
+
+  test('a_rejected_submission_should_report_failure_rather_than_a_reference', async () => {
+    mockedPost.mockResolvedValue({ status: 400, data: { error: 'apiName is required.' } });
+
+    expect(await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER)).toEqual({ ok: false });
+  });
+
+  test('an_unreachable_backend_should_report_failure_rather_than_throwing', async () => {
+    mockedPost.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    expect(await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER)).toEqual({ ok: false });
+  });
+
+  test.each([
+    ['api-name', 'The API name must be 255 characters or fewer'],
+    ['owning-team', 'The owning team must be 255 characters or fewer'],
+  ])('an_over_long_%s_should_be_rejected_on_the_form', (field: string, message: string) => {
+    // The backend caps these, so catching it here is a field error rather than a failed
+    // submission the user cannot act on.
+    const errors = validatePublication(toPublicationAnswers({ ...completeBody, [field]: 'x'.repeat(256) }));
+
+    expect(errors).toEqual([{ name: field, text: message }]);
+  });
+
+  test('an_over_long_specification_url_should_be_rejected_on_the_form', () => {
+    const specUrl = 'https://example.gov.uk/' + 'x'.repeat(2048);
+    const errors = validatePublication(toPublicationAnswers({ ...completeBody, 'spec-url': specUrl }));
+
+    expect(errors).toEqual([{ name: 'spec-url', text: 'The specification URL must be 2048 characters or fewer' }]);
   });
 });

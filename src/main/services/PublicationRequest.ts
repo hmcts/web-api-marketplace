@@ -1,9 +1,37 @@
+import axios from 'axios';
+
 import { Logger } from '../modules/logging';
 
-import { FieldError, SummaryRow, looksLikeAnEmailAddress, newReference, toAnswerText } from './answers';
-import { logNotImplemented } from './submissions';
+import { FieldError, SummaryRow, looksLikeAnEmailAddress, toAnswerText } from './answers';
+import { logSubmission, submissionEndpoint } from './submissions';
 
 const logger = Logger.getLogger('publication-request');
+
+/** Where the backend stores a request to publish an API. */
+const PUBLISH_REQUESTS_PATH = '/publish-requests';
+
+/** Match the backend's own limits, so an over-long answer fails on the form. */
+export const API_NAME_MAX_LENGTH = 255;
+export const OWNING_TEAM_MAX_LENGTH = 255;
+export const SPEC_URL_MAX_LENGTH = 2048;
+
+/**
+ * Who is asking. Taken from the signed-in session, never from the request body, so a
+ * request cannot be submitted in someone else's name by editing a hidden field.
+ */
+export interface Requester {
+  /** What the backend attributes the stored request to. */
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  orgName: string;
+}
+
+export interface SubmitResult {
+  ok: boolean;
+  reference?: string;
+}
 
 /** Field names match the prototype's, so the answers keep one shape end to end. */
 export interface PublicationRequestAnswers {
@@ -27,9 +55,16 @@ export function validatePublication(answers: PublicationRequestAnswers): FieldEr
 
   if (!answers['api-name']) {
     errors.push({ name: 'api-name', text: 'Enter the name of your API' });
+  } else if (answers['api-name'].length > API_NAME_MAX_LENGTH) {
+    errors.push({ name: 'api-name', text: `The API name must be ${API_NAME_MAX_LENGTH} characters or fewer` });
   }
   if (!answers['owning-team']) {
     errors.push({ name: 'owning-team', text: 'Enter the team that owns the API' });
+  } else if (answers['owning-team'].length > OWNING_TEAM_MAX_LENGTH) {
+    errors.push({
+      name: 'owning-team',
+      text: `The owning team must be ${OWNING_TEAM_MAX_LENGTH} characters or fewer`,
+    });
   }
 
   if (!answers['contact-email']) {
@@ -45,6 +80,11 @@ export function validatePublication(answers: PublicationRequestAnswers): FieldEr
     errors.push({ name: 'spec-url', text: 'Enter the URL of your OpenAPI specification' });
   } else if (!isHttpUrl(answers['spec-url'])) {
     errors.push({ name: 'spec-url', text: 'Enter the specification URL in full, starting with https://' });
+  } else if (answers['spec-url'].length > SPEC_URL_MAX_LENGTH) {
+    errors.push({
+      name: 'spec-url',
+      text: `The specification URL must be ${SPEC_URL_MAX_LENGTH} characters or fewer`,
+    });
   }
 
   return errors;
@@ -60,21 +100,53 @@ export function publicationSummaryRows(answers: PublicationRequestAnswers): Summ
 }
 
 /**
- * Records the submission and returns the reference shown on the confirmation page.
+ * Stores the request against the backend and returns the reference to quote.
  *
- * As with an access request, nothing is persisted yet — this is the seam that a POST to
- * service-api-marketplace replaces once there is an endpoint to publish to.
+ * The requester's name, organisation and email are not sent. The backend looks them up
+ * from the user id in the requestingUserId header and stamps them onto what it stores, so
+ * sending them would be offering it a second, forgeable copy of what it already knows.
+ *
+ * The reference is the backend's own id. Generating one here would be showing the user
+ * something no record can be found by.
  */
-export async function submitPublicationRequest(answers: PublicationRequestAnswers): Promise<string> {
-  const reference = newReference();
+export async function submitPublicationRequest(
+  answers: PublicationRequestAnswers,
+  requester: Requester
+): Promise<SubmitResult> {
+  const url = submissionEndpoint(PUBLISH_REQUESTS_PATH);
+  const body = {
+    apiName: answers['api-name'],
+    owningTeam: answers['owning-team'],
+    contactEmail: answers['contact-email'],
+    specUrl: answers['spec-url'],
+  };
 
-  logNotImplemented(
+  logSubmission(
     logger,
-    'Publication request',
-    `${reference} for ${answers['api-name']}, ${answers['owning-team']}`
+    `Publication request for ${answers['api-name']} by user ${requester.id}`,
+    PUBLISH_REQUESTS_PATH
   );
 
-  return reference;
+  try {
+    const response = await axios.post(url, body, {
+      timeout: 10000,
+      validateStatus: () => true,
+      headers: { requestingUserId: String(requester.id) },
+    });
+
+    if (response.status === 201) {
+      const reference = String((response.data as { id?: string })?.id ?? '');
+      logger.info(`Publication request stored as ${reference} at ${url}`);
+      return { ok: true, reference };
+    }
+
+    logger.error(`Publication request rejected with status ${response.status} from ${url}`);
+    return { ok: false };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`Publication request to ${url} failed: ${detail}`);
+    return { ok: false };
+  }
 }
 
 function isHttpUrl(value: string): boolean {
