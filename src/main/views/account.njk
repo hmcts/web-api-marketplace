@@ -5,6 +5,7 @@
 {% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
 
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
@@ -35,9 +36,34 @@
 
         <p class="govuk-body">{{ requests.intro }}</p>
 
-        {# Nothing is listed yet: the backend has no per-user view of a request, so asking
-           it for this user's would mean fetching everyone's. See requests.empty. #}
-        <p class="govuk-body" id="requests-empty">{{ requests.emptyHtml | safe }}</p>
+        {% if couldNotLoad %}
+          {# Not the same as having submitted nothing, so it must not read like it. #}
+          <p class="govuk-body" id="requests-unavailable">{{ requests.unavailable }}</p>
+        {% elif subscriptions.length %}
+          {% set rows = [] %}
+          {% for subscription in subscriptions %}
+            {% set rows = (rows.push([
+              { text: subscription.api or subscription.apiShortCode },
+              { text: subscription.environment },
+              { text: subscription.status },
+              { html: '<span class="apim-reference">' + subscription.id + '</span>' }
+            ]), rows) %}
+          {% endfor %}
+
+          {{ govukTable({
+            caption: requests.tableCaption,
+            captionClasses: "govuk-visually-hidden",
+            head: [
+              { text: requests.columnApi },
+              { text: requests.columnEnvironment },
+              { text: requests.columnStatus },
+              { text: requests.columnReference }
+            ],
+            rows: rows
+          }) }}
+        {% else %}
+          <p class="govuk-body" id="requests-empty">{{ requests.emptyHtml | safe }}</p>
+        {% endif %}
       {% endset %}
 
       {{ govukTabs({

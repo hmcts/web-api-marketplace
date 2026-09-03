@@ -36,4 +36,39 @@ describe('Account page', () => {
 
     expect(html).toContain('<form method="post" action="/sign-out">');
   });
+
+  test('submitted_requests_should_be_listed_in_a_table', () => {
+    const subscriptions = [
+      {
+        id: 'e6a1c0de-0000-4000-8000-000000000001',
+        status: 'NEW',
+        api: 'CP Crime Hearing API',
+        apiShortCode: 'api-cp-crime-hearing',
+        environment: 'sandbox',
+      },
+    ];
+
+    const html = env.render('account.njk', { ...i18n, user, subscriptions });
+
+    expect(html).toContain('CP Crime Hearing API');
+    expect(html).toContain('sandbox');
+    expect(html).toContain('NEW');
+    expect(html).toContain('e6a1c0de-0000-4000-8000-000000000001');
+    expect(html).not.toContain('You have not submitted any requests yet');
+  });
+
+  test('a_request_with_no_api_title_should_fall_back_to_its_short_code', () => {
+    const subscriptions = [{ id: 'a', status: 'NEW', api: '', apiShortCode: 'pcd', environment: 'SBOX' }];
+
+    const html = env.render('account.njk', { ...i18n, user, subscriptions });
+
+    expect(html).toContain('pcd');
+  });
+
+  test('a_failed_lookup_should_say_so_rather_than_claim_there_are_none', () => {
+    const html = env.render('account.njk', { ...i18n, user, couldNotLoad: true });
+
+    expect(html).toContain(i18n.requests.unavailable);
+    expect(html).not.toContain('You have not submitted any requests yet');
+  });
 });
