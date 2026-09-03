@@ -90,9 +90,20 @@ export default class SubscribeController {
       return;
     }
 
-    const reference = await submitAccessRequest(answers, this.requester(req));
+    const apiTitle = this.titleOf(apis, answers['api-name']);
+    const result = await submitAccessRequest(answers, this.requester(req), apiTitle);
 
-    res.render('subscribe/confirmation', { reference });
+    if (!result.ok) {
+      // The answers are still on the page, so the user can try again without retyping.
+      res.status(502).render('subscribe/check-answers', {
+        answers,
+        rows: summaryRows(answers, apiTitle, this.requester(req)),
+        error: 'Your request could not be submitted. Try again in a few minutes.',
+      });
+      return;
+    }
+
+    res.render('subscribe/confirmation', { reference: result.reference });
   }
 
   @route('/confirmation')
@@ -132,7 +143,13 @@ export default class SubscribeController {
    */
   private requester(req: AppRequest): Requester {
     const user = req.session.user as SignedInUser;
-    return { firstName: user.firstName, lastName: user.lastName, email: user.email, orgName: user.orgName };
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      orgName: user.orgName,
+    };
   }
 
   private titleOf(apis: CatalogueApi[], name: string): string {
