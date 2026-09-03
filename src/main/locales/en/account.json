@@ -2,5 +2,11 @@
   "heading": "Your account",
   "signedInAs": "You are signed in as",
   "organisation": "Organisation",
-  "signOutButton": "Sign out"
+  "signOutButton": "Sign out",
+  "requests": {
+    "tabLabel": "My requests",
+    "heading": "My requests",
+    "intro": "Everything you have submitted through Subscribe to an API or Publish an API.",
+    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/publish\">Publish an API</a>."
+  }
 }

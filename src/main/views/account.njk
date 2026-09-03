@@ -4,6 +4,7 @@
 {% set section = "account" %}
 {% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
 
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
@@ -14,18 +15,37 @@
 
       <h1 class="govuk-heading-xl">{{ heading }}</h1>
 
-      {{ govukSummaryList({
-        rows: [
-          { key: { text: "Name" },         value: { text: user.firstName + " " + user.lastName } },
-          { key: { text: "Email" },        value: { text: user.email } },
-          { key: { text: organisation },   value: { text: user.orgName } }
+      {% set accountPanel %}
+        {{ govukSummaryList({
+          rows: [
+            { key: { text: "Name" },       value: { text: user.firstName + " " + user.lastName } },
+            { key: { text: "Email" },      value: { text: user.email } },
+            { key: { text: organisation }, value: { text: user.orgName } }
+          ]
+        }) }}
+
+        {# POST, so no link or prefetcher can sign the user out. #}
+        <form method="post" action="/sign-out">
+          {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
+        </form>
+      {% endset %}
+
+      {% set requestsPanel %}
+        <h2 class="govuk-heading-l">{{ requests.heading }}</h2>
+
+        <p class="govuk-body">{{ requests.intro }}</p>
+
+        {# Nothing is listed yet: the backend has no per-user view of a request, so asking
+           it for this user's would mean fetching everyone's. See requests.empty. #}
+        <p class="govuk-body" id="requests-empty">{{ requests.emptyHtml | safe }}</p>
+      {% endset %}
+
+      {{ govukTabs({
+        items: [
+          { label: heading,           id: "tab-account",  panel: { html: accountPanel } },
+          { label: requests.tabLabel, id: "tab-requests", panel: { html: requestsPanel } }
         ]
       }) }}
-
-      {# POST, so no link or prefetcher can sign the user out. #}
-      <form method="post" action="/sign-out">
-        {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
-      </form>
 
     </div>
   </div>
