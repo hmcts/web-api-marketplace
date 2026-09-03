@@ -1,5 +1,4 @@
 import PublishController from '../../../main/controllers/PublishController';
-import { PUBLISH_DECLARATIONS } from '../../../main/services/PublicationRequest';
 import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -8,8 +7,6 @@ const completeBody = {
   'owning-team': 'Scheduling and Listing',
   'contact-email': 'sandl-api@justice.gov.uk',
   'spec-url': 'https://raw.githubusercontent.com/hmcts/api-cp-crime-slc/main/openapi-spec.yml',
-  classification: 'official',
-  declarations: PUBLISH_DECLARATIONS.map(declaration => declaration.value),
 };
 
 describe('PublishController', () => {
@@ -28,7 +25,7 @@ describe('PublishController', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.view).toBe('publish/form');
-    expect(res.data?.errors as unknown as unknown[]).toHaveLength(6);
+    expect(res.data?.errors as unknown as unknown[]).toHaveLength(4);
   });
 
   test('posting_an_invalid_form_should_return_the_answers_so_nothing_is_retyped', () => {
@@ -60,7 +57,7 @@ describe('PublishController', () => {
   test('submitting_tampered_answers_should_return_400_rather_than_a_confirmation', async () => {
     const res = mockResponse();
 
-    await new PublishController().submit(signedIn({ ...completeBody, classification: 'secret' }), res);
+    await new PublishController().submit(signedIn({ ...completeBody, 'spec-url': 'not-a-url' }), res);
 
     expect(res.statusCode).toBe(400);
     expect(res.view).toBe('publish/form');
