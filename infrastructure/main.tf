@@ -50,14 +50,14 @@ resource "azurerm_key_vault_secret" "redis_access_key" {
   key_vault_id = data.azurerm_key_vault.vault.id
 }
 
-resource "random_password" "session_secret" {
+resource "random_string" "session_secret" {
   length  = 64
   special = false
 }
 
 resource "azurerm_key_vault_secret" "session_secret" {
   name         = "${var.component}-session-secret"
-  value        = random_password.session_secret.result
+  value        = random_string.session_secret.result
   key_vault_id = data.azurerm_key_vault.vault.id
 
   lifecycle {
