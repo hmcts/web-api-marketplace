@@ -1,9 +1,7 @@
-import axios from 'axios';
-
 import { Logger } from '../modules/logging';
 
 import { Choice, FieldError, SummaryRow, toAnswerList, toAnswerText } from './answers';
-import { logSubmission, submissionEndpoint } from './submissions';
+import { SubmitResult, postSubmission } from './submissions';
 
 // Re-exported so importers that predate services/answers keep working unchanged.
 export type { Choice, FieldError, SummaryRow };
@@ -28,11 +26,6 @@ const SUBSCRIPTIONS_PATH = '/subscriptions';
 
 /** Matches the backend's own limit, so an over-long description fails on the form. */
 export const USE_CASE_MAX_LENGTH = 255;
-
-export interface SubmitResult {
-  ok: boolean;
-  reference?: string;
-}
 
 /**
  * The fixed answer lists, held here rather than in the template so that validation, the
@@ -184,39 +177,22 @@ export async function submitAccessRequest(
   requester: Requester,
   apiTitle: string
 ): Promise<SubmitResult> {
-  const url = submissionEndpoint(SUBSCRIPTIONS_PATH);
-  const body = {
-    apiShortCode: answers['api-name'],
-    api: apiTitle || answers['api-name'],
-    environment: answers.environment,
-    expectedVolume: answers['call-volume'],
-    useCase: answers['use-case'],
-    oauth2Capable: answers.oauth === 'yes',
-    declaration: answers.declarations.join(', '),
-  };
-
-  logSubmission(logger, `Access request for ${answers['api-name']} by user ${requester.id}`, SUBSCRIPTIONS_PATH);
-
-  try {
-    const response = await axios.post(url, body, {
-      timeout: 10000,
-      validateStatus: () => true,
-      headers: { requestingUserId: String(requester.id) },
-    });
-
-    if (response.status === 201) {
-      const reference = String((response.data as { id?: string })?.id ?? '');
-      logger.info(`Access request stored as ${reference} at ${url}`);
-      return { ok: true, reference };
+  return postSubmission(
+    logger,
+    'Access request',
+    `for ${answers['api-name']} by user ${requester.id}`,
+    SUBSCRIPTIONS_PATH,
+    requester.id,
+    {
+      apiShortCode: answers['api-name'],
+      api: apiTitle || answers['api-name'],
+      environment: answers.environment,
+      expectedVolume: answers['call-volume'],
+      useCase: answers['use-case'],
+      oauth2Capable: answers.oauth === 'yes',
+      declaration: answers.declarations.join(', '),
     }
-
-    logger.error(`Access request rejected with status ${response.status} from ${url}`);
-    return { ok: false };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Access request to ${url} failed: ${detail}`);
-    return { ok: false };
-  }
+  );
 }
 
 function requireChoice(errors: FieldError[], name: string, value: string, choices: Choice[], text: string): void {

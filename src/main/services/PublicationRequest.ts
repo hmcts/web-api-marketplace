@@ -1,9 +1,7 @@
-import axios from 'axios';
-
 import { Logger } from '../modules/logging';
 
 import { FieldError, SummaryRow, looksLikeAnEmailAddress, toAnswerText } from './answers';
-import { logSubmission, submissionEndpoint } from './submissions';
+import { SubmitResult, postSubmission } from './submissions';
 
 const logger = Logger.getLogger('publication-request');
 
@@ -26,11 +24,6 @@ export interface Requester {
   lastName: string;
   email: string;
   orgName: string;
-}
-
-export interface SubmitResult {
-  ok: boolean;
-  reference?: string;
 }
 
 /** Field names match the prototype's, so the answers keep one shape end to end. */
@@ -113,40 +106,19 @@ export async function submitPublicationRequest(
   answers: PublicationRequestAnswers,
   requester: Requester
 ): Promise<SubmitResult> {
-  const url = submissionEndpoint(PUBLISH_REQUESTS_PATH);
-  const body = {
-    apiName: answers['api-name'],
-    owningTeam: answers['owning-team'],
-    contactEmail: answers['contact-email'],
-    specUrl: answers['spec-url'],
-  };
-
-  logSubmission(
+  return postSubmission(
     logger,
-    `Publication request for ${answers['api-name']} by user ${requester.id}`,
-    PUBLISH_REQUESTS_PATH
-  );
-
-  try {
-    const response = await axios.post(url, body, {
-      timeout: 10000,
-      validateStatus: () => true,
-      headers: { requestingUserId: String(requester.id) },
-    });
-
-    if (response.status === 201) {
-      const reference = String((response.data as { id?: string })?.id ?? '');
-      logger.info(`Publication request stored as ${reference} at ${url}`);
-      return { ok: true, reference };
+    'Publication request',
+    `for ${answers['api-name']} by user ${requester.id}`,
+    PUBLISH_REQUESTS_PATH,
+    requester.id,
+    {
+      apiName: answers['api-name'],
+      owningTeam: answers['owning-team'],
+      contactEmail: answers['contact-email'],
+      specUrl: answers['spec-url'],
     }
-
-    logger.error(`Publication request rejected with status ${response.status} from ${url}`);
-    return { ok: false };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Publication request to ${url} failed: ${detail}`);
-    return { ok: false };
-  }
+  );
 }
 
 function isHttpUrl(value: string): boolean {

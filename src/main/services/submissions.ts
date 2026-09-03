@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import { AppLogger } from '../modules/logging';
 
 import { backendUrl } from './BackendHealth';
@@ -14,6 +16,11 @@ import { backendUrl } from './BackendHealth';
  */
 
 /** The full address a submission is sent to, so one log line names it in one piece. */
+export interface SubmitResult {
+  ok: boolean;
+  reference?: string;
+}
+
 export function submissionEndpoint(path: string): string {
   return `${backendUrl}${path}`;
 }
@@ -31,4 +38,38 @@ export function logSubmission(logger: AppLogger, form: string, path: string): vo
  */
 export function logNotImplemented(logger: AppLogger, form: string, detail: string): void {
   logger.info(`${form}: not implemented — no backend endpoint, nothing was persisted (${detail})`);
+}
+
+export async function postSubmission(
+  logger: AppLogger,
+  label: string,
+  detail: string,
+  path: string,
+  requesterId: number,
+  body: Record<string, unknown>
+): Promise<SubmitResult> {
+  const url = submissionEndpoint(path);
+
+  logSubmission(logger, `${label} ${detail}`, path);
+
+  try {
+    const response = await axios.post(url, body, {
+      timeout: 10000,
+      validateStatus: () => true,
+      headers: { requestingUserId: String(requesterId) },
+    });
+
+    if (response.status === 201) {
+      const reference = String((response.data as { id?: string })?.id ?? '');
+      logger.info(`${label} stored as ${reference} at ${url}`);
+      return { ok: true, reference };
+    }
+
+    logger.error(`${label} rejected with status ${response.status} from ${url}`);
+    return { ok: false };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`${label} to ${url} failed: ${reason}`);
+    return { ok: false };
+  }
 }
