@@ -8,12 +8,9 @@ import {
 
 const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
+const REQUESTER = { firstName: 'Joe', lastName: 'Bloggs', email: 'joe.bloggs@justice.gov.uk', orgName: 'HMCTS DTS' };
+
 const completeBody = {
-  'full-name': ' Joe Bloggs ',
-  organisation: 'HMCTS DTS',
-  email: 'joe.bloggs@justice.gov.uk',
-  'job-title': 'Senior Developer',
-  phone: '',
   'api-name': 'api-cp-ai-rag',
   environment: 'sandbox',
   'call-volume': 'low',
@@ -31,30 +28,12 @@ describe('AccessRequest', () => {
     const errors = validate(toAnswers({}), apiNames);
 
     expect(errors.map(error => error.name)).toEqual([
-      'full-name',
-      'organisation',
-      'email',
-      'job-title',
       'api-name',
       'environment',
       'call-volume',
       'use-case',
       'oauth',
       'declarations',
-    ]);
-  });
-
-  test('an_optional_phone_number_should_not_be_required', () => {
-    const errors = validate(toAnswers({ ...completeBody, phone: '' }), apiNames);
-
-    expect(errors.map(error => error.name)).not.toContain('phone');
-  });
-
-  test('an_email_without_an_at_sign_should_be_rejected_as_the_wrong_format', () => {
-    const errors = validate(toAnswers({ ...completeBody, email: 'not-an-address' }), apiNames);
-
-    expect(errors).toEqual([
-      { name: 'email', text: 'Enter a work email address in the correct format, like name@example.gov.uk' },
     ]);
   });
 
@@ -80,45 +59,36 @@ describe('AccessRequest', () => {
     expect(toAnswers({ declarations: 'in-scope' }).declarations).toEqual(['in-scope']);
   });
 
-  test('an_object_sent_in_place_of_a_text_answer_should_be_read_as_empty', () => {
-    // A JSON body can carry an object here; String()-ing one would pass validation as
-    // the literal "[object Object]".
-    const answers = toAnswers({ ...completeBody, 'full-name': { $ne: null } });
-
-    expect(answers['full-name']).toBe('');
-    expect(validate(answers, apiNames)).toEqual([{ name: 'full-name', text: 'Enter your full name' }]);
-  });
-
   test('a_non_string_declaration_should_be_discarded_rather_than_stringified', () => {
     expect(toAnswers({ declarations: [{ toString: () => 'in-scope' }] }).declarations).toEqual([]);
   });
 
-  test.each([
-    ['no at sign', 'joe.example.gov.uk'],
-    ['two at signs', 'joe@@justice.gov.uk'],
-    ['nothing before the at sign', '@justice.gov.uk'],
-    ['no dot in the domain', 'joe@justice'],
-    ['a domain starting with a dot', 'joe@.gov.uk'],
-    ['a domain ending with a dot', 'joe@justice.'],
-  ])('an_address_with_%s_should_be_rejected', (_description: string, email: string) => {
-    const errors = validate(toAnswers({ ...completeBody, email }), apiNames);
-
-    expect(errors.map(error => error.name)).toEqual(['email']);
+  test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
+    expect(toAnswers({ ...completeBody, 'use-case': '  Ingesting documents.  ' })['use-case']).toBe(
+      'Ingesting documents.'
+    );
   });
 
-  test.each([['joe.bloggs@justice.gov.uk'], ['j@a.b'], ["o'brien+tag@sub.domain.gov.uk"]])(
-    'a_valid_address_%s_should_be_accepted',
-    (email: string) => {
-      expect(validate(toAnswers({ ...completeBody, email }), apiNames)).toEqual([]);
-    }
-  );
+  test('the_requester_should_come_from_the_session_and_not_from_the_posted_body', () => {
+    // Whatever the body claims, the answers carry no identity at all — so a hidden field
+    // cannot be edited to submit a request in someone else's name.
+    const answers = toAnswers({ ...completeBody, 'full-name': 'Someone Else', email: 'else@example.com' });
 
-  test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
-    expect(toAnswers(completeBody)['full-name']).toBe('Joe Bloggs');
+    expect(Object.keys(answers)).not.toContain('full-name');
+    expect(Object.keys(answers)).not.toContain('email');
+  });
+
+  test('the_summary_should_name_the_signed_in_requester', () => {
+    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API', REQUESTER);
+    const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
+
+    expect(valueFor('Name')).toBe('Joe Bloggs');
+    expect(valueFor('Organisation')).toBe('HMCTS DTS');
+    expect(valueFor('Email')).toBe('joe.bloggs@justice.gov.uk');
   });
 
   test('the_summary_should_show_labels_rather_than_stored_values', () => {
-    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API');
+    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API', REQUESTER);
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
 
     expect(valueFor('API')).toBe('RAG Service API');
@@ -127,14 +97,8 @@ describe('AccessRequest', () => {
     expect(valueFor('OAuth 2.0 with JWT bearer tokens')).toBe('Yes');
   });
 
-  test('a_missing_phone_number_should_be_summarised_as_not_provided', () => {
-    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API');
-
-    expect(rows.find(row => row.key === 'Phone number')?.value).toBe('Not provided');
-  });
-
   test('submitting_a_request_should_return_a_reference', async () => {
-    const reference = await submitAccessRequest(toAnswers(completeBody));
+    const reference = await submitAccessRequest(toAnswers(completeBody), REQUESTER);
 
     expect(reference).toMatch(/^AMP-[0-9A-F]{8}$/);
   });

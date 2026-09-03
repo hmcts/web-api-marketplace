@@ -10,11 +10,6 @@ const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const catalogue = [{ name: 'api-cp-ai-rag', title: 'RAG Service API' }];
 
 const completeBody = {
-  'full-name': 'Joe Bloggs',
-  organisation: 'HMCTS DTS',
-  email: 'joe.bloggs@justice.gov.uk',
-  'job-title': 'Senior Developer',
-  phone: '',
   'api-name': 'api-cp-ai-rag',
   environment: 'sandbox',
   'call-volume': 'low',
@@ -61,9 +56,21 @@ describe('SubscribeController', () => {
   test('posting_an_invalid_form_should_return_the_answers_so_nothing_is_retyped', async () => {
     const res = mockResponse();
 
-    await new SubscribeController().post(signedIn({ ...completeBody, email: '' }), res);
+    await new SubscribeController().post(signedIn({ ...completeBody, 'api-name': '' }), res);
 
-    expect((res.data?.answers as unknown as Record<string, string>)['full-name']).toBe('Joe Bloggs');
+    expect((res.data?.answers as unknown as Record<string, string>)['use-case']).toBe(
+      'Ingesting documents for the case bundle service.'
+    );
+  });
+
+  test('the_check_answers_page_should_show_the_signed_in_user_rather_than_a_posted_name', async () => {
+    const res = mockResponse();
+
+    await new SubscribeController().post(signedIn({ ...completeBody, 'full-name': 'Someone Else' }), res);
+
+    const rows = res.data?.rows as unknown as { key: string; value: string }[];
+    expect(rows.find(row => row.key === 'Name')?.value).toBe('Joe Bloggs');
+    expect(JSON.stringify(rows)).not.toContain('Someone Else');
   });
 
   test('posting_a_valid_form_should_show_the_check_answers_page', async () => {
