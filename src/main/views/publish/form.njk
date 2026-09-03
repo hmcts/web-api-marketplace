@@ -2,10 +2,7 @@
 
 {% set pageTitle = "Submit an API for publication - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "publish" %}
-{% set breadcrumbs = [
-  { text: breadcrumb.home, href: "/" },
-  { text: breadcrumb.publish, href: "/publish" }
-] %}
+{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
 
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
@@ -30,12 +27,10 @@
     <h1 class="govuk-heading-xl">Submit an API for publication</h1>
 
     <p class="govuk-body">
-      Check your API against the
-      <a class="govuk-link" href="/publish/producer-standards">producer standards</a> before you
-      start. You will be able to review your answers before submitting.
+      You will be able to review your answers before submitting.
     </p>
 
-    <form method="post" action="/publish/submit" novalidate>
+    <form method="post" action="/publish" novalidate>
 
       {{ govukInput({
         label: { text: "API name", classes: "govuk-label--m" },

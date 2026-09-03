@@ -123,6 +123,16 @@ module.exports = defineConfig([
       ],
     },
   },
+  {
+    // Shared test harnesses describe suites on behalf of the files that call them, so they
+    // both export and take their titles from a variable. Neither is a problem here; both
+    // rules exist to catch a real test file doing it by accident.
+    files: ['src/test/**/helpers/**/*.ts'],
+    rules: {
+      'jest/no-export': 'off',
+      'jest/valid-title': 'off',
+    },
+  },
   globalIgnores(['src/main/views/govuk/**/*']),
   globalIgnores([
     'dist/*',

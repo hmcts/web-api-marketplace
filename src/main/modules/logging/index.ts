@@ -75,6 +75,8 @@ export function setAppInsightsClient(client: AppInsightsClient): void {
   appInsightsClient = client;
 }
 
+export type AppLogger = TelemetryLogger;
+
 export class Logger {
   public static getLogger(name: string): TelemetryLogger {
     const existingLogger = loggerCache.get(name);

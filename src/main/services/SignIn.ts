@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Logger } from '../modules/logging';
 
 import { backendUrl } from './BackendHealth';
+import { logSubmission, submissionEndpoint } from './submissions';
 
 const logger = Logger.getLogger('sign-in');
 
@@ -29,6 +30,10 @@ export interface SignInResult {
  * successful result here means only "this email is a known account".
  */
 export async function signIn(email: string, password: string): Promise<SignInResult> {
+  const endpoint = submissionEndpoint('/login');
+
+  logSubmission(logger, 'Sign in', '/login');
+
   try {
     const response = await axios.post(
       `${backendUrl}/login`,
@@ -37,17 +42,19 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     );
 
     if (response.status === 200) {
-      logger.info('Sign in succeeded');
+      logger.info(`Sign in succeeded via ${endpoint}`);
       return { ok: true, user: response.data as SignedInUser };
     }
 
     // 404 (unknown email) and 400 (validation) are both reported to the user as a single
     // "incorrect email or password", so the page does not reveal which accounts exist.
-    logger.info(`Sign in rejected with status ${response.status}`);
+    // The endpoint goes in the log line because a 404 also looks like this when the route
+    // is simply not deployed, and only the address tells the two apart.
+    logger.info(`Sign in rejected with status ${response.status} from ${endpoint}`);
     return { ok: false };
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Sign in request failed: ${detail}`);
+    logger.error(`Sign in request to ${endpoint} failed: ${detail}`);
     return { ok: false };
   }
 }

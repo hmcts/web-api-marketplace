@@ -14,8 +14,8 @@ describe('Home page', () => {
     expect(html).toContain(i18n.lede);
   });
 
-  test('rendering_the_home_page_should_list_every_card', () => {
-    const html = env.render('home.njk', i18n);
+  test('rendering_the_home_page_for_a_signed_in_user_should_list_every_card', () => {
+    const html = env.render('home.njk', { ...i18n, user: { email: 'joe@example.com' } });
 
     for (const card of i18n.cards) {
       expect(html).toContain(card.heading);
@@ -23,11 +23,15 @@ describe('Home page', () => {
     }
   });
 
-  test('rendering_the_home_page_should_keep_the_backend_check', () => {
+  test('rendering_the_home_page_for_a_signed_out_visitor_should_offer_no_cards', () => {
+    // Both cards lead to journeys that need an account, so they are not advertised until
+    // there is one. requireSignIn is what actually refuses the request.
     const html = env.render('home.njk', i18n);
 
-    expect(html).toContain('backend-check-button');
-    expect(html).toContain(i18n.backendCheck.buttonText);
+    for (const card of i18n.cards) {
+      expect(html).not.toContain(card.href);
+    }
+    expect(html).toContain(i18n.signInButton);
   });
 
   test('rendering_the_home_page_should_not_show_a_back_link', () => {

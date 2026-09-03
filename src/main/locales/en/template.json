@@ -50,21 +50,15 @@
     }
   ],
   "nav": {
-    "catalogue": "API catalogue",
-    "getStarted": "Get started",
-    "documentation": "Documentation",
+    "subscribe": "Subscribe to an API",
     "publish": "Publish an API",
-    "help": "Help and support",
     "signIn": "Sign in",
     "account": "Your account"
   },
   "breadcrumb": {
     "home": "Home",
-    "catalogue": "API catalogue",
-    "getStarted": "Get started",
-    "publish": "Publish an API",
-    "help": "Help and support",
-    "documentation": "Documentation"
+    "subscribe": "Subscribe to an API",
+    "publish": "Publish an API"
   },
   "phaseTag": "Beta"
 }

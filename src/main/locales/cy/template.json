@@ -53,21 +53,15 @@
     }
   ],
   "nav": {
-    "catalogue": "API catalogue",
-    "getStarted": "Get started",
-    "documentation": "Documentation",
-    "publish": "Publish an API",
-    "help": "Help and support",
+    "subscribe": "Tanysgrifio i API",
+    "publish": "Cyhoeddi API",
     "signIn": "Sign in",
     "account": "Eich cyfrif"
   },
   "breadcrumb": {
     "home": "Home",
-    "catalogue": "API catalogue",
-    "getStarted": "Get started",
-    "publish": "Cyhoeddi API",
-    "help": "Cymorth a chefnogaeth",
-    "documentation": "Dogfennaeth"
+    "subscribe": "Tanysgrifio i API",
+    "publish": "Cyhoeddi API"
   },
   "phaseTag": "Beta"
 }

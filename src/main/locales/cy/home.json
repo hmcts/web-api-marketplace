@@ -2,37 +2,18 @@
   "pageTitle": "HMCTS API Marketplace - GOV.UK",
   "heading": "HMCTS API Marketplace",
   "lede": "Discover, request and integrate the APIs powering justice sector software.",
-  "startButton": "Get started",
+  "startButton": "Tanysgrifio i API",
   "cards": [
     {
-      "heading": "API and integration catalogue",
-      "href": "/api-catalogue",
-      "body": "An A to Z list of HMCTS APIs and other integrations, with plain-English descriptions of what each one returns."
+      "heading": "Tanysgrifio i API",
+      "href": "/subscribe",
+      "body": "Dywedwch wrthym am eich achos defnydd a’r API sydd ei angen arnoch. Mae perchennog yr API yn adolygu pob cais."
     },
     {
-      "heading": "Getting started with our APIs",
-      "href": "/get-started",
-      "body": "A step-by-step introduction to what our APIs can do and how your team can get connected."
-    },
-    {
-      "heading": "Documentation, guides and tutorials",
-      "href": "/documentation",
-      "body": "Learn about APIs and the standards we use, and how to make the most of our developer resources."
-    },
-    {
-      "heading": "Help and support building software",
-      "href": "/help",
-      "body": "Get help at any point in your project, to make sure your integration with our APIs goes smoothly."
-    },
-    {
-      "heading": "Publish an API",
+      "heading": "Cyhoeddi API",
       "href": "/publish",
-      "body": "If your team owns an API, list it in the marketplace so other teams can find it, understand it, and request access."
+      "body": "Os yw eich tîm yn berchen ar API, rhestrwch ef yn y farchnad fel y gall timau eraill ddod o hyd iddo a gofyn am fynediad."
     }
   ],
-  "backendCheck": {
-    "heading": "Backend connection",
-    "intro": "Check that this service can reach the API Marketplace backend.",
-    "buttonText": "Check backend connection"
-  }
+  "signInButton": "Mewngofnodi"
 }

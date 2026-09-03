@@ -1,6 +1,8 @@
 import { GET, POST, route } from 'awilix-express';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
+import { AppRequest } from '../interfaces/AppRequest';
+import { requireSignIn } from '../modules/session';
 import {
   AccessRequestAnswers,
   CALL_VOLUMES,
@@ -16,22 +18,28 @@ import {
 import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
 
 /**
- * The "Request API access" journey: form, check your answers, confirmation.
+ * The "Subscribe to an API" journey: form, check your answers, confirmation.
  *
  * The prototype carries answers between the three pages in sessionStorage. There is no
  * session store here, so each page posts the answers on to the next as hidden fields.
  * That keeps the journey working with JavaScript unavailable and leaves no server state
  * to expire, at the cost of the answers travelling with each request.
  */
-@route('/get-started/request-api')
-export default class RequestApiController {
+@route('/subscribe')
+export default class SubscribeController {
   @GET()
-  public async get(req: Request, res: Response): Promise<void> {
-    res.render('get-started/request-api/index', await this.formData(toAnswers({}), []));
+  public async get(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
+    res.render('subscribe/index', await this.formData(toAnswers({}), []));
   }
 
   @POST()
-  public async post(req: Request, res: Response): Promise<void> {
+  public async post(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const apis = await getCatalogueApis();
     const answers = toAnswers(req.body as Record<string, unknown>);
     const errors = validate(
@@ -40,11 +48,11 @@ export default class RequestApiController {
     );
 
     if (errors.length) {
-      res.status(400).render('get-started/request-api/index', await this.formData(answers, errors, apis));
+      res.status(400).render('subscribe/index', await this.formData(answers, errors, apis));
       return;
     }
 
-    res.render('get-started/request-api/check-answers', {
+    res.render('subscribe/check-answers', {
       answers,
       rows: summaryRows(answers, this.titleOf(apis, answers['api-name'])),
     });
@@ -52,14 +60,20 @@ export default class RequestApiController {
 
   @route('/check-answers')
   @GET()
-  public checkAnswers(req: Request, res: Response): void {
+  public checkAnswers(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     // Reached directly, with no answers to check — send the user back to fill the form in.
-    res.redirect('/get-started/request-api');
+    res.redirect('/subscribe');
   }
 
   @route('/check-answers')
   @POST()
-  public async submit(req: Request, res: Response): Promise<void> {
+  public async submit(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
     const apis = await getCatalogueApis();
     const answers = toAnswers(req.body as Record<string, unknown>);
     const errors = validate(
@@ -70,19 +84,22 @@ export default class RequestApiController {
     // The hidden fields came from a page we rendered, so a failure here means they were
     // tampered with or the catalogue changed underneath. Either way, back to the form.
     if (errors.length) {
-      res.status(400).render('get-started/request-api/index', await this.formData(answers, errors, apis));
+      res.status(400).render('subscribe/index', await this.formData(answers, errors, apis));
       return;
     }
 
     const reference = await submitAccessRequest(answers);
 
-    res.render('get-started/request-api/confirmation', { reference });
+    res.render('subscribe/confirmation', { reference });
   }
 
   @route('/confirmation')
   @GET()
-  public confirmation(req: Request, res: Response): void {
-    res.redirect('/get-started/request-api');
+  public confirmation(req: AppRequest, res: Response): void {
+    if (!requireSignIn(req, res)) {
+      return;
+    }
+    res.redirect('/subscribe');
   }
 
   private async formData(

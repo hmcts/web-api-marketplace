@@ -8,5 +8,9 @@ module.exports = {
     '^.+\\.js$': 'babel-jest',
   },
   transformIgnorePatterns: ['/node_modules/(?!chai|uuid)'],
-  modulePathIgnorePatterns: ['<rootDir>/src/test/unit/mocks', '<rootDir>/src/test/unit/views/helpers'],
+  modulePathIgnorePatterns: [
+    '<rootDir>/src/test/unit/mocks',
+    '<rootDir>/src/test/unit/helpers',
+    '<rootDir>/src/test/unit/views/helpers',
+  ],
 };
