@@ -10,12 +10,14 @@ import {
   ENVIRONMENTS,
   FieldError,
   OAUTH_ANSWERS,
+  Requester,
   submitAccessRequest,
   summaryRows,
   toAnswers,
   validate,
 } from '../services/AccessRequest';
 import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
+import { SignedInUser } from '../services/SignIn';
 
 /**
  * The "Subscribe to an API" journey: form, check your answers, confirmation.
@@ -54,7 +56,7 @@ export default class SubscribeController {
 
     res.render('subscribe/check-answers', {
       answers,
-      rows: summaryRows(answers, this.titleOf(apis, answers['api-name'])),
+      rows: summaryRows(answers, this.titleOf(apis, answers['api-name']), this.requester(req)),
     });
   }
 
@@ -88,7 +90,7 @@ export default class SubscribeController {
       return;
     }
 
-    const reference = await submitAccessRequest(answers);
+    const reference = await submitAccessRequest(answers, this.requester(req));
 
     res.render('subscribe/confirmation', { reference });
   }
@@ -121,6 +123,16 @@ export default class SubscribeController {
       oauthAnswers: OAUTH_ANSWERS,
       declarations: DECLARATIONS,
     };
+  }
+
+  /**
+   * Read from the session, never from the body. The check-answers page posts the answers
+   * on as hidden fields, so anything taken from the body there could be edited — the
+   * requester has to come from the account that is actually signed in.
+   */
+  private requester(req: AppRequest): Requester {
+    const user = req.session.user as SignedInUser;
+    return { firstName: user.firstName, lastName: user.lastName, email: user.email, orgName: user.orgName };
   }
 
   private titleOf(apis: CatalogueApi[], name: string): string {

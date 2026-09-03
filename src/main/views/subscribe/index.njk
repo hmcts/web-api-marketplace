@@ -4,7 +4,7 @@
 {% set section = "subscribe" %}
 {% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
 
-{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
@@ -34,56 +34,15 @@
 
     <form method="post" action="/subscribe" novalidate>
 
-      <h2 class="govuk-heading-l">Your details</h2>
-
-      {{ govukInput({
-        label: { text: "Full name", classes: "govuk-label--m" },
-        id: "full-name",
-        name: "full-name",
-        value: answers["full-name"],
-        autocomplete: "name",
-        errorMessage: { text: errorFor["full-name"] } if errorFor["full-name"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Organisation", classes: "govuk-label--m" },
-        hint: { text: "For example, HMCTS DTS or Ministry of Justice Digital." },
-        id: "organisation",
-        name: "organisation",
-        value: answers.organisation,
-        autocomplete: "organization",
-        errorMessage: { text: errorFor.organisation } if errorFor.organisation
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Work email address", classes: "govuk-label--m" },
-        id: "email",
-        name: "email",
-        type: "email",
-        value: answers.email,
-        autocomplete: "email",
-        spellcheck: false,
-        errorMessage: { text: errorFor.email } if errorFor.email
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Job title", classes: "govuk-label--m" },
-        hint: { text: "For example, Senior Developer or Technical Architect." },
-        id: "job-title",
-        name: "job-title",
-        value: answers["job-title"],
-        autocomplete: "organization-title",
-        errorMessage: { text: errorFor["job-title"] } if errorFor["job-title"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Phone number (optional)", classes: "govuk-label--m" },
-        hint: { text: "In case we need to contact you urgently about your request." },
-        id: "phone",
-        name: "phone",
-        type: "tel",
-        value: answers.phone,
-        autocomplete: "tel"
+      {# The requester is whoever is signed in, so their details come from the session
+         rather than being asked for again — and cannot be edited into someone else's. #}
+      {{ govukSummaryList({
+        card: { title: { text: "Your details" } },
+        rows: [
+          { key: { text: "Name" },         value: { text: user.firstName + " " + user.lastName } },
+          { key: { text: "Organisation" }, value: { text: user.orgName } },
+          { key: { text: "Email" },        value: { text: user.email } }
+        ]
       }) }}
 
       <h2 class="govuk-heading-l">API details</h2>
