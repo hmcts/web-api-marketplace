@@ -44,3 +44,10 @@ src/test/functional/.sessions/
 
 # Local environment
 .env
+
+# Terraform working files
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
+infrastructure/*.tfstate
+infrastructure/*.tfstate.*
+infrastructure/.terraform.tfstate.lock.info
