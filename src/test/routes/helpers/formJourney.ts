@@ -4,6 +4,7 @@ import request from 'supertest';
 import { app } from '../../../main/app';
 
 const SIGNED_IN_USER = {
+  id: 1,
   email: 'joe.bloggs@justice.gov.uk',
   firstName: 'Joe',
   lastName: 'Bloggs',
@@ -39,6 +40,8 @@ export interface FormJourney {
   checkAnswersContains: string[];
   /** The confirmation page's heading. */
   confirmationContains: string;
+  /** The shape of the reference shown. Journeys wired to the backend quote its id. */
+  referencePattern?: RegExp;
 }
 
 /**
@@ -92,7 +95,7 @@ export function describeFormJourney(journey: FormJourney): void {
         .expect(res => {
           expect(res.status).to.equal(200);
           expect(res.text).to.contain(journey.confirmationContains);
-          expect(res.text).to.match(/id="confirmation-reference">AMP-/);
+          expect(res.text).to.match(journey.referencePattern ?? /id="confirmation-reference">AMP-/);
         });
     });
 

@@ -4,7 +4,12 @@ import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/ApiCatalogue', () => ({ getCatalogueApis: jest.fn() }));
+jest.mock('../../../main/services/AccessRequest', () => ({
+  ...jest.requireActual('../../../main/services/AccessRequest'),
+  submitAccessRequest: jest.fn(),
+}));
 
+const { submitAccessRequest } = require('../../../main/services/AccessRequest');
 const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 
 const catalogue = [{ name: 'api-cp-ai-rag', title: 'RAG Service API' }];
@@ -22,6 +27,8 @@ describe('SubscribeController', () => {
   beforeEach(() => {
     (getCatalogueApis as jest.Mock).mockReset();
     (getCatalogueApis as jest.Mock).mockResolvedValue(catalogue);
+    (submitAccessRequest as jest.Mock).mockReset();
+    (submitAccessRequest as jest.Mock).mockResolvedValue({ ok: true, reference: 'e6a1c0de-0000' });
   });
 
   test('getting_the_page_should_render_the_form', async () => {
@@ -88,7 +95,7 @@ describe('SubscribeController', () => {
     await new SubscribeController().submit(signedIn(completeBody), res);
 
     expect(res.view).toBe('subscribe/confirmation');
-    expect(res.data?.reference).toMatch(/^AMP-/);
+    expect(res.data?.reference).toBe('e6a1c0de-0000');
   });
 
   test('submitting_tampered_answers_should_return_400_rather_than_a_confirmation', async () => {
@@ -117,4 +124,26 @@ describe('SubscribeController', () => {
   });
 
   describeSignInGuard(() => new SubscribeController(), completeBody);
+
+  test('a_backend_failure_should_keep_the_answers_and_say_so_rather_than_confirm', async () => {
+    (submitAccessRequest as jest.Mock).mockResolvedValue({ ok: false });
+    const res = mockResponse();
+
+    await new SubscribeController().submit(signedIn(completeBody), res);
+
+    expect(res.view).toBe('subscribe/check-answers');
+    expect(res.statusCode).toBe(502);
+    expect(res.data?.error).toContain('could not be submitted');
+    expect(res.data?.answers).toBeDefined();
+  });
+
+  test('submitting_should_pass_the_signed_in_user_to_the_backend', async () => {
+    const res = mockResponse();
+
+    await new SubscribeController().submit(signedIn(completeBody), res);
+
+    const [, requester] = (submitAccessRequest as jest.Mock).mock.calls[0];
+    expect(requester.id).toBe(7);
+    expect(requester.email).toBe('joe@example.com');
+  });
 });

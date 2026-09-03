@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import {
   DECLARATIONS,
   submitAccessRequest,
@@ -8,7 +10,13 @@ import {
 
 const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
-const REQUESTER = { firstName: 'Joe', lastName: 'Bloggs', email: 'joe.bloggs@justice.gov.uk', orgName: 'HMCTS DTS' };
+const REQUESTER = {
+  id: 1,
+  firstName: 'Joe',
+  lastName: 'Bloggs',
+  email: 'joe.bloggs@justice.gov.uk',
+  orgName: 'HMCTS DTS',
+};
 
 const completeBody = {
   'api-name': 'api-cp-ai-rag',
@@ -19,7 +27,13 @@ const completeBody = {
   declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 
+jest.mock('axios');
+
+const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>;
+
 describe('AccessRequest', () => {
+  beforeEach(() => mockedPost.mockReset());
+
   test('a_complete_submission_should_produce_no_errors', () => {
     expect(validate(toAnswers(completeBody), apiNames)).toEqual([]);
   });
@@ -97,9 +111,52 @@ describe('AccessRequest', () => {
     expect(valueFor('OAuth 2.0 with JWT bearer tokens')).toBe('Yes');
   });
 
-  test('submitting_a_request_should_return_a_reference', async () => {
-    const reference = await submitAccessRequest(toAnswers(completeBody), REQUESTER);
+  test('submitting_a_request_should_send_the_user_id_as_a_header_and_not_the_identity', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'e6a1c0de-0000-4000-8000-000000000001' } });
 
-    expect(reference).toMatch(/^AMP-[0-9A-F]{8}$/);
+    const result = await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API');
+
+    expect(result).toEqual({ ok: true, reference: 'e6a1c0de-0000-4000-8000-000000000001' });
+
+    const [, body, options] = mockedPost.mock.calls[0];
+    expect((options as { headers: Record<string, string> }).headers.requestingUserId).toBe('1');
+    // The backend derives these from the user id, so sending them would offer it a second,
+    // forgeable copy of what it already knows.
+    expect(JSON.stringify(body)).not.toContain(REQUESTER.email);
+    expect(JSON.stringify(body)).not.toContain('Bloggs');
+  });
+
+  test('submitting_a_request_should_map_the_answers_onto_the_backend_fields', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'abc' } });
+
+    await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API');
+
+    expect(mockedPost.mock.calls[0][1]).toEqual({
+      apiShortCode: 'api-cp-ai-rag',
+      api: 'RAG Service API',
+      environment: 'sandbox',
+      expectedVolume: 'low',
+      useCase: 'Ingesting documents for the case bundle service.',
+      oauth2Capable: true,
+      declaration: DECLARATIONS.map(declaration => declaration.value).join(', '),
+    });
+  });
+
+  test('a_rejected_submission_should_report_failure_rather_than_a_reference', async () => {
+    mockedPost.mockResolvedValue({ status: 400, data: { error: 'useCase is required.' } });
+
+    expect(await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API')).toEqual({ ok: false });
+  });
+
+  test('an_unreachable_backend_should_report_failure_rather_than_throwing', async () => {
+    mockedPost.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    expect(await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API')).toEqual({ ok: false });
+  });
+
+  test('a_use_case_longer_than_the_backend_allows_should_be_rejected_on_the_form', () => {
+    const errors = validate(toAnswers({ ...completeBody, 'use-case': 'x'.repeat(256) }), apiNames);
+
+    expect(errors).toEqual([{ name: 'use-case', text: 'Your description must be 255 characters or fewer' }]);
   });
 });

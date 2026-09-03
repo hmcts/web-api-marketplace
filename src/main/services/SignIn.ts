@@ -8,6 +8,8 @@ import { logSubmission, submissionEndpoint } from './submissions';
 const logger = Logger.getLogger('sign-in');
 
 export interface SignedInUser {
+  /** The backend's own user id, which every request it stores is attributed to. */
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
