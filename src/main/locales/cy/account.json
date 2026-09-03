@@ -7,6 +7,12 @@
     "tabLabel": "Fy ngheisiadau",
     "heading": "Fy ngheisiadau",
     "intro": "Popeth rydych wedi’i gyflwyno drwy Tanysgrifio i API neu Cyhoeddi API.",
-    "emptyHtml": "Nid ydych wedi cyflwyno unrhyw geisiadau eto. Dechreuwch o <a class=\"govuk-link\" href=\"/subscribe\">Tanysgrifio i API</a> neu <a class=\"govuk-link\" href=\"/publish\">Cyhoeddi API</a>."
+    "emptyHtml": "Nid ydych wedi cyflwyno unrhyw geisiadau eto. Dechreuwch o <a class=\"govuk-link\" href=\"/subscribe\">Tanysgrifio i API</a> neu <a class=\"govuk-link\" href=\"/publish\">Cyhoeddi API</a>.",
+    "unavailable": "Nid oedd modd llwytho eich ceisiadau ar hyn o bryd. Rhowch gynnig arall arni ymhen ychydig funudau.",
+    "tableCaption": "Ceisiadau rydych wedi’u cyflwyno",
+    "columnApi": "API",
+    "columnEnvironment": "Amgylchedd",
+    "columnStatus": "Statws",
+    "columnReference": "Cyfeirnod"
   }
 }

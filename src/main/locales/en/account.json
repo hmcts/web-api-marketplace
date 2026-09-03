@@ -7,6 +7,12 @@
     "tabLabel": "My requests",
     "heading": "My requests",
     "intro": "Everything you have submitted through Subscribe to an API or Publish an API.",
-    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/publish\">Publish an API</a>."
+    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/publish\">Publish an API</a>.",
+    "unavailable": "Your requests could not be loaded just now. Try again in a few minutes.",
+    "tableCaption": "Requests you have submitted",
+    "columnApi": "API",
+    "columnEnvironment": "Environment",
+    "columnStatus": "Status",
+    "columnReference": "Reference"
   }
 }
