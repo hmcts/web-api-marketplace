@@ -2,7 +2,7 @@ import { AppRequest } from '../../../main/interfaces/AppRequest';
 import { mockRequest } from '../mocks/mockRequest';
 import { mockResponse } from '../mocks/mockResponse';
 
-const SIGNED_IN_USER = { email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
+const SIGNED_IN_USER = { id: 7, email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
 
 /** A request carrying a signed-in session, which both form journeys require. */
 export const signedIn = (body: Record<string, unknown> = {}): AppRequest => {

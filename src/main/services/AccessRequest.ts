@@ -1,25 +1,37 @@
-import crypto from 'node:crypto';
+import axios from 'axios';
 
 import { Logger } from '../modules/logging';
 
-import { logNotImplemented } from './submissions';
+import { Choice, FieldError, SummaryRow, toAnswerList, toAnswerText } from './answers';
+import { logSubmission, submissionEndpoint } from './submissions';
+
+// Re-exported so importers that predate services/answers keep working unchanged.
+export type { Choice, FieldError, SummaryRow };
+
+/**
+ * Who is asking. Taken from the signed-in session, never from the request body, so a
+ * request cannot be submitted in someone else's name by editing a hidden field.
+ */
+export interface Requester {
+  /** What the backend attributes the stored request to. */
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  orgName: string;
+}
 
 const logger = Logger.getLogger('access-request');
 
-export interface Choice {
-  value: string;
-  text: string;
-  hint?: { text: string } | { html: string };
-}
+/** The backend stores an access request as a subscription. */
+const SUBSCRIPTIONS_PATH = '/subscriptions';
 
-export interface FieldError {
-  name: string;
-  text: string;
-}
+/** Matches the backend's own limit, so an over-long description fails on the form. */
+export const USE_CASE_MAX_LENGTH = 255;
 
-export interface SummaryRow {
-  key: string;
-  value: string;
+export interface SubmitResult {
+  ok: boolean;
+  reference?: string;
 }
 
 /**
@@ -64,13 +76,12 @@ export const DECLARATIONS: Choice[] = [
   { value: 'governance', text: 'I have read and accept the Data Governance Standards' },
 ];
 
-/** Field names match the prototype's, so the answers keep one shape end to end. */
+/**
+ * What the form asks for. The requester is not in here: their name, organisation and
+ * email come from the signed-in session, so they cannot be posted and cannot be edited
+ * into someone else's.
+ */
 export interface AccessRequestAnswers {
-  'full-name': string;
-  organisation: string;
-  email: string;
-  'job-title': string;
-  phone: string;
   'api-name': string;
   environment: string;
   'call-volume': string;
@@ -80,11 +91,6 @@ export interface AccessRequestAnswers {
 }
 
 export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = [
-  'full-name',
-  'organisation',
-  'email',
-  'job-title',
-  'phone',
   'api-name',
   'environment',
   'call-volume',
@@ -94,22 +100,15 @@ export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = [
 ];
 
 export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnswers {
-  // Only strings count. A JSON body can carry an object or an array under any of these
-  // names, and String()-ing one would produce "[object Object]" and pass validation.
-  const text = (name: string) => (typeof body?.[name] === 'string' ? (body[name] as string).trim() : '');
+  const text = (name: string) => toAnswerText(body, name);
 
   return {
-    'full-name': text('full-name'),
-    organisation: text('organisation'),
-    email: text('email'),
-    'job-title': text('job-title'),
-    phone: text('phone'),
     'api-name': text('api-name'),
     environment: text('environment'),
     'call-volume': text('call-volume'),
     'use-case': text('use-case'),
     oauth: text('oauth'),
-    declarations: toList(body?.declarations),
+    declarations: toAnswerList(body?.declarations),
   };
 }
 
@@ -119,22 +118,6 @@ export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnsw
  */
 export function validate(answers: AccessRequestAnswers, apiNames: string[]): FieldError[] {
   const errors: FieldError[] = [];
-  const require = (name: keyof AccessRequestAnswers, text: string) => {
-    if (!answers[name]) {
-      errors.push({ name, text });
-    }
-  };
-
-  require('full-name', 'Enter your full name');
-  require('organisation', 'Enter your organisation');
-
-  if (!answers.email) {
-    errors.push({ name: 'email', text: 'Enter your work email address' });
-  } else if (!looksLikeAnEmailAddress(answers.email)) {
-    errors.push({ name: 'email', text: 'Enter a work email address in the correct format, like name@example.gov.uk' });
-  }
-
-  require('job-title', 'Enter your job title');
 
   if (!answers['api-name'] || !apiNames.includes(answers['api-name'])) {
     errors.push({ name: 'api-name', text: 'Select the API you need access to' });
@@ -142,7 +125,16 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
 
   requireChoice(errors, 'environment', answers.environment, ENVIRONMENTS, 'Select the environment you need');
   requireChoice(errors, 'call-volume', answers['call-volume'], CALL_VOLUMES, 'Select the expected call volume');
-  require('use-case', 'Describe what you are building and why you need this API');
+  if (!answers['use-case']) {
+    errors.push({ name: 'use-case', text: 'Describe what you are building and why you need this API' });
+  } else if (answers['use-case'].length > USE_CASE_MAX_LENGTH) {
+    // The backend rejects anything longer. Catching it here means a field error on the
+    // form rather than a failed submission the user cannot act on.
+    errors.push({
+      name: 'use-case',
+      text: `Your description must be ${USE_CASE_MAX_LENGTH} characters or fewer`,
+    });
+  }
   requireChoice(
     errors,
     'oauth',
@@ -158,14 +150,16 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
   return errors;
 }
 
-/** The rows shown on the check-answers page, with stored values turned back into their labels. */
-export function summaryRows(answers: AccessRequestAnswers, apiTitle: string): SummaryRow[] {
+/**
+ * The rows shown on the check-answers page, with stored values turned back into their
+ * labels. The requester's own details come from the session, so they are passed in rather
+ * than read from the answers.
+ */
+export function summaryRows(answers: AccessRequestAnswers, apiTitle: string, requester: Requester): SummaryRow[] {
   return [
-    { key: 'Full name', value: answers['full-name'] },
-    { key: 'Organisation', value: answers.organisation },
-    { key: 'Work email address', value: answers.email },
-    { key: 'Job title', value: answers['job-title'] },
-    { key: 'Phone number', value: answers.phone || 'Not provided' },
+    { key: 'Name', value: `${requester.firstName} ${requester.lastName}` },
+    { key: 'Organisation', value: requester.orgName },
+    { key: 'Email', value: requester.email },
     { key: 'API', value: apiTitle || answers['api-name'] },
     { key: 'Environment', value: labelFor(ENVIRONMENTS, answers.environment) },
     { key: 'Expected call volume', value: labelFor(CALL_VOLUMES, answers['call-volume']) },
@@ -176,44 +170,53 @@ export function summaryRows(answers: AccessRequestAnswers, apiTitle: string): Su
 }
 
 /**
- * Records the request and returns the reference shown on the confirmation page.
+ * Stores the request against the backend and returns the reference to quote.
  *
- * AMP-1071 step 1 stops here: nothing is persisted yet. Step 2 replaces the body of this
- * function with a POST to service-api-marketplace, and everything above it — the pages,
- * the validation and the answer shape — stays as it is.
+ * The requester's name, organisation and email are not sent. The backend looks them up
+ * from the user id in the requestingUserId header and stamps them onto what it stores, so
+ * sending them would be offering it a second, forgeable copy of what it already knows.
+ *
+ * The reference is the backend's own id. Generating one here would be showing the user
+ * something no record can be found by.
  */
-export async function submitAccessRequest(answers: AccessRequestAnswers): Promise<string> {
-  const reference = newReference();
+export async function submitAccessRequest(
+  answers: AccessRequestAnswers,
+  requester: Requester,
+  apiTitle: string
+): Promise<SubmitResult> {
+  const url = submissionEndpoint(SUBSCRIPTIONS_PATH);
+  const body = {
+    apiShortCode: answers['api-name'],
+    api: apiTitle || answers['api-name'],
+    environment: answers.environment,
+    expectedVolume: answers['call-volume'],
+    useCase: answers['use-case'],
+    oauth2Capable: answers.oauth === 'yes',
+    declaration: answers.declarations.join(', '),
+  };
 
-  logNotImplemented(logger, 'Access request', `${reference} for ${answers['api-name']}, ${answers.environment}`);
+  logSubmission(logger, `Access request for ${answers['api-name']} by user ${requester.id}`, SUBSCRIPTIONS_PATH);
 
-  return reference;
-}
+  try {
+    const response = await axios.post(url, body, {
+      timeout: 10000,
+      validateStatus: () => true,
+      headers: { requestingUserId: String(requester.id) },
+    });
 
-/**
- * Deliberately not a regular expression: the obvious one backtracks, and no pattern
- * decides whether an address is real anyway. This rejects the shapes a person could only
- * have typed by mistake, and delivery decides the rest.
- */
-function looksLikeAnEmailAddress(value: string): boolean {
-  const parts = value.split('@');
+    if (response.status === 201) {
+      const reference = String((response.data as { id?: string })?.id ?? '');
+      logger.info(`Access request stored as ${reference} at ${url}`);
+      return { ok: true, reference };
+    }
 
-  if (parts.length !== 2) {
-    return false;
+    logger.error(`Access request rejected with status ${response.status} from ${url}`);
+    return { ok: false };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`Access request to ${url} failed: ${detail}`);
+    return { ok: false };
   }
-
-  const [local, domain] = parts;
-
-  return local.length > 0 && domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
-}
-
-function toList(value: unknown): string[] {
-  // Checkboxes arrive as a string when one is ticked and an array when several are, and
-  // only string entries are meaningful — anything else is not an answer this form offered.
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
-  }
-  return typeof value === 'string' && value !== '' ? [value] : [];
 }
 
 function requireChoice(errors: FieldError[], name: string, value: string, choices: Choice[], text: string): void {
@@ -224,12 +227,4 @@ function requireChoice(errors: FieldError[], name: string, value: string, choice
 
 function labelFor(choices: Choice[], value: string): string {
   return choices.find(choice => choice.value === value)?.text ?? value;
-}
-
-/**
- * Unguessable rather than merely unique: the reference is quoted back to the user and
- * will become the key their request is looked up by, so Math.random() is not good enough.
- */
-function newReference(): string {
-  return `AMP-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }

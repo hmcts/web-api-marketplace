@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import {
   DECLARATIONS,
   submitAccessRequest,
@@ -8,12 +10,15 @@ import {
 
 const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
-const completeBody = {
-  'full-name': ' Joe Bloggs ',
-  organisation: 'HMCTS DTS',
+const REQUESTER = {
+  id: 1,
+  firstName: 'Joe',
+  lastName: 'Bloggs',
   email: 'joe.bloggs@justice.gov.uk',
-  'job-title': 'Senior Developer',
-  phone: '',
+  orgName: 'HMCTS DTS',
+};
+
+const completeBody = {
   'api-name': 'api-cp-ai-rag',
   environment: 'sandbox',
   'call-volume': 'low',
@@ -22,7 +27,13 @@ const completeBody = {
   declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 
+jest.mock('axios');
+
+const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>;
+
 describe('AccessRequest', () => {
+  beforeEach(() => mockedPost.mockReset());
+
   test('a_complete_submission_should_produce_no_errors', () => {
     expect(validate(toAnswers(completeBody), apiNames)).toEqual([]);
   });
@@ -31,30 +42,12 @@ describe('AccessRequest', () => {
     const errors = validate(toAnswers({}), apiNames);
 
     expect(errors.map(error => error.name)).toEqual([
-      'full-name',
-      'organisation',
-      'email',
-      'job-title',
       'api-name',
       'environment',
       'call-volume',
       'use-case',
       'oauth',
       'declarations',
-    ]);
-  });
-
-  test('an_optional_phone_number_should_not_be_required', () => {
-    const errors = validate(toAnswers({ ...completeBody, phone: '' }), apiNames);
-
-    expect(errors.map(error => error.name)).not.toContain('phone');
-  });
-
-  test('an_email_without_an_at_sign_should_be_rejected_as_the_wrong_format', () => {
-    const errors = validate(toAnswers({ ...completeBody, email: 'not-an-address' }), apiNames);
-
-    expect(errors).toEqual([
-      { name: 'email', text: 'Enter a work email address in the correct format, like name@example.gov.uk' },
     ]);
   });
 
@@ -80,45 +73,36 @@ describe('AccessRequest', () => {
     expect(toAnswers({ declarations: 'in-scope' }).declarations).toEqual(['in-scope']);
   });
 
-  test('an_object_sent_in_place_of_a_text_answer_should_be_read_as_empty', () => {
-    // A JSON body can carry an object here; String()-ing one would pass validation as
-    // the literal "[object Object]".
-    const answers = toAnswers({ ...completeBody, 'full-name': { $ne: null } });
-
-    expect(answers['full-name']).toBe('');
-    expect(validate(answers, apiNames)).toEqual([{ name: 'full-name', text: 'Enter your full name' }]);
-  });
-
   test('a_non_string_declaration_should_be_discarded_rather_than_stringified', () => {
     expect(toAnswers({ declarations: [{ toString: () => 'in-scope' }] }).declarations).toEqual([]);
   });
 
-  test.each([
-    ['no at sign', 'joe.example.gov.uk'],
-    ['two at signs', 'joe@@justice.gov.uk'],
-    ['nothing before the at sign', '@justice.gov.uk'],
-    ['no dot in the domain', 'joe@justice'],
-    ['a domain starting with a dot', 'joe@.gov.uk'],
-    ['a domain ending with a dot', 'joe@justice.'],
-  ])('an_address_with_%s_should_be_rejected', (_description: string, email: string) => {
-    const errors = validate(toAnswers({ ...completeBody, email }), apiNames);
-
-    expect(errors.map(error => error.name)).toEqual(['email']);
+  test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
+    expect(toAnswers({ ...completeBody, 'use-case': '  Ingesting documents.  ' })['use-case']).toBe(
+      'Ingesting documents.'
+    );
   });
 
-  test.each([['joe.bloggs@justice.gov.uk'], ['j@a.b'], ["o'brien+tag@sub.domain.gov.uk"]])(
-    'a_valid_address_%s_should_be_accepted',
-    (email: string) => {
-      expect(validate(toAnswers({ ...completeBody, email }), apiNames)).toEqual([]);
-    }
-  );
+  test('the_requester_should_come_from_the_session_and_not_from_the_posted_body', () => {
+    // Whatever the body claims, the answers carry no identity at all — so a hidden field
+    // cannot be edited to submit a request in someone else's name.
+    const answers = toAnswers({ ...completeBody, 'full-name': 'Someone Else', email: 'else@example.com' });
 
-  test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
-    expect(toAnswers(completeBody)['full-name']).toBe('Joe Bloggs');
+    expect(Object.keys(answers)).not.toContain('full-name');
+    expect(Object.keys(answers)).not.toContain('email');
+  });
+
+  test('the_summary_should_name_the_signed_in_requester', () => {
+    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API', REQUESTER);
+    const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
+
+    expect(valueFor('Name')).toBe('Joe Bloggs');
+    expect(valueFor('Organisation')).toBe('HMCTS DTS');
+    expect(valueFor('Email')).toBe('joe.bloggs@justice.gov.uk');
   });
 
   test('the_summary_should_show_labels_rather_than_stored_values', () => {
-    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API');
+    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API', REQUESTER);
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
 
     expect(valueFor('API')).toBe('RAG Service API');
@@ -127,15 +111,52 @@ describe('AccessRequest', () => {
     expect(valueFor('OAuth 2.0 with JWT bearer tokens')).toBe('Yes');
   });
 
-  test('a_missing_phone_number_should_be_summarised_as_not_provided', () => {
-    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API');
+  test('submitting_a_request_should_send_the_user_id_as_a_header_and_not_the_identity', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'e6a1c0de-0000-4000-8000-000000000001' } });
 
-    expect(rows.find(row => row.key === 'Phone number')?.value).toBe('Not provided');
+    const result = await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API');
+
+    expect(result).toEqual({ ok: true, reference: 'e6a1c0de-0000-4000-8000-000000000001' });
+
+    const [, body, options] = mockedPost.mock.calls[0];
+    expect((options as { headers: Record<string, string> }).headers.requestingUserId).toBe('1');
+    // The backend derives these from the user id, so sending them would offer it a second,
+    // forgeable copy of what it already knows.
+    expect(JSON.stringify(body)).not.toContain(REQUESTER.email);
+    expect(JSON.stringify(body)).not.toContain('Bloggs');
   });
 
-  test('submitting_a_request_should_return_a_reference', async () => {
-    const reference = await submitAccessRequest(toAnswers(completeBody));
+  test('submitting_a_request_should_map_the_answers_onto_the_backend_fields', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { id: 'abc' } });
 
-    expect(reference).toMatch(/^AMP-[0-9A-F]{8}$/);
+    await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API');
+
+    expect(mockedPost.mock.calls[0][1]).toEqual({
+      apiShortCode: 'api-cp-ai-rag',
+      api: 'RAG Service API',
+      environment: 'sandbox',
+      expectedVolume: 'low',
+      useCase: 'Ingesting documents for the case bundle service.',
+      oauth2Capable: true,
+      declaration: DECLARATIONS.map(declaration => declaration.value).join(', '),
+    });
+  });
+
+  test('a_rejected_submission_should_report_failure_rather_than_a_reference', async () => {
+    mockedPost.mockResolvedValue({ status: 400, data: { error: 'useCase is required.' } });
+
+    expect(await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API')).toEqual({ ok: false });
+  });
+
+  test('an_unreachable_backend_should_report_failure_rather_than_throwing', async () => {
+    mockedPost.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    expect(await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API')).toEqual({ ok: false });
+  });
+
+  test('a_use_case_longer_than_the_backend_allows_should_be_rejected_on_the_form', () => {
+    const errors = validate(toAnswers({ ...completeBody, 'use-case': 'x'.repeat(256) }), apiNames);
+
+    expect(errors).toEqual([{ name: 'use-case', text: 'Your description must be 255 characters or fewer' }]);
   });
 });

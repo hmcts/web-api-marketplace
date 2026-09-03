@@ -4,6 +4,8 @@
 {% set section = "account" %}
 {% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
 
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
@@ -14,18 +16,62 @@
 
       <h1 class="govuk-heading-xl">{{ heading }}</h1>
 
-      {{ govukSummaryList({
-        rows: [
-          { key: { text: "Name" },         value: { text: user.firstName + " " + user.lastName } },
-          { key: { text: "Email" },        value: { text: user.email } },
-          { key: { text: organisation },   value: { text: user.orgName } }
+      {% set accountPanel %}
+        {{ govukSummaryList({
+          rows: [
+            { key: { text: "Name" },       value: { text: user.firstName + " " + user.lastName } },
+            { key: { text: "Email" },      value: { text: user.email } },
+            { key: { text: organisation }, value: { text: user.orgName } }
+          ]
+        }) }}
+
+        {# POST, so no link or prefetcher can sign the user out. #}
+        <form method="post" action="/sign-out">
+          {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
+        </form>
+      {% endset %}
+
+      {% set requestsPanel %}
+        <h2 class="govuk-heading-l">{{ requests.heading }}</h2>
+
+        <p class="govuk-body">{{ requests.intro }}</p>
+
+        {% if couldNotLoad %}
+          {# Not the same as having submitted nothing, so it must not read like it. #}
+          <p class="govuk-body" id="requests-unavailable">{{ requests.unavailable }}</p>
+        {% elif subscriptions.length %}
+          {% set rows = [] %}
+          {% for subscription in subscriptions %}
+            {% set rows = (rows.push([
+              { text: subscription.api or subscription.apiShortCode },
+              { text: subscription.environment },
+              { text: subscription.status },
+              { html: '<span class="apim-reference">' + subscription.id + '</span>' }
+            ]), rows) %}
+          {% endfor %}
+
+          {{ govukTable({
+            caption: requests.tableCaption,
+            captionClasses: "govuk-visually-hidden",
+            head: [
+              { text: requests.columnApi },
+              { text: requests.columnEnvironment },
+              { text: requests.columnStatus },
+              { text: requests.columnReference }
+            ],
+            rows: rows
+          }) }}
+        {% else %}
+          <p class="govuk-body" id="requests-empty">{{ requests.emptyHtml | safe }}</p>
+        {% endif %}
+      {% endset %}
+
+      {{ govukTabs({
+        items: [
+          { label: heading,           id: "tab-account",  panel: { html: accountPanel } },
+          { label: requests.tabLabel, id: "tab-requests", panel: { html: requestsPanel } }
         ]
       }) }}
-
-      {# POST, so no link or prefetcher can sign the user out. #}
-      <form method="post" action="/sign-out">
-        {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
-      </form>
 
     </div>
   </div>

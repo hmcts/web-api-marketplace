@@ -10,12 +10,14 @@ import {
   ENVIRONMENTS,
   FieldError,
   OAUTH_ANSWERS,
+  Requester,
   submitAccessRequest,
   summaryRows,
   toAnswers,
   validate,
 } from '../services/AccessRequest';
 import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
+import { SignedInUser } from '../services/SignIn';
 
 /**
  * The "Subscribe to an API" journey: form, check your answers, confirmation.
@@ -54,7 +56,7 @@ export default class SubscribeController {
 
     res.render('subscribe/check-answers', {
       answers,
-      rows: summaryRows(answers, this.titleOf(apis, answers['api-name'])),
+      rows: summaryRows(answers, this.titleOf(apis, answers['api-name']), this.requester(req)),
     });
   }
 
@@ -88,9 +90,20 @@ export default class SubscribeController {
       return;
     }
 
-    const reference = await submitAccessRequest(answers);
+    const apiTitle = this.titleOf(apis, answers['api-name']);
+    const result = await submitAccessRequest(answers, this.requester(req), apiTitle);
 
-    res.render('subscribe/confirmation', { reference });
+    if (!result.ok) {
+      // The answers are still on the page, so the user can try again without retyping.
+      res.status(502).render('subscribe/check-answers', {
+        answers,
+        rows: summaryRows(answers, apiTitle, this.requester(req)),
+        error: 'Your request could not be submitted. Try again in a few minutes.',
+      });
+      return;
+    }
+
+    res.render('subscribe/confirmation', { reference: result.reference });
   }
 
   @route('/confirmation')
@@ -120,6 +133,22 @@ export default class SubscribeController {
       callVolumes: CALL_VOLUMES,
       oauthAnswers: OAUTH_ANSWERS,
       declarations: DECLARATIONS,
+    };
+  }
+
+  /**
+   * Read from the session, never from the body. The check-answers page posts the answers
+   * on as hidden fields, so anything taken from the body there could be edited — the
+   * requester has to come from the account that is actually signed in.
+   */
+  private requester(req: AppRequest): Requester {
+    const user = req.session.user as SignedInUser;
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      orgName: user.orgName,
     };
   }
 
