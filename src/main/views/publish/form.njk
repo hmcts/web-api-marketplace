@@ -2,12 +2,10 @@
 
 {% set pageTitle = "Submit an API for publication - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "publish" %}
-{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
+{% set hideBackLink = true %}
 
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
-{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
@@ -73,33 +71,6 @@
         errorMessage: { text: errorFor["spec-url"] } if errorFor["spec-url"],
         autocomplete: "off",
         spellcheck: false
-      }) }}
-
-      {{ govukRadios({
-        name: "classification",
-        fieldset: {
-          legend: {
-            text: "Highest data classification the API returns",
-            classes: "govuk-fieldset__legend--m"
-          }
-        },
-        hint: { text: "Secret and Top Secret APIs cannot be listed in the marketplace." },
-        items: classifications,
-        value: answers.classification,
-        errorMessage: { text: errorFor.classification } if errorFor.classification
-      }) }}
-
-      {{ govukCheckboxes({
-        name: "declarations",
-        fieldset: {
-          legend: {
-            text: "Declarations",
-            classes: "govuk-fieldset__legend--m"
-          }
-        },
-        items: declarations,
-        values: answers.declarations,
-        errorMessage: { text: errorFor.declarations } if errorFor.declarations
       }) }}
 
       {{ govukButton({ text: "Continue" }) }}

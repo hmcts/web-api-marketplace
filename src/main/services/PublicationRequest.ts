@@ -1,36 +1,9 @@
 import { Logger } from '../modules/logging';
 
-import {
-  Choice,
-  FieldError,
-  SummaryRow,
-  looksLikeAnEmailAddress,
-  newReference,
-  toAnswerList,
-  toAnswerText,
-} from './answers';
+import { FieldError, SummaryRow, looksLikeAnEmailAddress, newReference, toAnswerText } from './answers';
 import { logNotImplemented } from './submissions';
 
 const logger = Logger.getLogger('publication-request');
-
-export const CLASSIFICATIONS: Choice[] = [
-  { value: 'official', text: 'Official' },
-  {
-    value: 'official-sensitive',
-    text: 'Official-Sensitive',
-    hint: { text: 'A formal data sharing agreement will be required.' },
-  },
-  { value: 'secret', text: 'Secret or Top Secret', hint: { text: 'Not eligible for listing.' } },
-];
-
-/** Offered on the form so the answer can be given honestly, but rejected on submission. */
-export const INELIGIBLE_CLASSIFICATION = 'secret';
-
-export const PUBLISH_DECLARATIONS: Choice[] = [
-  { value: 'public-repo', text: 'The API repository is public on GitHub under the HMCTS organisation' },
-  { value: 'spectral', text: 'The specification passes the standard Spectral OAS3 ruleset with no errors' },
-  { value: 'external', text: 'This is an external API, not an internal or developers-only API' },
-];
 
 /** Field names match the prototype's, so the answers keep one shape end to end. */
 export interface PublicationRequestAnswers {
@@ -38,8 +11,6 @@ export interface PublicationRequestAnswers {
   'owning-team': string;
   'contact-email': string;
   'spec-url': string;
-  classification: string;
-  declarations: string[];
 }
 
 export function toPublicationAnswers(body: Record<string, unknown> = {}): PublicationRequestAnswers {
@@ -48,8 +19,6 @@ export function toPublicationAnswers(body: Record<string, unknown> = {}): Public
     'owning-team': toAnswerText(body, 'owning-team'),
     'contact-email': toAnswerText(body, 'contact-email'),
     'spec-url': toAnswerText(body, 'spec-url'),
-    classification: toAnswerText(body, 'classification'),
-    declarations: toAnswerList(body?.declarations),
   };
 }
 
@@ -78,34 +47,15 @@ export function validatePublication(answers: PublicationRequestAnswers): FieldEr
     errors.push({ name: 'spec-url', text: 'Enter the specification URL in full, starting with https://' });
   }
 
-  if (!CLASSIFICATIONS.some(choice => choice.value === answers.classification)) {
-    errors.push({ name: 'classification', text: 'Select the highest data classification the API returns' });
-  } else if (answers.classification === INELIGIBLE_CLASSIFICATION) {
-    // The page says these cannot be listed, so the form has to say so too rather than
-    // accepting the submission and leaving someone to find out later.
-    errors.push({
-      name: 'classification',
-      text: 'APIs classified Secret or Top Secret cannot be listed in the marketplace',
-    });
-  }
-
-  if (!PUBLISH_DECLARATIONS.every(declaration => answers.declarations.includes(declaration.value))) {
-    errors.push({ name: 'declarations', text: 'You must confirm all three declarations' });
-  }
-
   return errors;
 }
 
 export function publicationSummaryRows(answers: PublicationRequestAnswers): SummaryRow[] {
-  const classification = CLASSIFICATIONS.find(choice => choice.value === answers.classification);
-
   return [
     { key: 'API name', value: answers['api-name'] },
     { key: 'Owning team', value: answers['owning-team'] },
     { key: 'Team contact email', value: answers['contact-email'] },
     { key: 'OpenAPI specification URL', value: answers['spec-url'] },
-    { key: 'Data classification', value: classification?.text ?? answers.classification },
-    { key: 'Declarations', value: `All ${PUBLISH_DECLARATIONS.length} confirmed` },
   ];
 }
 

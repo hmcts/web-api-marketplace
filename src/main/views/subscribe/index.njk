@@ -2,9 +2,8 @@
 
 {% set pageTitle = "Subscribe to an API - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "subscribe" %}
-{% set breadcrumbs = [{ text: breadcrumb.home, href: "/" }] %}
+{% set hideBackLink = true %}
 
-{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
@@ -33,17 +32,6 @@
     </p>
 
     <form method="post" action="/subscribe" novalidate>
-
-      {# The requester is whoever is signed in, so their details come from the session
-         rather than being asked for again — and cannot be edited into someone else's. #}
-      {{ govukSummaryList({
-        card: { title: { text: "Your details" } },
-        rows: [
-          { key: { text: "Name" },         value: { text: user.firstName + " " + user.lastName } },
-          { key: { text: "Organisation" }, value: { text: user.orgName } },
-          { key: { text: "Email" },        value: { text: user.email } }
-        ]
-      }) }}
 
       <h2 class="govuk-heading-l">API details</h2>
 

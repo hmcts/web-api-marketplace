@@ -4,8 +4,6 @@ import { Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { requireSignIn } from '../modules/session';
 import {
-  CLASSIFICATIONS,
-  PUBLISH_DECLARATIONS,
   PublicationRequestAnswers,
   publicationSummaryRows,
   submitPublicationRequest,
@@ -90,8 +88,6 @@ export default class PublishController {
       answers,
       errors,
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      classifications: CLASSIFICATIONS,
-      declarations: PUBLISH_DECLARATIONS,
     };
   }
 }
