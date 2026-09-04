@@ -60,7 +60,7 @@ export async function postSubmission(
     });
 
     if (response.status === 201) {
-      const reference = String((response.data as { id?: string })?.id ?? '');
+      const reference = String((response.data as { reference?: string })?.reference ?? '');
       logger.info(`${label} stored as ${reference} at ${url}`);
       return { ok: true, reference };
     }
