@@ -7,5 +7,6 @@
   "submitButton": "Sign in",
   "errorSummaryTitle": "There is a problem",
   "errorMissing": "Enter your email address and password",
-  "errorRejected": "Incorrect email or password"
+  "errorRejected": "Incorrect email or password",
+  "errorUnavailable": "Sign in is not available at the moment because the service could not be reached. Try again in a few minutes."
 }

@@ -10,6 +10,7 @@ const content = {
   heading: 'Sign in',
   errorMissing: 'Enter your email address and password',
   errorRejected: 'Incorrect email or password',
+  errorUnavailable: 'Sign in is not available at the moment',
 };
 
 describe('SignInController', () => {
@@ -48,6 +49,46 @@ describe('SignInController', () => {
 
     expect(res.statusCode).toBe(401);
     expect(res.data?.error).toBe(content.errorRejected);
+  });
+
+  test('an_unreachable_backend_should_return_503_and_say_the_service_is_unavailable', async () => {
+    (signIn as jest.Mock).mockResolvedValue({ ok: false, unavailable: true });
+    const controller = new SignInController();
+    const res = mockResponse();
+    const req = mockRequest({ signIn: content });
+    req.body = { email: 'joe@example.com', password: 'any' };
+
+    await controller.post(req, res);
+
+    expect(res.statusCode).toBe(503);
+    expect(res.data?.serviceError).toBe(content.errorUnavailable);
+    // Not a 401 and not blamed on the credentials, which were never judged.
+    expect(res.data?.error).toBeUndefined();
+  });
+
+  test('an_outage_should_keep_the_email_so_the_user_can_simply_retry', async () => {
+    (signIn as jest.Mock).mockResolvedValue({ ok: false, unavailable: true });
+    const controller = new SignInController();
+    const res = mockResponse();
+    const req = mockRequest({ signIn: content });
+    req.body = { email: 'joe@example.com', password: 's3cr3t' };
+
+    await controller.post(req, res);
+
+    expect(res.data?.email).toBe('joe@example.com');
+    expect(JSON.stringify(res.data)).not.toContain('s3cr3t');
+  });
+
+  test('a_rejected_sign_in_should_not_be_reported_as_a_service_error', async () => {
+    (signIn as jest.Mock).mockResolvedValue({ ok: false });
+    const controller = new SignInController();
+    const res = mockResponse();
+    const req = mockRequest({ signIn: content });
+    req.body = { email: 'nobody@example.com', password: 'x' };
+
+    await controller.post(req, res);
+
+    expect(res.data?.serviceError).toBeUndefined();
   });
 
   test('a_successful_sign_in_should_store_the_user_and_redirect_to_the_account', async () => {
