@@ -33,7 +33,13 @@
   },
   "session": {
     "secret": "",
-    "maxAgeMinutes": 20
+    "maxAgeMinutes": 20,
+    "redis": {
+      "host": "",
+      "port": "6380",
+      "key": "",
+      "tls": true
+    }
   },
   "catalogue": {
     "url": "https://hmcts.github.io/amp-catalog/apis.json"
