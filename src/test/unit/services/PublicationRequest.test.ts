@@ -72,11 +72,11 @@ describe('PublicationRequest', () => {
   });
 
   test('submitting_should_send_the_user_id_as_a_header_and_not_the_identity', async () => {
-    mockedPost.mockResolvedValue({ status: 201, data: { id: 'e6a1c0de-0000-4000-8000-000000000001' } });
+    mockedPost.mockResolvedValue({ status: 201, data: { reference: 'PR-2026-E9PDKA' } });
 
     const result = await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER);
 
-    expect(result).toEqual({ ok: true, reference: 'e6a1c0de-0000-4000-8000-000000000001' });
+    expect(result).toEqual({ ok: true, reference: 'PR-2026-E9PDKA' });
 
     const [, body, options] = mockedPost.mock.calls[0];
     expect((options as { headers: Record<string, string> }).headers.requestingUserId).toBe('1');
@@ -87,7 +87,7 @@ describe('PublicationRequest', () => {
   });
 
   test('submitting_should_map_the_answers_onto_the_backend_fields', async () => {
-    mockedPost.mockResolvedValue({ status: 201, data: { id: 'abc' } });
+    mockedPost.mockResolvedValue({ status: 201, data: { reference: 'PR-2026-ABC123' } });
 
     await submitPublicationRequest(toPublicationAnswers(completeBody), REQUESTER);
 
