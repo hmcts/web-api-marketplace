@@ -35,4 +35,31 @@ describe('Sign in page', () => {
 
     expect(html).toContain('joe@example.com');
   });
+
+  test('a_service_error_should_be_shown_in_the_summary_without_blaming_a_field', () => {
+    const html = env.render('sign-in.njk', { ...data, serviceError: i18n.errorUnavailable });
+
+    expect(html).toContain('govuk-error-summary');
+    expect(html).toContain(i18n.errorUnavailable);
+    // Nothing on the form to go and correct, so no link into it and no red field.
+    expect(html).not.toContain('href="#email"');
+    expect(html).not.toContain('govuk-input--error');
+  });
+
+  test('a_service_error_should_keep_the_email_so_the_user_can_simply_retry', () => {
+    const html = env.render('sign-in.njk', {
+      ...data,
+      serviceError: i18n.errorUnavailable,
+      email: 'joe@example.com',
+    });
+
+    expect(html).toContain('joe@example.com');
+  });
+
+  test('a_credential_error_should_still_point_at_the_email_field', () => {
+    const html = env.render('sign-in.njk', { ...data, error: i18n.errorRejected });
+
+    expect(html).toContain('href="#email"');
+    expect(html).not.toContain(i18n.errorUnavailable);
+  });
 });

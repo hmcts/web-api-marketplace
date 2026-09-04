@@ -14,6 +14,12 @@
     "columnReference": "Reference",
     "columnType": "Type",
     "columnSubmitted": "Submitted",
+    "columnAction": "Action",
+    "deleteButton": "Delete",
+    "deletedTitle": "Success",
+    "deleted": "Your request has been deleted.",
+    "deleteFailedTitle": "Important",
+    "deleteFailed": "Your request could not be deleted just now. Try again in a few minutes.",
     "types": {
       "SUBSCRIPTION": "Subscribe to an API",
       "PUBLISH": "Publish an API"
