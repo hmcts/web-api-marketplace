@@ -20,10 +20,8 @@ const REQUESTER = {
 
 const completeBody = {
   'api-name': 'api-cp-ai-rag',
-  environment: 'sandbox',
   'call-volume': 'low',
   'use-case': 'Ingesting documents for the case bundle service.',
-  oauth: 'yes',
   declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 
@@ -41,14 +39,7 @@ describe('AccessRequest', () => {
   test('an_empty_submission_should_report_every_required_field_in_form_order', () => {
     const errors = validate(toAnswers({}), apiNames);
 
-    expect(errors.map(error => error.name)).toEqual([
-      'api-name',
-      'environment',
-      'call-volume',
-      'use-case',
-      'oauth',
-      'declarations',
-    ]);
+    expect(errors.map(error => error.name)).toEqual(['api-name', 'call-volume', 'use-case', 'declarations']);
   });
 
   test('an_api_that_is_not_in_the_catalogue_should_be_rejected', () => {
@@ -58,9 +49,19 @@ describe('AccessRequest', () => {
   });
 
   test('a_choice_outside_the_offered_options_should_be_rejected', () => {
-    const errors = validate(toAnswers({ ...completeBody, environment: 'staging' }), apiNames);
+    const errors = validate(toAnswers({ ...completeBody, 'call-volume': 'enormous' }), apiNames);
 
-    expect(errors).toEqual([{ name: 'environment', text: 'Select the environment you need' }]);
+    expect(errors).toEqual([{ name: 'call-volume', text: 'Select the expected call volume' }]);
+  });
+
+  test('a_dropped_question_should_not_be_asked_for_or_answerable', () => {
+    // Environment and OAuth were removed from the form. Posting them must not reintroduce
+    // them into the answers, or they would travel on as hidden fields and reappear.
+    const answers = toAnswers({ ...completeBody, environment: 'production', oauth: 'yes' });
+
+    expect(answers).not.toHaveProperty('environment');
+    expect(answers).not.toHaveProperty('oauth');
+    expect(validate(answers, apiNames)).toEqual([]);
   });
 
   test('confirming_only_some_declarations_should_be_rejected', () => {
@@ -106,9 +107,14 @@ describe('AccessRequest', () => {
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
 
     expect(valueFor('API')).toBe('RAG Service API');
-    expect(valueFor('Environment')).toBe('Sandbox (development and testing)');
     expect(valueFor('Expected call volume')).toBe('Low');
-    expect(valueFor('OAuth 2.0 with JWT bearer tokens')).toBe('Yes');
+  });
+
+  test('the_summary_should_not_offer_the_dropped_questions_to_check', () => {
+    const rows = summaryRows(toAnswers(completeBody), 'RAG Service API', REQUESTER);
+
+    expect(rows.map(row => row.key)).not.toContain('Environment');
+    expect(rows.map(row => row.key)).not.toContain('OAuth 2.0 with JWT bearer tokens');
   });
 
   test('submitting_a_request_should_send_the_user_id_as_a_header_and_not_the_identity', async () => {
@@ -134,12 +140,32 @@ describe('AccessRequest', () => {
     expect(mockedPost.mock.calls[0][1]).toEqual({
       apiShortCode: 'api-cp-ai-rag',
       api: 'RAG Service API',
-      environment: 'sandbox',
+      // Still sent because the backend declares it @NotBlank, but marked as never asked
+      // rather than given a plausible default nobody chose.
+      environment: 'unspecified',
       expectedVolume: 'low',
       useCase: 'Ingesting documents for the case bundle service.',
+      // Still sent: the backend cannot read a body without it. Taken from the compulsory
+      // declaration now that the question has gone.
       oauth2Capable: true,
       declaration: DECLARATIONS.map(declaration => declaration.value).join(', '),
     });
+  });
+
+  test('the_submitted_body_should_always_carry_oauth2capable_or_the_backend_cannot_read_it', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { reference: 'AR-2026-ABC123' } });
+
+    await submitAccessRequest(toAnswers(completeBody), REQUESTER, 'RAG Service API');
+
+    expect(mockedPost.mock.calls[0][1]).toHaveProperty('oauth2Capable');
+  });
+
+  test('an_environment_posted_by_hand_should_not_reach_the_backend', async () => {
+    mockedPost.mockResolvedValue({ status: 201, data: { reference: 'AR-2026-ABC123' } });
+
+    await submitAccessRequest(toAnswers({ ...completeBody, environment: 'production' }), REQUESTER, 'RAG Service API');
+
+    expect((mockedPost.mock.calls[0][1] as { environment: string }).environment).toBe('unspecified');
   });
 
   test('a_rejected_submission_should_report_failure_rather_than_a_reference', async () => {

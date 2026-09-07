@@ -101,13 +101,19 @@
     containerClasses: "govuk-width-container"
   }) }}
 
-  {# Pages set `section` to highlight the current navigation item. `user` comes from the
+  {# The service name links back to the public marketplace site rather than to this
+     service's own root, so a user who arrived here to subscribe or publish can get back to
+     the front door. The address is configuration because it has moved before — /v2/ to the
+     root of the same host — so the next move is a deployment change. The GOV.UK crown
+     above is deliberately left alone, still pointing at this service's root.
+
+     Pages set `section` to highlight the current navigation item. `user` comes from the
      session, via res.locals in app.ts. Both journeys need an account, so they are only
      offered once someone has one — see requireSignIn, which is what actually refuses a
      signed-out request rather than merely declining to advertise it. #}
   {{ govukServiceNavigation({
     serviceName: serviceName | safe,
-    serviceUrl: (globals.basePath if globals.basePath) + "/",
+    serviceUrl: marketplaceSiteUrl or ((globals.basePath if globals.basePath) + "/"),
     navigation: (
       [
         { href: "/subscribe", text: nav.subscribe, active: section == "subscribe" },

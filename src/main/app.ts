@@ -34,7 +34,12 @@ const logger = Logger.getLogger('app');
 
 new PropertiesVolume().enableFor(app);
 new AppInsights().enable();
-new Nunjucks(config.get('dynatrace'), developmentMode, config.get('analytics.gtmContainerId')).enableFor(app);
+new Nunjucks(
+  config.get('dynatrace'),
+  developmentMode,
+  config.get('analytics.gtmContainerId'),
+  config.get('marketplaceSite.url')
+).enableFor(app);
 // secure the application by adding various HTTP headers to its responses
 new Helmet(config.get('security'), developmentMode).enableFor(app);
 new Container().enableFor(app);
