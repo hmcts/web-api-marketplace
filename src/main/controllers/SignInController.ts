@@ -28,6 +28,15 @@ export default class SignInController {
 
     const result = await signIn(email, password);
 
+    if (result.unavailable) {
+      // 503 rather than 401: the credentials were never judged, so saying "unauthorised"
+      // would be untrue to the user and to anything watching the logs. Reported as a
+      // service error and not against the email field, because nothing they typed is
+      // wrong and a red box round a valid address only misleads.
+      res.status(503).render('sign-in', { ...content, serviceError: content?.errorUnavailable as string, email });
+      return;
+    }
+
     if (!result.ok) {
       // Deliberately the same message whether the account is unknown or the password is
       // wrong, so the page cannot be used to discover which addresses are registered.

@@ -4,6 +4,8 @@ import request from 'supertest';
 jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
 jest.mock('../../main/services/Requests', () => ({
   getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
+  deleteRequest: jest.fn().mockResolvedValue(true),
+  isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
 }));
 
 import { app } from '../../main/app';
@@ -23,6 +25,8 @@ const guarded: [string, string][] = [
   ['GET', '/publish/check-answers'],
   ['POST', '/publish/check-answers'],
   ['GET', '/publish/confirmation'],
+  ['GET', '/account'],
+  ['POST', '/account/delete-request'],
 ];
 
 describe('Access control on the form journeys', () => {

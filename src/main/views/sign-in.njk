@@ -13,7 +13,17 @@
     <div class="govuk-grid-column-two-thirds">
 
       {# Rendered server-side, so the form reports errors with JavaScript unavailable. #}
-      {% if error %}
+      {% if serviceError %}
+        {#
+          No href and no field message: the service is down, so there is nothing on the
+          form for the user to go and correct.
+        #}
+        {{ govukErrorSummary({
+          titleText: errorSummaryTitle,
+          errorList: [{ text: serviceError }],
+          attributes: { id: "service-error" }
+        }) }}
+      {% elif error %}
         {{ govukErrorSummary({
           titleText: errorSummaryTitle,
           errorList: [{ text: error, href: "#email" }]

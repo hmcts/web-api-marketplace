@@ -14,6 +14,12 @@
     "columnReference": "Cyfeirnod",
     "columnType": "Math",
     "columnSubmitted": "Cyflwynwyd",
+    "columnAction": "Gweithred",
+    "deleteButton": "Dileu",
+    "deletedTitle": "Llwyddiant",
+    "deleted": "Mae eich cais wedi cael ei ddileu.",
+    "deleteFailedTitle": "Pwysig",
+    "deleteFailed": "Nid oedd modd dileu eich cais ar hyn o bryd. Rhowch gynnig arall arni ymhen ychydig funudau.",
     "types": {
       "SUBSCRIPTION": "Tanysgrifio i API",
       "PUBLISH": "Cyhoeddi API"

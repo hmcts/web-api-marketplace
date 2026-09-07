@@ -19,6 +19,15 @@ export interface SignedInUser {
 export interface SignInResult {
   ok: boolean;
   user?: SignedInUser;
+  /**
+   * Set when sign in could not be attempted at all, rather than being refused.
+   *
+   * The distinction matters to the user: a refusal means check what you typed, while this
+   * means nothing you type will work yet. Reporting an outage as "incorrect email or
+   * password" sends people off to reset a password that was never wrong — which is what
+   * this service used to do.
+   */
+  unavailable?: boolean;
 }
 
 /**
@@ -48,6 +57,13 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       return { ok: true, user: response.data as SignedInUser };
     }
 
+    // The backend itself failed. Nothing the user typed is at fault, so this is reported
+    // as an outage rather than as a refusal.
+    if (response.status >= 500) {
+      logger.error(`Sign in unavailable: ${response.status} from ${endpoint}`);
+      return { ok: false, unavailable: true };
+    }
+
     // 404 (unknown email) and 400 (validation) are both reported to the user as a single
     // "incorrect email or password", so the page does not reveal which accounts exist.
     // The endpoint goes in the log line because a 404 also looks like this when the route
@@ -55,8 +71,10 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     logger.info(`Sign in rejected with status ${response.status} from ${endpoint}`);
     return { ok: false };
   } catch (error) {
+    // Nothing answered: a refused connection, an unresolvable host, or the timeout above.
+    // Whatever the cause, the sign-in service is not there to say yes or no.
     const detail = error instanceof Error ? error.message : 'Unknown error';
     logger.error(`Sign in request to ${endpoint} failed: ${detail}`);
-    return { ok: false };
+    return { ok: false, unavailable: true };
   }
 }

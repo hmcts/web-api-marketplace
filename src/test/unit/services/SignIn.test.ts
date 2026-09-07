@@ -36,10 +36,42 @@ describe('SignIn', () => {
     expect((await signIn('bad', 'any')).ok).toBe(false);
   });
 
-  test('a_network_failure_should_be_rejected_rather_than_thrown', async () => {
+  test('a_network_failure_should_be_reported_as_unavailable_rather_than_thrown', async () => {
     mockedPost.mockRejectedValue(new Error('ECONNREFUSED'));
 
-    expect((await signIn('joe@example.com', 'any')).ok).toBe(false);
+    const result = await signIn('joe@example.com', 'any');
+
+    // Nothing answered, so nothing judged the credentials. Calling this a refusal sends
+    // the user off to reset a password that was never wrong.
+    expect(result.ok).toBe(false);
+    expect(result.unavailable).toBe(true);
+  });
+
+  test('a_timeout_should_be_reported_as_unavailable', async () => {
+    mockedPost.mockRejectedValue(new Error('timeout of 5000ms exceeded'));
+
+    expect((await signIn('joe@example.com', 'any')).unavailable).toBe(true);
+  });
+
+  test('a_backend_error_should_be_reported_as_unavailable_not_as_a_refusal', async () => {
+    mockedPost.mockResolvedValue({ status: 500, data: '' });
+
+    const result = await signIn('joe@example.com', 'any');
+
+    expect(result.ok).toBe(false);
+    expect(result.unavailable).toBe(true);
+  });
+
+  test('a_bad_gateway_should_be_reported_as_unavailable', async () => {
+    mockedPost.mockResolvedValue({ status: 502, data: '' });
+
+    expect((await signIn('joe@example.com', 'any')).unavailable).toBe(true);
+  });
+
+  test('a_refusal_should_not_be_confused_with_an_outage', async () => {
+    mockedPost.mockResolvedValue({ status: 404, data: { error: 'User not found.' } });
+
+    expect((await signIn('nobody@example.com', 'any')).unavailable).toBeUndefined();
   });
 
   test('the_password_should_be_sent_to_the_backend_not_logged', async () => {

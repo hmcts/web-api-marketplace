@@ -8,6 +8,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
 {% block content %}
 
@@ -32,6 +33,21 @@
       {% endset %}
 
       {% set requestsPanel %}
+        {% if deleted %}
+          {{ govukNotificationBanner({
+            type: "success",
+            titleText: requests.deletedTitle,
+            text: requests.deleted,
+            attributes: { id: "request-deleted" }
+          }) }}
+        {% elif deleteFailed %}
+          {{ govukNotificationBanner({
+            titleText: requests.deleteFailedTitle,
+            text: requests.deleteFailed,
+            attributes: { id: "request-delete-failed" }
+          }) }}
+        {% endif %}
+
         <h2 class="govuk-heading-l">{{ requests.heading }}</h2>
 
         <p class="govuk-body">{{ requests.intro }}</p>
@@ -41,11 +57,29 @@
         {% elif myRequests.length %}
           {% set rows = [] %}
           {% for request in myRequests %}
+            {#
+              POST, and the reference travels in the body rather than the URL, so nothing
+              that merely follows a link can delete a request. The type goes with it
+              because each kind is deleted from its own backend collection.
+            #}
+            {% set deleteCell %}
+              <form method="post" action="/account/delete-request" class="apim-delete-request">
+                <input type="hidden" name="reference" value="{{ request.reference }}">
+                <input type="hidden" name="type" value="{{ request.type }}">
+                {{ govukButton({
+                  html: requests.deleteButton + '<span class="govuk-visually-hidden"> ' + request.reference + '</span>',
+                  classes: "govuk-button--warning govuk-!-margin-bottom-0",
+                  attributes: { id: "delete-" + loop.index }
+                }) }}
+              </form>
+            {% endset %}
+
             {% set rows = (rows.push([
               { html: '<span class="apim-reference">' + request.reference + '</span>' },
               { text: requests.types[request.type] or request.type },
               { text: request.submittedOn },
-              { text: request.status }
+              { text: request.status },
+              { html: deleteCell }
             ]), rows) %}
           {% endfor %}
 
@@ -56,7 +90,8 @@
               { text: requests.columnReference },
               { text: requests.columnType },
               { text: requests.columnSubmitted },
-              { text: requests.columnStatus }
+              { text: requests.columnStatus },
+              { html: '<span class="govuk-visually-hidden">' + requests.columnAction + '</span>' }
             ],
             rows: rows
           }) }}

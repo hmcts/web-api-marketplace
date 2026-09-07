@@ -7,5 +7,6 @@
   "submitButton": "Sign in",
   "errorSummaryTitle": "There is a problem",
   "errorMissing": "Enter your email address and password",
-  "errorRejected": "Incorrect email or password"
+  "errorRejected": "Incorrect email or password",
+  "errorUnavailable": "Nid yw mewngofnodi ar gael ar hyn o bryd oherwydd nid oedd modd cysylltu â’r gwasanaeth. Rhowch gynnig arall arni ymhen ychydig funudau."
 }
