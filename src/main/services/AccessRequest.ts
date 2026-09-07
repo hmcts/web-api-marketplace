@@ -24,6 +24,17 @@ const logger = Logger.getLogger('access-request');
 /** The backend stores an access request as a subscription. */
 const SUBSCRIPTIONS_PATH = '/subscriptions';
 
+/**
+ * What is sent as the environment now that the form no longer asks for one.
+ *
+ * The backend still declares environment @NotBlank, so omitting it would fail every
+ * submission with a 400. A placeholder keeps requests going through and is honest about
+ * the fact that nobody was asked — a plausible-looking default such as "sandbox" would
+ * put an answer in the record that no user ever gave. Remove this, and stop sending the
+ * field, once the backend no longer requires it.
+ */
+const ENVIRONMENT_NOT_ASKED = 'unspecified';
+
 /** Matches the backend's own limit, so an over-long description fails on the form. */
 export const USE_CASE_MAX_LENGTH = 255;
 
@@ -32,21 +43,10 @@ export const USE_CASE_MAX_LENGTH = 255;
  * form and the check-answers summary all read the same source. The catalogue list is not
  * here — it comes from the live feed, see ApiCatalogue.
  */
-export const ENVIRONMENTS: Choice[] = [
-  { value: 'sandbox', text: 'Sandbox (development and testing)' },
-  { value: 'production', text: 'Production' },
-  { value: 'both', text: 'Both sandbox and production' },
-];
-
 export const CALL_VOLUMES: Choice[] = [
   { value: 'low', text: 'Low', hint: { text: 'Under 1,000 calls per day' } },
   { value: 'medium', text: 'Medium', hint: { text: '1,000 to 100,000 calls per day' } },
   { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
-];
-
-export const OAUTH_ANSWERS: Choice[] = [
-  { value: 'yes', text: 'Yes' },
-  { value: 'no', text: 'No - I need guidance' },
 ];
 
 export const DECLARATIONS: Choice[] = [
@@ -56,7 +56,9 @@ export const DECLARATIONS: Choice[] = [
   },
   {
     value: 'oauth-ready',
-    text: 'My system can implement OAuth 2.0 with JWT bearer tokens, or I have said I need guidance',
+    // The trailing "or I have said I need guidance" went with the OAuth question: there is
+    // no longer anywhere to say it, so promising it here would point at nothing.
+    text: 'My system can implement OAuth 2.0 with JWT bearer tokens',
   },
   {
     value: 'dsa-dpa',
@@ -76,31 +78,20 @@ export const DECLARATIONS: Choice[] = [
  */
 export interface AccessRequestAnswers {
   'api-name': string;
-  environment: string;
   'call-volume': string;
   'use-case': string;
-  oauth: string;
   declarations: string[];
 }
 
-export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = [
-  'api-name',
-  'environment',
-  'call-volume',
-  'use-case',
-  'oauth',
-  'declarations',
-];
+export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = ['api-name', 'call-volume', 'use-case', 'declarations'];
 
 export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnswers {
   const text = (name: string) => toAnswerText(body, name);
 
   return {
     'api-name': text('api-name'),
-    environment: text('environment'),
     'call-volume': text('call-volume'),
     'use-case': text('use-case'),
-    oauth: text('oauth'),
     declarations: toAnswerList(body?.declarations),
   };
 }
@@ -116,7 +107,6 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
     errors.push({ name: 'api-name', text: 'Select the API you need access to' });
   }
 
-  requireChoice(errors, 'environment', answers.environment, ENVIRONMENTS, 'Select the environment you need');
   requireChoice(errors, 'call-volume', answers['call-volume'], CALL_VOLUMES, 'Select the expected call volume');
   if (!answers['use-case']) {
     errors.push({ name: 'use-case', text: 'Describe what you are building and why you need this API' });
@@ -128,14 +118,6 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
       text: `Your description must be ${USE_CASE_MAX_LENGTH} characters or fewer`,
     });
   }
-  requireChoice(
-    errors,
-    'oauth',
-    answers.oauth,
-    OAUTH_ANSWERS,
-    'Select whether your system can implement OAuth 2.0 with JWT bearer tokens'
-  );
-
   if (!DECLARATIONS.every(declaration => answers.declarations.includes(declaration.value))) {
     errors.push({ name: 'declarations', text: 'You must confirm all four declarations' });
   }
@@ -154,10 +136,8 @@ export function summaryRows(answers: AccessRequestAnswers, apiTitle: string, req
     { key: 'Organisation', value: requester.orgName },
     { key: 'Email', value: requester.email },
     { key: 'API', value: apiTitle || answers['api-name'] },
-    { key: 'Environment', value: labelFor(ENVIRONMENTS, answers.environment) },
     { key: 'Expected call volume', value: labelFor(CALL_VOLUMES, answers['call-volume']) },
     { key: 'Use case', value: answers['use-case'] },
-    { key: 'OAuth 2.0 with JWT bearer tokens', value: labelFor(OAUTH_ANSWERS, answers.oauth) },
     { key: 'Declarations', value: `All ${DECLARATIONS.length} confirmed` },
   ];
 }
@@ -186,10 +166,14 @@ export async function submitAccessRequest(
     {
       apiShortCode: answers['api-name'],
       api: apiTitle || answers['api-name'],
-      environment: answers.environment,
+      environment: ENVIRONMENT_NOT_ASKED,
       expectedVolume: answers['call-volume'],
       useCase: answers['use-case'],
-      oauth2Capable: answers.oauth === 'yes',
+      // Derived from the declaration rather than dropped. The backend refuses a body with
+      // no oauth2Capable at all — not a validation error but an unreadable-request 400 —
+      // and the declaration is compulsory, so anyone who gets this far has confirmed the
+      // capability that the removed question used to ask about.
+      oauth2Capable: answers.declarations.includes('oauth-ready'),
       declaration: answers.declarations.join(', '),
     }
   );

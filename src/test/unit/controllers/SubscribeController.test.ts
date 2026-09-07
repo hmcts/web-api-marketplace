@@ -16,10 +16,8 @@ const catalogue = [{ name: 'api-cp-ai-rag', title: 'RAG Service API' }];
 
 const completeBody = {
   'api-name': 'api-cp-ai-rag',
-  environment: 'sandbox',
   'call-volume': 'low',
   'use-case': 'Ingesting documents for the case bundle service.',
-  oauth: 'yes',
   declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 

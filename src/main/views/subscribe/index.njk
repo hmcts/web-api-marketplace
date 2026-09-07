@@ -52,16 +52,6 @@
       }) }}
 
       {{ govukRadios({
-        name: "environment",
-        fieldset: {
-          legend: { text: "Environment", classes: "govuk-fieldset__legend--m" }
-        },
-        items: environments,
-        value: answers.environment,
-        errorMessage: { text: errorFor.environment } if errorFor.environment
-      }) }}
-
-      {{ govukRadios({
         name: "call-volume",
         fieldset: {
           legend: { text: "Expected call volume", classes: "govuk-fieldset__legend--m" }
@@ -83,19 +73,6 @@
         hint: { text: "Include what data you need, how it will be used, and any relevant project name." },
         value: answers["use-case"],
         errorMessage: { text: errorFor["use-case"] } if errorFor["use-case"]
-      }) }}
-
-      {{ govukRadios({
-        name: "oauth",
-        fieldset: {
-          legend: {
-            text: "Can your system implement OAuth 2.0 with JWT bearer tokens?",
-            classes: "govuk-fieldset__legend--m"
-          }
-        },
-        items: oauthAnswers,
-        value: answers.oauth,
-        errorMessage: { text: errorFor.oauth } if errorFor.oauth
       }) }}
 
       <h2 class="govuk-heading-l">Declaration</h2>

@@ -19,7 +19,16 @@ export class Nunjucks {
   constructor(
     dynatrace: DynatraceOptions,
     public readonly developmentMode: boolean,
-    private readonly gtmContainerId: string = ''
+    private readonly gtmContainerId: string = '',
+    /**
+     * The public marketplace site the service name in the header links back to.
+     *
+     * Configured rather than written into the template because the address has already
+     * moved once — it was served from /v2/ before moving to the root of the same host —
+     * so the next move is a MARKETPLACE_SITE_URL change on the deployment rather than a
+     * code change and a release.
+     */
+    private readonly marketplaceSiteUrl: string = ''
   ) {
     // Both tags are optional — the template only renders a script when one is configured.
     this.jstag = dynatrace?.jstags?.[dynatrace.jstagKey] ?? '';
@@ -39,6 +48,9 @@ export class Nunjucks {
     logger.info(this.jstag ? `using jstag: ${this.jstag}` : 'no Dynatrace jstag configured');
     env.addGlobal('jstag', this.jstag);
     env.addGlobal('gtmContainerId', this.gtmContainerId);
+    // Falls back to this service's own root, so an unset or empty configuration leaves the
+    // crown pointing somewhere real rather than at an empty href.
+    env.addGlobal('marketplaceSiteUrl', this.marketplaceSiteUrl || '/');
 
     app.use((req, res, next) => {
       res.locals.pagePath = req.path;

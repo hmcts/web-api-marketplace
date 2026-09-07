@@ -7,9 +7,7 @@ import {
   AccessRequestAnswers,
   CALL_VOLUMES,
   DECLARATIONS,
-  ENVIRONMENTS,
   FieldError,
-  OAUTH_ANSWERS,
   Requester,
   submitAccessRequest,
   summaryRows,
@@ -129,9 +127,7 @@ export default class SubscribeController {
       apiOptions: [{ value: '', text: 'Choose an API' }].concat(
         catalogue.map(api => ({ value: api.name, text: api.title }))
       ),
-      environments: ENVIRONMENTS,
       callVolumes: CALL_VOLUMES,
-      oauthAnswers: OAUTH_ANSWERS,
       declarations: DECLARATIONS,
     };
   }
