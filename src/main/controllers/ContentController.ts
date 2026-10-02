@@ -2,7 +2,7 @@ import { GET, route } from 'awilix-express';
 import { Request, Response } from 'express';
 
 /**
- * The guidance pages migrated from the GitHub Pages site (hmcts/hmcts-api-marketplace v2).
+ * The guidance pages migrated from the GitHub Pages site at hmcts.github.io/hmcts-api-marketplace.
  *
  * They are static content: no data, no form, nothing that differs between visitors beyond
  * the navigation. One controller and a fixed table, rather than a controller per page, so
