@@ -1,0 +1,67 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "macros/errors.njk" import errorSummary %}
+
+{% set pageTitle = ("Error: " if errors.length) + "Request a new API - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "catalogue" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }, { text: "API catalogue", href: "/api-catalogue" }] %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ errorSummary(errors) }}
+
+    <h1 class="govuk-heading-xl">Request a new API</h1>
+
+    <p class="govuk-body">
+      Tell us about data or a capability that is not in the <a class="govuk-link" href="/api-catalogue">API catalogue</a>.
+      We record what people are looking for and use it to decide which APIs to prioritise.
+    </p>
+
+    <form method="post" action="/api-catalogue/request-new-api" novalidate>
+      {{ govukCharacterCount({
+        label: { text: "What data or capability do you need?", classes: "govuk-label--m" },
+        hint: { text: "Describe the data you need, what it would be used for, and the problem it would solve." },
+        id: "need",
+        name: "need",
+        maxlength: needMaxLength,
+        value: answers.need,
+        errorMessage: { text: errorFor.need } if errorFor.need
+      }) }}
+
+      {{ govukSelect({
+        id: "domain",
+        name: "domain",
+        label: { text: "Which justice domain does this relate to?", classes: "govuk-label--m" },
+        items: domains,
+        value: answers.domain,
+        errorMessage: { text: errorFor.domain } if errorFor.domain
+      }) }}
+
+      {{ govukRadios({
+        name: "urgency",
+        fieldset: { legend: { text: "How urgent is this?", classes: "govuk-fieldset__legend--m" } },
+        items: urgencies,
+        value: answers.urgency,
+        errorMessage: { text: errorFor.urgency } if errorFor.urgency
+      }) }}
+
+      {{ govukCharacterCount({
+        label: { text: "Is there an existing system that holds this data? (optional)", classes: "govuk-label--m" },
+        hint: { text: "If you know of an HMCTS system with this data, tell us here." },
+        id: "existing",
+        name: "existing",
+        maxlength: needMaxLength,
+        value: answers.existing,
+        errorMessage: { text: errorFor.existing } if errorFor.existing
+      }) }}
+
+      {{ govukButton({ text: "Continue", attributes: { id: "new-api-continue" } }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

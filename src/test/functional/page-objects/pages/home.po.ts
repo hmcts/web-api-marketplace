@@ -13,10 +13,6 @@ export class HomePage extends Base {
     }
   }
 
-  async expectLanguageLinkToContainText(language: string): Promise<void> {
-    await expect(this.languageLink).toContainText(language);
-  }
-
   async expectHeadingToContainText(text: string): Promise<void> {
     await expect(this.heading).toContainText(text);
   }

@@ -50,6 +50,52 @@ src/main/
 Controllers are discovered by `loadControllers('controllers/**/*')` — there is no route
 registration step. A new page is a controller, a view, and a locale file per language.
 
+## Pages and journeys
+
+The public content migrated from the GitHub Pages site (AMP-1247) is served by
+`ContentController` from `views/content/**`: Get started, Documentation, Help and support,
+the publishing guidance and the privacy notice. The home page, API catalogue (rendered on the
+server from the `amp-catalog` feed), cookies and accessibility statement have their own
+controllers.
+
+The consumer onboarding journey, end to end:
+
+| Step                                         | Path                                                     |
+| -------------------------------------------- | -------------------------------------------------------- |
+| Create a developer account, confirm email    | `/register`, `/register/check-email`, `/verify-email`    |
+| Sign in, forgotten password                  | `/sign-in`, `/forgotten-password`, `/reset-password`     |
+| First sign in: profile and guidelines        | `/account/welcome`                                       |
+| Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
+| View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
+| Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
+| Request production credentials, follow it    | `/account/production-credentials`, `.../:reference`      |
+| Request a new API                            | `/api-catalogue/request-new-api`                         |
+
+`src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
+build on any that do not work.
+
+### Stand-ins until service-api-marketplace has the endpoints
+
+These are deliberate, and each is confined to one service so it can be swapped for a backend
+call without touching the journeys:
+
+- **Accounts registered here** (`services/Accounts.ts`) — the backend can look a user up but
+  cannot create one, verify an address or reset a password. Passwords are scrypt-hashed.
+  Accounts the backend already knows still sign in against it.
+- **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
+  client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
+  are **not registered with either**, and every page that shows them says so. Secrets are
+  shown once and only their first three characters are kept.
+- **Production credentials and new API requests** (`services/LocalRequests.ts`) — stored here
+  and listed under My requests alongside the backend's own. So are subscribe and publish
+  requests from accounts registered here, which the backend would refuse.
+- **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
+  email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
+  once Notify is wired in.
+
+All of it is held in the data store (`modules/store`): the session Redis when `REDIS_HOST` is
+set, otherwise memory for that one process.
+
 ## Outstanding
 
 These are known gaps from the initial AMP-1031 onboarding, not oversights:
@@ -70,6 +116,3 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   along with its court domain. Add an axios client and Zod schemas when wiring to
   `service-api-marketplace`; FACT's `axiosConfig.ts` is the reference for the app-registration
   bearer-token pattern, which needs two Entra ID registrations.
-- **No server-side session.** `express-session` was removed — nothing read `req.session`, and
-  an in-memory store would not survive multiple replicas. A journey needing state means
-  adding Redis, which becomes component-level Terraform in this repo.

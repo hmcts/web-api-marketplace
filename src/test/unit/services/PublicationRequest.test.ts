@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { MemoryStore, useDataStore } from '../../../main/modules/store';
+import { listLocalRequests } from '../../../main/services/LocalRequests';
 import {
   publicationSummaryRows,
   submitPublicationRequest,
@@ -127,5 +129,16 @@ describe('PublicationRequest', () => {
     const errors = validatePublication(toPublicationAnswers({ ...completeBody, 'spec-url': specUrl }));
 
     expect(errors).toEqual([{ name: 'spec-url', text: 'The specification URL must be 2048 characters or fewer' }]);
+  });
+
+  test('an_account_registered_here_should_be_stored_locally_and_not_sent_to_the_backend', async () => {
+    useDataStore(new MemoryStore());
+
+    const result = await submitPublicationRequest(toPublicationAnswers(completeBody), { ...REQUESTER, local: true });
+
+    expect(result.ok).toBe(true);
+    expect(result.reference).toMatch(/^PUB-/);
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect((await listLocalRequests(REQUESTER.email))[0].type).toBe('PUBLISH');
   });
 });

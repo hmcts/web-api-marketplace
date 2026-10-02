@@ -45,6 +45,13 @@ export class Nunjucks {
       express: app,
     });
     env.addGlobal('govukRebrand', true);
+    // "2 October 2026" from a stored ISO timestamp, the GOV.UK style for dates.
+    env.addFilter('date', (value: string) => {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+    });
     logger.info(this.jstag ? `using jstag: ${this.jstag}` : 'no Dynatrace jstag configured');
     env.addGlobal('jstag', this.jstag);
     env.addGlobal('gtmContainerId', this.gtmContainerId);

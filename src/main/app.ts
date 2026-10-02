@@ -18,6 +18,7 @@ import { Logger } from './modules/logging';
 import { Nunjucks } from './modules/nunjucks';
 import { PropertiesVolume } from './modules/properties-volume';
 import { Session } from './modules/session';
+import { configureDataStore } from './modules/store';
 
 const env = process.env.NODE_ENV || 'development';
 const developmentMode = env === 'development';
@@ -29,6 +30,8 @@ const limiter = RateLimit({
 
 export const app = express();
 app.locals.ENV = env;
+// Whether pages may show the emails GOV.UK Notify would have sent — see services/Notify.
+app.locals.showEmailsOnPage = config.get<boolean>('notify.showEmailsOnPage');
 
 const logger = Logger.getLogger('app');
 
@@ -55,6 +58,7 @@ app.set('trust proxy', 1);
 
 app.use(cookieParser());
 new Session(config.get('session')).enableFor(app);
+configureDataStore(config.get('session.redis'));
 
 // Every page's navigation needs to know whether anyone is signed in, so the user goes on
 // res.locals rather than being passed by each controller that happens to render.

@@ -31,7 +31,8 @@ export function isRequestType(value: unknown): value is RequestType {
 
 export interface RequestSummary {
   reference: string;
-  type: RequestType;
+  /** A RequestType from the backend, or one of the kinds only this service holds. */
+  type: RequestType | 'NEW_API' | 'PRODUCTION';
   submittedAt: string;
   status: string;
 }

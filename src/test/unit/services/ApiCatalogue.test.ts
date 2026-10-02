@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { clearCatalogueCache, getCatalogueApis } from '../../../main/services/ApiCatalogue';
+import { clearCatalogueCache, domainOf, getCatalogueApis, platformOf } from '../../../main/services/ApiCatalogue';
 
 jest.mock('axios');
 
@@ -67,5 +67,23 @@ describe('ApiCatalogue', () => {
     expect(mockedGet).toHaveBeenCalledTimes(2);
 
     clock.mockRestore();
+  });
+
+  test.each([
+    ['api-cp-ai-rag', 'AI'],
+    ['api-cp-refdata-courthearing-courthouses', 'Reference data'],
+    ['api-cp-crime-prosecution-case-details', 'Case administration'],
+    ['api-cp-crime-defendant-details', 'Case administration'],
+    ['api-cp-crime-schedulingandlisting-courtschedule', 'Scheduling and listing'],
+    ['api-cp-crime-court-list-publisher', 'Scheduling and listing'],
+    ['api-cp-crime-hearing-results', 'Hearings'],
+    ['api-something-else', 'Other'],
+  ])('the_domain_of_%s_should_be_%s', (name, domain) => {
+    expect(domainOf(name)).toBe(domain);
+  });
+
+  test('the_platform_should_be_common_platform_for_cp_apis_and_other_otherwise', () => {
+    expect(platformOf('api-cp-crime-hearing')).toBe('Common Platform');
+    expect(platformOf('api-cft-something')).toBe('Other');
   });
 });

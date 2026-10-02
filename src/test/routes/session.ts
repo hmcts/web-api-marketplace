@@ -80,12 +80,12 @@ describe('Session and the account navigation', () => {
     await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
   });
 
-  test('visiting_register_should_return_200_saying_it_is_not_implemented', async () => {
+  test('visiting_register_should_return_the_create_account_form', async () => {
     await request(app)
       .get('/register')
       .expect(res => {
         expect(res.status).to.equal(200);
-        expect(res.text).to.contain('Not implemented');
+        expect(res.text).to.contain('Create a developer account');
       });
   });
 });

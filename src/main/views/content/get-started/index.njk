@@ -1,0 +1,129 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Getting started with our APIs - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "get-started" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }] %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Getting started with our APIs</h1>
+
+    <p class="govuk-body-l">
+      Learn about what APIs we offer and how you can connect to them.
+    </p>
+
+    {{ govukInsetText({
+      html: 'If you own an API and want to list it on the marketplace, read the
+             <a class="govuk-link" href="/get-started/onboarding-guide#producer-onboarding">producer
+             onboarding steps</a> instead.'
+    }) }}
+
+    <h2 class="govuk-heading-l" id="steps">Steps to get connected</h2>
+
+    <h3 class="govuk-heading-m">1. Learn about our APIs</h3>
+
+    <p class="govuk-body">
+      Before designing your software, read the
+      <a class="govuk-link" href="/get-started/onboarding-guide">onboarding guide</a>, browse the
+      <a class="govuk-link" href="/api-catalogue">API catalogue</a>, and check the
+      <a class="govuk-link" href="/get-started/consumer-guidance">consumer guidance</a> for rate
+      limits and error handling. Review the
+      <a class="govuk-link" href="/publish/guidance/data-governance">data governance standards</a> for the data
+      classification and legal obligations that apply. All APIs use OAuth 2.0 with JWT bearer tokens.
+    </p>
+
+    <h3 class="govuk-heading-m">2. Confirm your use case</h3>
+
+    <p class="govuk-body">
+      Before proceeding with next steps on using the APIs, confirm you have a valid use case.
+    </p>
+
+    <h3 class="govuk-heading-m">3. Start using our APIs</h3>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/sign-in">Sign in</a> to your developer account, or
+      <a class="govuk-link" href="/register">create one</a> if you do not have one yet.
+    </p>
+
+    <p class="govuk-body">To use our APIs you need to:</p>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>create an application in our sandbox (test) environment</li>
+      <li>choose which APIs you want to use</li>
+      <li>get credentials to use our APIs by submitting an
+        <a class="govuk-link" href="/subscribe">access request</a> describing your use
+        case, expected call volume and the environments you need</li>
+      <li>test your software integrates with our APIs</li>
+    </ul>
+
+    <p class="govuk-body">
+      Your request is sent to the HMCTS Data Access Panel for review and approval. This is currently an
+      offline process, so look out for emails requesting clarification, or confirming approval or
+      rejection.
+    </p>
+
+    <p class="govuk-body">
+      Once the Data Access Panel has approved your request, the API owner reviews it and issues you
+      with credentials for the relevant environments.
+    </p>
+
+    <h3 class="govuk-heading-m">4. Apply to go live on the API Marketplace</h3>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>add your production application</li>
+      <li>apply for production credentials</li>
+    </ul>
+
+    <p class="govuk-body">
+      We&rsquo;ll check your application and get back to you with approval, or ask for more information
+      if needed.
+    </p>
+
+    <h3 class="govuk-heading-m">5. Start using secure data</h3>
+
+    <p class="govuk-body">
+      If your request for production access is successful, you can retrieve credentials and start
+      using APIs with secure data.
+    </p>
+
+    <h2 class="govuk-heading-l" id="in-this-section">In this section</h2>
+
+    <ul class="govuk-list">
+      <li><a class="govuk-link" href="/get-started/onboarding-guide">Onboarding guide</a> &mdash; the non-technical walkthrough for consumers and producers</li>
+      <li><a class="govuk-link" href="/get-started/consumer-guidance">Consumer guidance</a> &mdash; using APIs responsibly, rate limits, error handling</li>
+      <li><a class="govuk-link" href="/get-started/technology-introduction">Introduction to justice sector technology</a> &mdash; how HMCTS systems fit together</li>
+      <li><a class="govuk-link" href="/get-started/building-software">Building justice sector software</a> &mdash; designing for court and tribunal settings</li>
+      <li><a class="govuk-link" href="/get-started/glossary">Glossary of developer terms</a></li>
+      <li><a class="govuk-link" href="/subscribe">Request API access</a> &mdash; submit an access request for the APIs you need</li>
+    </ul>
+
+    <h2 class="govuk-heading-l" id="help">Get help and support</h2>
+
+    <p class="govuk-body">
+      If you have any issues, either during development or once your software is live, you can
+      <a class="govuk-link" href="/help">contact the marketplace team</a>.
+    </p>
+
+    <p class="govuk-body">
+      Read the <a class="govuk-link" href="/get-started/consumer-guidance">consumer guidance</a> for
+      detailed information on using APIs responsibly, or the
+      <a class="govuk-link" href="/publish/guidance/data-governance">data governance standards</a> for your legal
+      obligations.
+    </p>
+
+    {{ govukButton({
+      text: "Browse the API catalogue",
+      href: "/api-catalogue",
+      isStartButton: true
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}

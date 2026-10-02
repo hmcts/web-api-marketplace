@@ -145,6 +145,7 @@ export default class SubscribeController {
       lastName: user.lastName,
       email: user.email,
       orgName: user.orgName,
+      local: user.local,
     };
   }
 

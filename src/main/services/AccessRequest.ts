@@ -1,5 +1,6 @@
 import { Logger } from '../modules/logging';
 
+import { addLocalRequest } from './LocalRequests';
 import { Choice, FieldError, SummaryRow, toAnswerList, toAnswerText } from './answers';
 import { SubmitResult, postSubmission } from './submissions';
 
@@ -17,6 +18,8 @@ export interface Requester {
   lastName: string;
   email: string;
   orgName: string;
+  /** An account registered here, which the backend has never heard of — see services/Accounts. */
+  local?: boolean;
 }
 
 const logger = Logger.getLogger('access-request');
@@ -157,6 +160,12 @@ export async function submitAccessRequest(
   requester: Requester,
   apiTitle: string
 ): Promise<SubmitResult> {
+  if (requester.local) {
+    const stored = await addLocalRequest(requester.email, 'SUBSCRIPTION', summaryRows(answers, apiTitle, requester));
+    logger.info(`Access request stored locally as ${stored.reference}: the requester is not known to the backend`);
+    return { ok: true, reference: stored.reference };
+  }
+
   return postSubmission(
     logger,
     'Access request',

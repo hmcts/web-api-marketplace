@@ -110,6 +110,7 @@ export default class PublishController {
       lastName: user.lastName,
       email: user.email,
       orgName: user.orgName,
+      local: user.local,
     };
   }
 

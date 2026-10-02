@@ -82,6 +82,30 @@ export function requireSignIn(req: AppRequest, res: Response): boolean {
     return true;
   }
 
+  // Only a page can be returned to. A POST's body is lost on the way through sign in, so
+  // returning to its URL would land on a form with nothing in it.
+  if (req.method === 'GET' && req.session) {
+    req.session.returnTo = req.originalUrl;
+  }
   res.redirect('/sign-in');
   return false;
+}
+
+/**
+ * Where to send someone who has just signed in: back to the page sign in interrupted, if
+ * there was one. Only ever a path on this service — `//elsewhere` and absolute URLs are
+ * refused, so the value cannot be used to redirect off-site.
+ */
+export function takeReturnTo(req: AppRequest, fallback: string): string {
+  const returnTo = req.session?.returnTo;
+  delete req.session?.returnTo;
+
+  return returnTo?.startsWith('/') && !returnTo.startsWith('//') && !returnTo.startsWith('/\\') ? returnTo : fallback;
+}
+
+/** Reads the one-off banner set by the page before, and clears it. */
+export function takeNotice(req: AppRequest): { success: boolean; title: string; text: string } | undefined {
+  const notice = req.session?.notice;
+  delete req.session?.notice;
+  return notice;
 }

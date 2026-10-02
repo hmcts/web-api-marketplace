@@ -1,8 +1,7 @@
 {
   "pageTitle": "HMCTS API Marketplace - GOV.UK",
   "serviceName": "HMCTS API Marketplace",
-  "feedback": "This is a new service – your <a class=\"govuk-link\" href=\"#\">feedback</a> will help us to improve it. ",
-  "languageToggle": "<a href=\"?lng=en\" class=\"govuk-link apim-language\">English</a>",
+  "feedback": "This is a new service – your <a class=\"govuk-link\" href=\"/help\">feedback</a> will help us to improve it. ",
   "backLink": "Yn ôl",
   "cookieBannerH1": "Cookies on HMCTS API Marketplace",
   "cookieBannerP1": "Rydym yn defnyddio cwcis hanfodol i wneud i'r gwasanaeth hwn weithio.",
@@ -20,43 +19,39 @@
   },
   "footerLinks": [
     {
-      "text": "Cymorth",
-      "href": "https://www.gov.uk/help"
+      "text": "Contact the marketplace team",
+      "href": "/help"
     },
     {
-      "text": "Cysylltu",
-      "href": "https://www.gov.uk/contact"
+      "text": "Accessibility statement",
+      "href": "/accessibility-statement",
+      "attributes": {
+        "id": "accessibility-statement"
+      }
     },
     {
-      "text": "Preifatrwydd",
-      "href": "https://www.gov.uk/government/organisations/hm-courts-and-tribunals-service/about/personal-information-charter.cy#polisi-preifatrwydd-glltef"
-    },
-    {
-      "text": "Cwcis",
+      "text": "Cookies",
       "href": "/cookies"
     },
     {
-      "text": "Datganiad hygyrchedd",
-      "href": "/accessibility-statement"
+      "text": "Privacy notice",
+      "href": "/privacy"
     },
     {
-      "text": "Telerau ac amodau",
-      "href": "https://www.gov.uk/help/terms-conditions"
-    },
-    {
-      "text": "Cymraeg",
-      "href": "https://www.gov.uk/cymraeg"
-    },
-    {
-      "text": "Gwasanaeth Digidol y Llywodraeth",
-      "href": "https://www.gov.uk/government/organisations/government-digital-service"
+      "text": "HMCTS on GOV.UK",
+      "href": "https://www.gov.uk/government/organisations/hm-courts-and-tribunals-service"
     }
   ],
   "nav": {
-    "subscribe": "Tanysgrifio i API",
-    "publish": "Cyhoeddi API",
+    "catalogue": "API catalogue",
+    "getStarted": "Get started",
+    "documentation": "Documentation",
+    "publish": "Publish an API",
+    "help": "Help and support",
+    "applications": "Applications",
+    "subscribe": "Subscribe to an API",
     "signIn": "Sign in",
-    "account": "Eich cyfrif"
+    "account": "Your account"
   },
   "breadcrumb": {
     "home": "Home",

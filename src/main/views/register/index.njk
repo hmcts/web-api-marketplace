@@ -1,0 +1,115 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "macros/errors.njk" import errorSummary %}
+
+{% set pageTitle = ("Error: " if errors.length) + "Create a developer account - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Sign in", href: "/sign-in" }
+] %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ errorSummary(errors) }}
+
+    <h1 class="govuk-heading-xl">Create a developer account</h1>
+
+    <p class="govuk-body">
+      You need to provide your details to create an account. For more information on why we collect
+      your information, see our <a class="govuk-link" href="/privacy">privacy notice</a>.
+    </p>
+
+    <p class="govuk-body">
+      Already have an account? <a class="govuk-link" href="/sign-in">Sign in</a>.
+    </p>
+
+    <form method="post" action="/register" novalidate>
+
+      {{ govukInput({
+        label: { text: "First name", classes: "govuk-label--m" },
+        id: "first-name",
+        name: "first-name",
+        value: answers["first-name"],
+        autocomplete: "given-name",
+        spellcheck: false,
+        errorMessage: { text: errorFor["first-name"] } if errorFor["first-name"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Last name", classes: "govuk-label--m" },
+        id: "last-name",
+        name: "last-name",
+        value: answers["last-name"],
+        autocomplete: "family-name",
+        spellcheck: false,
+        errorMessage: { text: errorFor["last-name"] } if errorFor["last-name"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Email address", classes: "govuk-label--m" },
+        hint: { text: "Use your work email address. We will send you a link to confirm it." },
+        id: "email",
+        name: "email",
+        type: "email",
+        value: answers.email,
+        autocomplete: "email",
+        spellcheck: false,
+        errorMessage: { text: errorFor.email } if errorFor.email
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Organisation or team", classes: "govuk-label--m" },
+        hint: { text: "For example, HMCTS DTS or Ministry of Justice Digital." },
+        id: "organisation",
+        name: "organisation",
+        value: answers.organisation,
+        autocomplete: "organization",
+        errorMessage: { text: errorFor.organisation } if errorFor.organisation
+      }) }}
+
+      {{ govukRadios({
+        name: "role",
+        fieldset: {
+          legend: { text: "I am registering as", classes: "govuk-fieldset__legend--m" }
+        },
+        items: roles,
+        value: answers.role,
+        errorMessage: { text: errorFor.role } if errorFor.role
+      }) }}
+
+      <h2 class="govuk-heading-l">Create your password</h2>
+
+      {{ govukInput({
+        label: { text: "Password", classes: "govuk-label--m" },
+        hint: { text: "Your password must be at least 12 characters long." },
+        id: "password",
+        name: "password",
+        type: "password",
+        autocomplete: "new-password",
+        errorMessage: { text: errorFor.password } if errorFor.password
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Confirm your password", classes: "govuk-label--m" },
+        id: "password-confirm",
+        name: "password-confirm",
+        type: "password",
+        autocomplete: "new-password",
+        errorMessage: { text: errorFor["password-confirm"] } if errorFor["password-confirm"]
+      }) }}
+
+      {{ govukButton({ text: "Create account", attributes: { id: "register-submit" } }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

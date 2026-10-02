@@ -1,0 +1,27 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Check your email - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">Check your email</h1>
+
+    <p class="govuk-body">
+      If <strong id="sent-to">{{ address }}</strong> has a developer account, we have sent it a link to reset
+      your password. The link expires in 1 hour.
+    </p>
+
+    {% include "components/email-preview.njk" %}
+
+    <p class="govuk-body">
+      Not received anything? Check your spam folder, or <a class="govuk-link" href="/forgotten-password">try again</a>.
+      You can also <a class="govuk-link" href="/help">contact the marketplace team</a>.
+    </p>
+
+    <p class="govuk-body"><a class="govuk-link" href="/sign-in">Back to sign in</a></p>
+  </div>
+</div>
+{% endblock %}

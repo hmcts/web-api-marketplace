@@ -1,0 +1,18 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "Password changed - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({ titleText: "Your password has been changed" }) }}
+    <p class="govuk-body">You can now sign in with your new password.</p>
+    {{ govukButton({ text: "Sign in", href: "/sign-in", attributes: { id: "changed-sign-in" } }) }}
+  </div>
+</div>
+{% endblock %}

@@ -31,5 +31,11 @@
   },
   "marketplaceSite": {
     "url": "MARKETPLACE_SITE_URL"
+  },
+  "notify": {
+    "showEmailsOnPage": {
+      "__name": "NOTIFY_SHOW_EMAILS_ON_PAGE",
+      "__format": "json"
+    }
   }
 }

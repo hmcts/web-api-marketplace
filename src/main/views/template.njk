@@ -101,31 +101,32 @@
     containerClasses: "govuk-width-container"
   }) }}
 
-  {# The service name links back to the public marketplace site rather than to this
-     service's own root, so a user who arrived here to subscribe or publish can get back to
-     the front door. The address is configuration because it has moved before — /v2/ to the
-     root of the same host — so the next move is a deployment change. The GOV.UK crown
-     above is deliberately left alone, still pointing at this service's root.
+  {# Pages set `section` to highlight the current navigation item. `user` comes from the
+     session, via res.locals in app.ts. The signed-in items lead to journeys that need an
+     account — requireSignIn is what actually refuses a signed-out request, this only
+     declines to advertise it.
 
-     Pages set `section` to highlight the current navigation item. `user` comes from the
-     session, via res.locals in app.ts. Both journeys need an account, so they are only
-     offered once someone has one — see requireSignIn, which is what actually refuses a
-     signed-out request rather than merely declining to advertise it. #}
+     The service name links to marketplaceSiteUrl, which defaults to this service's own
+     root now the GitHub Pages content has moved here. It stays configuration in case the
+     front door moves again. #}
   {{ govukServiceNavigation({
     serviceName: serviceName | safe,
     serviceUrl: marketplaceSiteUrl or ((globals.basePath if globals.basePath) + "/"),
-    navigation: (
-      [
-        { href: "/subscribe", text: nav.subscribe, active: section == "subscribe" },
-        { href: "/publish",   text: nav.publish,   active: section == "publish" }
-      ] if user else []
+    navigation: ([
+      { href: "/api-catalogue",    text: nav.catalogue,     active: section == "catalogue" },
+      { href: "/get-started",      text: nav.getStarted,    active: section == "get-started" },
+      { href: "/documentation",    text: nav.documentation, active: section == "documentation" },
+      { href: "/publish/guidance", text: nav.publish,       active: section == "publish" },
+      { href: "/help",             text: nav.help,          active: section == "help" }
+    ].concat(
+      [{ href: "/account/applications", text: nav.applications, active: section == "applications" }] if user else []
     ).concat([
       {
         href: "/account" if user else "/sign-in",
         text: nav.account if user else nav.signIn,
         active: section == "account"
       }
-    ]) if nav else []
+    ])) if nav else []
   }) }}
 
 {% endblock %}
@@ -135,7 +136,7 @@
     tag: {
       text: phaseTag
     },
-    html: feedback + languageToggle
+    html: feedback
   }) }}
   {# Pages set `breadcrumbs` to a govukBreadcrumbs items array, or leave it unset. #}
   {% if breadcrumbs %}

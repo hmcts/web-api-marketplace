@@ -1,19 +1,70 @@
 {
   "pageTitle": "HMCTS API Marketplace - GOV.UK",
   "heading": "HMCTS API Marketplace",
-  "lede": "Discover, request and integrate the APIs powering justice sector software.",
-  "startButton": "Subscribe to an API",
-  "cards": [
+  "lede": "Discover, request and integrate with HMCTS APIs.",
+  "signInButton": "Sign in to developer account",
+  "registerButton": "Create account",
+  "accountButton": "Go to your account",
+  "signedInHeading": "Your developer account",
+  "signedInLinks": [
     {
-      "heading": "Subscribe to an API",
-      "href": "/subscribe",
-      "body": "Tell us about your use case and the API you need. The API owner reviews every request."
+      "text": "Manage your applications and credentials",
+      "href": "/account/applications"
     },
     {
-      "heading": "Publish an API",
-      "href": "/publish",
-      "body": "If your team owns an API, list it in the marketplace so other teams can find it and request access."
+      "text": "Request access to an API",
+      "href": "/subscribe"
+    },
+    {
+      "text": "Submit an API for publication",
+      "href": "/publish"
+    },
+    {
+      "text": "Request production credentials",
+      "href": "/account/production-credentials"
     }
   ],
-  "signInButton": "Sign in"
+  "cardRows": [
+    [
+      {
+        "heading": "Getting started with our APIs",
+        "href": "/get-started",
+        "body": "A step-by-step introduction to what our APIs can do and how your team can get connected."
+      },
+      {
+        "heading": "API and integration catalogue",
+        "href": "/api-catalogue",
+        "body": "An A to Z list of HMCTS APIs and other integrations, with plain-English descriptions of what each one returns."
+      },
+      {
+        "heading": "Documentation, guides and tutorials",
+        "href": "/documentation",
+        "body": "Learn about APIs and the standards we use, and how to make the most of our developer resources."
+      }
+    ],
+    [
+      {
+        "heading": "Help and support building software",
+        "href": "/help",
+        "body": "Get help at any point in your project, to make sure your integration with our APIs goes smoothly."
+      },
+      {
+        "heading": "Our architecture",
+        "href": "/documentation/architecture",
+        "body": "Architecture is integral to the design and delivery of all products and services that we produce and maintain for the justice system."
+      },
+      {
+        "heading": "Onboarding to APIs and services",
+        "href": "/get-started/onboarding-guide",
+        "body": "Find out how to get assured for an API or service before your software goes live."
+      }
+    ],
+    [
+      {
+        "heading": "Publish an API",
+        "href": "/publish/guidance",
+        "body": "If your team owns an API, list it in the marketplace so other teams can find it, understand it, and request access."
+      }
+    ]
+  ]
 }

@@ -1,0 +1,133 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "macros/errors.njk" import errorSummary %}
+
+{% set pageTitle = ("Error: " if errors.length) + "Request production credentials - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "applications" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Your account", href: "/account" },
+  { text: "Manage applications", href: "/account/applications" }
+] %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ errorSummary(errors) }}
+
+    <h1 class="govuk-heading-xl">Request production credentials</h1>
+
+    <p class="govuk-body">
+      Production credentials let your application call our APIs with live data. The marketplace team reviews
+      every request, then creates the client ID, secret and subscription keys and sends them to you securely.
+    </p>
+
+    {% if not applicationItems.length %}
+      <p class="govuk-body" id="no-applications">
+        You need an application that has been tested in the sandbox first.
+        <a class="govuk-link" href="/account/applications/new">Create an application</a>.
+      </p>
+    {% else %}
+
+    <form method="post" action="/account/production-credentials" novalidate>
+
+      {{ govukRadios({
+        name: "application",
+        fieldset: { legend: { text: "Which application is going live?", classes: "govuk-fieldset__legend--m" } },
+        hint: { text: "Production credentials cover the same APIs as the application you choose." },
+        items: applicationItems,
+        value: answers.application,
+        errorMessage: { text: errorFor.application } if errorFor.application
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Legal name of your organisation", classes: "govuk-label--m" },
+        id: "organisation",
+        name: "organisation",
+        value: answers.organisation,
+        autocomplete: "organization",
+        errorMessage: { text: errorFor.organisation } if errorFor.organisation
+      }) }}
+
+      {{ govukDateInput({
+        id: "go-live",
+        namePrefix: "go-live",
+        fieldset: { legend: { text: "When do you plan to go live?", classes: "govuk-fieldset__legend--m" } },
+        hint: { text: "For example, 27 3 2027" },
+        errorMessage: { text: errorFor["go-live-day"] } if errorFor["go-live-day"],
+        items: [
+          { id: "go-live-day", name: "day", label: "Day", classes: "govuk-input--width-2" + (" govuk-input--error" if errorFor["go-live-day"]), value: answers["go-live-day"] },
+          { id: "go-live-month", name: "month", label: "Month", classes: "govuk-input--width-2" + (" govuk-input--error" if errorFor["go-live-day"]), value: answers["go-live-month"] },
+          { id: "go-live-year", name: "year", label: "Year", classes: "govuk-input--width-4" + (" govuk-input--error" if errorFor["go-live-day"]), value: answers["go-live-year"] }
+        ]
+      }) }}
+
+      {{ govukRadios({
+        name: "call-volume",
+        fieldset: { legend: { text: "Expected call volume in production", classes: "govuk-fieldset__legend--m" } },
+        items: callVolumes,
+        value: answers["call-volume"],
+        errorMessage: { text: errorFor["call-volume"] } if errorFor["call-volume"]
+      }) }}
+
+      {{ govukRadios({
+        name: "dpia",
+        classes: "govuk-radios--inline",
+        fieldset: { legend: { text: "Have you completed a Data Protection Impact Assessment (DPIA)?", classes: "govuk-fieldset__legend--m" } },
+        items: yesNo,
+        value: answers.dpia,
+        errorMessage: { text: errorFor.dpia } if errorFor.dpia
+      }) }}
+
+      {{ govukRadios({
+        name: "dsa",
+        fieldset: { legend: { text: "Is a Data Sharing Agreement in place?", classes: "govuk-fieldset__legend--m" } },
+        hint: { html: 'Read the <a class="govuk-link" href="/publish/guidance/data-governance">data governance standards</a>.' },
+        items: dsaOptions,
+        value: answers.dsa,
+        errorMessage: { text: errorFor.dsa } if errorFor.dsa
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Security contact email address", classes: "govuk-label--m" },
+        hint: { text: "Who we contact about a security incident involving this application. A team inbox is best." },
+        id: "security-contact",
+        name: "security-contact",
+        type: "email",
+        value: answers["security-contact"],
+        spellcheck: false,
+        errorMessage: { text: errorFor["security-contact"] } if errorFor["security-contact"]
+      }) }}
+
+      {{ govukCharacterCount({
+        label: { text: "How will your application use the APIs in production?", classes: "govuk-label--m" },
+        hint: { text: "Include who the users are, what data you need and why, and how you will keep it secure." },
+        id: "use-case",
+        name: "use-case",
+        maxlength: useCaseMaxLength,
+        value: answers["use-case"],
+        errorMessage: { text: errorFor["use-case"] } if errorFor["use-case"]
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "declaration",
+        fieldset: { legend: { text: "Declaration", classes: "govuk-fieldset__legend--m" } },
+        items: [{ value: declaration.value, text: declaration.text }],
+        values: answers.declaration,
+        errorMessage: { text: errorFor.declaration } if errorFor.declaration
+      }) }}
+
+      {{ govukButton({ text: "Continue", attributes: { id: "production-continue" } }) }}
+    </form>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

@@ -2,7 +2,9 @@ import { GET, POST, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
-import { signIn } from '../services/SignIn';
+import { takeReturnTo } from '../modules/session';
+import { authenticate, isOnboarded } from '../services/Accounts';
+import { SignedInUser, signIn } from '../services/SignIn';
 
 @route('/sign-in')
 export default class SignInController {
@@ -15,6 +17,12 @@ export default class SignInController {
     res.render('sign-in', req.i18n?.getDataByLanguage(req.lng)?.signIn);
   }
 
+  /**
+   * Accounts registered through this service are checked first, then the backend's. An
+   * address registered here is never also tried against the backend, so a wrong password
+   * for it is refused here rather than waved through by the backend's stub /login, which
+   * does not check passwords at all.
+   */
   @POST()
   public async post(req: AppRequest, res: Response): Promise<void> {
     const content = req.i18n?.getDataByLanguage(req.lng)?.signIn as Record<string, unknown>;
@@ -23,6 +31,21 @@ export default class SignInController {
 
     if (!email || !password) {
       res.status(400).render('sign-in', { ...content, error: content?.errorMissing as string, email });
+      return;
+    }
+
+    const local = await authenticate(email, password);
+
+    if (local.status === 'unverified') {
+      res.status(401).render('sign-in', { ...content, unverified: true, email });
+      return;
+    }
+    if (local.status === 'rejected') {
+      res.status(401).render('sign-in', { ...content, error: content?.errorRejected as string, email });
+      return;
+    }
+    if (local.status === 'ok') {
+      await this.startSession(req, res, local.user, content, email);
       return;
     }
 
@@ -37,12 +60,26 @@ export default class SignInController {
       return;
     }
 
-    if (!result.ok) {
+    if (!result.ok || !result.user) {
       // Deliberately the same message whether the account is unknown or the password is
       // wrong, so the page cannot be used to discover which addresses are registered.
       res.status(401).render('sign-in', { ...content, error: content?.errorRejected as string, email });
       return;
     }
+
+    await this.startSession(req, res, result.user, content, email);
+  }
+
+  private async startSession(
+    req: AppRequest,
+    res: Response,
+    user: SignedInUser,
+    content: Record<string, unknown>,
+    email: string
+  ): Promise<void> {
+    // Read before regenerating, which starts an empty session.
+    const returnTo = takeReturnTo(req, '/account');
+    const onboarded = await isOnboarded(user.email);
 
     // A new session id on sign in, so a session id an attacker planted before the user
     // signed in cannot be used afterwards.
@@ -52,8 +89,11 @@ export default class SignInController {
         return;
       }
 
-      req.session.user = result.user;
-      req.session.save(() => res.redirect('/account'));
+      req.session.user = user;
+      // First sign in goes through the welcome page, which then carries on to wherever
+      // sign in interrupted.
+      req.session.returnTo = returnTo;
+      req.session.save(() => res.redirect(onboarded ? takeReturnTo(req, '/account') : '/account/welcome'));
     });
   }
 }

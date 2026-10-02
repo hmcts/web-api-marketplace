@@ -14,6 +14,13 @@ export interface SignedInUser {
   firstName: string;
   lastName: string;
   orgName: string;
+  /**
+   * Set for an account registered through this service rather than known to the backend.
+   * Its submissions go to the data store, since the backend would reject a user id it has
+   * never seen — see services/Accounts.
+   */
+  local?: boolean;
+  role?: 'consumer' | 'producer';
 }
 
 export interface SignInResult {

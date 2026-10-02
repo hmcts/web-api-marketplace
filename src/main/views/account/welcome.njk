@@ -1,0 +1,64 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageTitle = ("Error: " if error) + "Welcome to the HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if error %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: [{ text: error, href: "#agree" }] }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Welcome, {{ profile.firstName }}</h1>
+
+    <p class="govuk-body-l">Before you create an application, check your profile and read how HMCTS APIs may be used.</p>
+
+    <h2 class="govuk-heading-m">Your profile</h2>
+
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Name" }, value: { text: profile.firstName + " " + profile.lastName } },
+        { key: { text: "Email address" }, value: { text: profile.email } },
+        { key: { text: "Organisation" }, value: { text: profile.orgName } },
+        { key: { text: "Account type" }, value: { text: "Producer" if profile.role == "producer" else "Consumer" } }
+      ]
+    }) }}
+
+    <p class="govuk-body">If any of this is wrong, <a class="govuk-link" href="/help">contact the marketplace team</a>.</p>
+
+    <h2 class="govuk-heading-m">Guidelines for using our APIs</h2>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Only request the APIs and data your service actually needs.</li>
+      <li>Keep your client secret and subscription keys secret. Never put them in source code or share them.</li>
+      <li>Test in the sandbox first. Production credentials are only issued after a review.</li>
+      <li>Have a Data Sharing Agreement in place before you use any API that returns personal data.</li>
+    </ul>
+
+    <p class="govuk-body">
+      Read the <a class="govuk-link" href="/get-started/consumer-guidance">consumer guidance</a> and the
+      <a class="govuk-link" href="/get-started/onboarding-guide">onboarding guide</a> for the detail.
+    </p>
+
+    <form method="post" action="/account/welcome" novalidate>
+      {{ govukCheckboxes({
+        name: "agree",
+        fieldset: { legend: { text: "Agree to the guidelines", classes: "govuk-visually-hidden" } },
+        items: [{ value: "yes", text: "I have read and agree to the guidelines for using HMCTS APIs" }],
+        errorMessage: { text: error } if error
+      }) }}
+
+      {{ govukButton({ text: "Continue", attributes: { id: "welcome-continue" } }) }}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

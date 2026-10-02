@@ -1,0 +1,20 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "Email address confirmed - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({ titleText: "Email address confirmed", text: "Your developer account is ready" }) }}
+
+    <p class="govuk-body">Thank you, {{ firstName }}. Sign in to set up your profile and create your first application.</p>
+
+    {{ govukButton({ text: "Sign in", href: "/sign-in", attributes: { id: "verified-sign-in" } }) }}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageTitle = ("Error: " if error) + "Reset your password - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }, { text: "Sign in", href: "/sign-in" }] %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if error %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: [{ text: error, href: "#email" }] }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Reset your password</h1>
+
+    <p class="govuk-body">Enter the email address you use to sign in. We will send you a link to reset your password.</p>
+
+    <form method="post" action="/forgotten-password" novalidate>
+      {{ govukInput({
+        label: { text: "Email address", classes: "govuk-label--m" },
+        id: "email",
+        name: "email",
+        type: "email",
+        value: email,
+        autocomplete: "email",
+        spellcheck: false,
+        errorMessage: { text: error } if error
+      }) }}
+      {{ govukButton({ text: "Send reset link", attributes: { id: "forgotten-submit" } }) }}
+    </form>
+
+    <p class="govuk-body"><a class="govuk-link" href="/sign-in">Back to sign in</a></p>
+  </div>
+</div>
+{% endblock %}
