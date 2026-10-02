@@ -2,7 +2,6 @@
   "pageTitle": "HMCTS API Marketplace - GOV.UK",
   "serviceName": "HMCTS API Marketplace",
   "feedback": "This is a new service – your <a class=\"govuk-link\" href=\"/help\">feedback</a> will help us to improve it. ",
-  "languageToggle": "<a href=\"?lng=en\" class=\"govuk-link apim-language\">English</a>",
   "backLink": "Yn ôl",
   "cookieBannerH1": "Cookies on HMCTS API Marketplace",
   "cookieBannerP1": "Rydym yn defnyddio cwcis hanfodol i wneud i'r gwasanaeth hwn weithio.",

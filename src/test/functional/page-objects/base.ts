@@ -11,7 +11,6 @@ export abstract class Base {
   public readonly header: Locator;
   public readonly headerComponent: HeaderComponent;
   public readonly heading: Locator;
-  public readonly languageLink: Locator;
   public readonly mainContent: Locator;
   public readonly mainContentComponent: MainContentComponent;
   public readonly phaseBanner: Locator;
@@ -27,7 +26,6 @@ export abstract class Base {
     this.footer = this.footerComponent.footer;
     this.header = this.headerComponent.header;
     this.heading = page.locator('h1').first();
-    this.languageLink = page.locator('a.govuk-link.apim-language');
     this.mainContent = this.mainContentComponent.content;
     this.phaseBanner = page.locator('div.govuk-phase-banner');
     this.title = this.titleComponent.title;
@@ -37,7 +35,6 @@ export abstract class Base {
     await this.headerComponent.checkIsVisible();
     await this.titleComponent.checkIsVisible();
     await expect(this.phaseBanner).toBeVisible();
-    await expect(this.languageLink).toBeVisible();
     await expect(this.heading).toBeVisible();
     await this.mainContentComponent.checkIsVisible();
     await this.footerComponent.checkIsVisible();

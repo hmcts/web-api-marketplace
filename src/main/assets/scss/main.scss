@@ -1,13 +1,5 @@
 @use 'govuk-frontend';
 
-.govuk-phase-banner__text {
-  width: 100%;
-
-  .apim-language {
-    float: right;
-  }
-}
-
 // A reference is a UUID, long enough to overflow its column. Break it rather than let
 // the table scroll, since it is the one thing on the row a user has to read out.
 .apim-reference {

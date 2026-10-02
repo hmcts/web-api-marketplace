@@ -11,7 +11,6 @@ describe('Base template', () => {
       serviceName: i18n.serviceName,
       footerLinks: i18n.footerLinks,
       feedback: '',
-      languageToggle: i18n.languageToggle,
       cookieBannerP1: 'Cookies',
       cookieBannerP2: 'More cookies',
       cookieBannerH1: 'Cookies',
@@ -24,7 +23,8 @@ describe('Base template', () => {
     });
 
     expect(html).toContain(i18n.serviceName);
-    expect(html).toContain(i18n.languageToggle);
+    // The Cymraeg/English toggle was removed: no page offers a Welsh version yet.
+    expect(html).not.toContain('apim-language');
   });
 
   const render = (extra: Record<string, unknown> = {}) =>
@@ -33,7 +33,6 @@ describe('Base template', () => {
       serviceName: i18n.serviceName,
       footerLinks: i18n.footerLinks,
       feedback: '',
-      languageToggle: i18n.languageToggle,
       globals: { basePath: '' },
       ...extra,
     });
