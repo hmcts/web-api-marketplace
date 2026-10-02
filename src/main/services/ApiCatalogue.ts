@@ -12,10 +12,12 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 export interface CatalogueApi {
   name: string;
   title: string;
+  description?: string;
+  team?: string;
 }
 
 interface CatalogueFeed {
-  apis?: { name?: string; title?: string }[];
+  apis?: { name?: string; title?: string; description?: string; team?: string }[];
 }
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
@@ -51,6 +53,18 @@ export async function getCatalogueApis(): Promise<CatalogueApi[]> {
   }
 }
 
+/**
+ * Where an API's own documentation and source live. The feed carries neither, but every
+ * API in it is published from an hmcts repository of the same name by the
+ * publish-api-docs workflow, which is what puts it in the feed at all.
+ */
+export function linksFor(name: string): { docsUrl: string; repoUrl: string } {
+  return {
+    docsUrl: `https://hmcts.github.io/${encodeURIComponent(name)}/`,
+    repoUrl: `https://github.com/hmcts/${encodeURIComponent(name)}`,
+  };
+}
+
 /** Only for tests — the module-level cache otherwise leaks between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
@@ -59,6 +73,11 @@ export function clearCatalogueCache(): void {
 function toApis(feed: CatalogueFeed): CatalogueApi[] {
   return (feed?.apis ?? [])
     .filter(api => !!api?.name)
-    .map(api => ({ name: api.name as string, title: api.title || (api.name as string) }))
+    .map(api => ({
+      name: api.name as string,
+      title: api.title || (api.name as string),
+      ...(api.description ? { description: api.description } : {}),
+      ...(api.team ? { team: api.team } : {}),
+    }))
     .sort((a, b) => a.title.localeCompare(b.title));
 }

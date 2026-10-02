@@ -6,8 +6,8 @@
   "requests": {
     "tabLabel": "My requests",
     "heading": "My requests",
-    "intro": "Everything you have submitted through Subscribe to an API or Publish an API.",
-    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/publish\">Publish an API</a>.",
+    "intro": "Everything you have submitted: access requests, APIs submitted for publication, requests for a new API and production credentials requests.",
+    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a>, <a class=\"govuk-link\" href=\"/publish\">Publish an API</a> or <a class=\"govuk-link\" href=\"/account/production-credentials\">Request production credentials</a>.",
     "unavailable": "Your requests could not be loaded just now. Try again in a few minutes.",
     "tableCaption": "Requests you have submitted",
     "columnStatus": "Status",
@@ -22,7 +22,70 @@
     "deleteFailed": "Your request could not be deleted just now. Try again in a few minutes.",
     "types": {
       "SUBSCRIPTION": "Subscribe to an API",
-      "PUBLISH": "Publish an API"
+      "PUBLISH": "Publish an API",
+      "NEW_API": "Request a new API",
+      "PRODUCTION": "Production credentials"
     }
+  },
+  "accountType": "Account type",
+  "nextSteps": {
+    "heading": "What you can do next",
+    "groups": [
+      {
+        "heading": "Applications",
+        "links": [
+          {
+            "text": "Manage applications",
+            "href": "/account/applications"
+          },
+          {
+            "text": "Add a new application",
+            "href": "/account/applications/new"
+          },
+          {
+            "text": "Request production credentials",
+            "href": "/account/production-credentials"
+          }
+        ]
+      },
+      {
+        "heading": "APIs",
+        "links": [
+          {
+            "text": "API catalogue",
+            "href": "/api-catalogue"
+          },
+          {
+            "text": "Request access to an API",
+            "href": "/subscribe"
+          },
+          {
+            "text": "Request a new API",
+            "href": "/api-catalogue/request-new-api"
+          },
+          {
+            "text": "Publish an API",
+            "href": "/publish"
+          }
+        ]
+      },
+      {
+        "heading": "Support",
+        "links": [
+          {
+            "text": "Get started with our APIs",
+            "href": "/get-started"
+          },
+          {
+            "text": "Onboarding guide",
+            "href": "/get-started/onboarding-guide"
+          },
+          {
+            "text": "Help and support",
+            "href": "/help"
+          }
+        ]
+      }
+    ]
   }
 }

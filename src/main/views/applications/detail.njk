@@ -1,0 +1,88 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = application.name + " - Manage applications - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "applications" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Your account", href: "/account" },
+  { text: "Manage applications", href: "/account/applications" }
+] %}
+{% set base = "/account/applications/" + application.id %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% include "components/notice.njk" %}
+
+    <span class="govuk-caption-l">Application</span>
+    <h1 class="govuk-heading-xl">{{ application.name }}</h1>
+
+    {% include "components/simulated-credentials.njk" %}
+
+    <h2 class="govuk-heading-m">Basic details</h2>
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Application name" }, value: { text: application.name } },
+        { key: { text: "Application ID" }, value: { html: '<span class="apim-credential">' + application.id + '</span>' } },
+        { key: { text: "Environment" }, value: { text: environment } },
+        { key: { text: "Created" }, value: { text: application.createdAt | date } },
+        { key: { text: "Description" }, value: { text: application.description or "None" } }
+      ]
+    }) }}
+
+    <h2 class="govuk-heading-m">Authorisation details</h2>
+    <p class="govuk-body">Use your client ID and secret to get an access token from Microsoft Entra ID for your calls.</p>
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
+        {
+          key: { text: "Client secret" },
+          value: { html: '<span class="apim-credential" id="masked-secret">' + maskedSecret + '</span><br><span class="govuk-hint">Expires ' + (application.secretExpiresAt | date) + '</span>' },
+          actions: { items: [{ href: base + "/client-secret", text: "Regenerate", visuallyHiddenText: "client secret", attributes: { id: "regenerate-secret" } }] }
+        }
+      ]
+    }) }}
+
+    <h2 class="govuk-heading-m">APIs added</h2>
+    {% if application.apis.length %}
+      {% set rows = [] %}
+      {% for api in application.apis %}
+        {% set rows = (rows.push([
+          { text: api.apiTitle },
+          { text: api.publisherId, classes: "apim-reference" },
+          { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
+        ]), rows) %}
+      {% endfor %}
+      {{ govukTable({
+        caption: "APIs added to this application",
+        captionClasses: "govuk-visually-hidden",
+        head: [{ text: "API" }, { text: "Publisher ID" }, { html: '<span class="govuk-visually-hidden">Action</span>' }],
+        rows: rows,
+        attributes: { id: "application-apis" }
+      }) }}
+    {% else %}
+      <p class="govuk-body">No APIs added yet.</p>
+    {% endif %}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Add or remove APIs", href: base + "/apis", classes: "govuk-button--secondary", attributes: { id: "change-apis" } }) }}
+    </div>
+
+    <h2 class="govuk-heading-m">Going live</h2>
+    <p class="govuk-body">
+      When this application has been tested, <a class="govuk-link" href="/account/production-credentials?application={{ application.id }}">request production credentials</a> for it.
+    </p>
+
+    <h2 class="govuk-heading-m">Delete this application</h2>
+    <p class="govuk-body">Its client ID, secret and subscription keys stop working straight away.</p>
+    {{ govukButton({ text: "Delete application", href: base + "/delete", classes: "govuk-button--warning", attributes: { id: "delete-application" } }) }}
+
+    <p class="govuk-body"><a class="govuk-link" href="/account/applications">Back to your applications</a></p>
+  </div>
+</div>
+{% endblock %}

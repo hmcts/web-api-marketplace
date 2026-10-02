@@ -3,6 +3,7 @@ import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
 import { requireSignIn } from '../modules/session';
+import { deleteLocalRequest, listLocalRequests, statusText } from '../services/LocalRequests';
 import { RequestSummary, deleteRequest, getRequestsFor, isRequestType } from '../services/Requests';
 import { SignedInUser } from '../services/SignIn';
 
@@ -15,7 +16,19 @@ export default class AccountController {
     }
 
     const user = req.session.user as SignedInUser;
-    const result = await getRequestsFor(user.id);
+    // An account registered here is unknown to the backend, which would refuse its id.
+    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id);
+    const local = await listLocalRequests(user.email);
+    const requests: (RequestSummary & { href?: string })[] = [
+      ...result.requests,
+      ...local.map(request => ({
+        reference: request.reference,
+        type: request.type,
+        submittedAt: request.submittedAt,
+        status: statusText(request.status),
+        href: request.type === 'PRODUCTION' ? `/account/production-credentials/${request.reference}` : undefined,
+      })),
+    ].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
     // Read once and cleared, so the banner appears on the page that follows the delete
     // and not on every visit afterwards.
     const notice = req.session.requestNotice;
@@ -24,7 +37,7 @@ export default class AccountController {
     res.render('account', {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
       user,
-      myRequests: result.requests.map(request => this.forDisplay(request, req.lng)),
+      myRequests: requests.map(request => this.forDisplay(request, req.lng)),
       couldNotLoad: !result.ok,
       deleted: notice === 'deleted',
       deleteFailed: notice === 'deleteFailed',
@@ -52,13 +65,19 @@ export default class AccountController {
     const reference = String(body.reference ?? '').trim();
     const type = body.type;
 
-    const deleted = reference !== '' && isRequestType(type) ? await deleteRequest(user.id, type, reference) : false;
+    // Held here first: a reference this user owns in the data store is deleted there.
+    // Anything else goes to the backend, which checks the owner itself.
+    const deleted =
+      reference === ''
+        ? false
+        : (await deleteLocalRequest(user.email, reference)) ||
+          (!user.local && isRequestType(type) ? await deleteRequest(user.id, type, reference) : false);
 
     req.session.requestNotice = deleted ? 'deleted' : 'deleteFailed';
     req.session.save(() => res.redirect('/account'));
   }
 
-  private forDisplay(request: RequestSummary, language: string | undefined) {
+  private forDisplay(request: RequestSummary & { href?: string }, language: string | undefined) {
     return { ...request, submittedOn: this.formatDate(request.submittedAt, language) };
   }
 

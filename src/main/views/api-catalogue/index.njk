@@ -1,0 +1,78 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = ("Search results for " + query if query else "API catalogue") + " - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "catalogue" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }] %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">API catalogue</h1>
+
+    <p class="govuk-body-l">
+      Browse the APIs published by HMCTS teams, search by name or description, and open one to read
+      what it does and how to get access.
+    </p>
+
+    <form method="get" action="/api-catalogue" role="search" novalidate>
+      {{ govukInput({
+        label: { text: "Search the catalogue", classes: "govuk-label--m" },
+        hint: { text: "Search by API name, description or team. Leave this empty to browse alphabetically." },
+        id: "q",
+        name: "q",
+        type: "search",
+        value: query,
+        classes: "govuk-!-width-two-thirds"
+      }) }}
+      {{ govukButton({ text: "Search", classes: "govuk-button--secondary", attributes: { id: "catalogue-search" } }) }}
+    </form>
+
+    {% if unavailable %}
+      {{ govukWarningText({
+        text: "The catalogue could not be loaded just now. Try again in a few minutes.",
+        iconFallbackText: "Warning",
+        attributes: { id: "catalogue-unavailable" }
+      }) }}
+    {% else %}
+      <p class="govuk-body" id="catalogue-count">
+        {% if query %}
+          {{ results.length }} {{ "API" if results.length == 1 else "APIs" }} matching &ldquo;{{ query }}&rdquo;.
+          <a class="govuk-link" href="/api-catalogue">Clear search</a>
+        {% else %}
+          {{ results.length }} APIs, A to Z.
+        {% endif %}
+      </p>
+
+      <ul class="govuk-list" id="catalogue-results">
+        {% for api in results %}
+          <li class="govuk-!-margin-bottom-6">
+            <h2 class="govuk-heading-m govuk-!-margin-bottom-1">
+              <a class="govuk-link" href="/api-catalogue/{{ api.name }}">{{ api.title }}</a>
+            </h2>
+            {% if api.description %}<p class="govuk-body govuk-!-margin-bottom-1">{{ api.description }}</p>{% endif %}
+            <p class="govuk-body-s govuk-!-margin-bottom-0">{{ api.name }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <h2 class="govuk-heading-m">Can&rsquo;t find what you need?</h2>
+
+    <p class="govuk-body">
+      If the data or capability you need isn&rsquo;t listed,
+      <a class="govuk-link" href="/api-catalogue/request-new-api">request a new API</a>. We record
+      what people are looking for and use it to decide which APIs to prioritise.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

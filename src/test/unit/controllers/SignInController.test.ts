@@ -1,4 +1,6 @@
 import SignInController from '../../../main/controllers/SignInController';
+import { MemoryStore, useDataStore } from '../../../main/modules/store';
+import { markOnboarded } from '../../../main/services/Accounts';
 import { mockRequest } from '../mocks/mockRequest';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -14,7 +16,10 @@ const content = {
 };
 
 describe('SignInController', () => {
-  beforeEach(() => (signIn as jest.Mock).mockReset());
+  beforeEach(() => {
+    (signIn as jest.Mock).mockReset();
+    useDataStore(new MemoryStore());
+  });
 
   test('getting_the_page_should_render_the_sign_in_view', () => {
     const controller = new SignInController();
@@ -91,7 +96,7 @@ describe('SignInController', () => {
     expect(res.data?.serviceError).toBeUndefined();
   });
 
-  test('a_successful_sign_in_should_store_the_user_and_redirect_to_the_account', async () => {
+  test('a_first_sign_in_should_store_the_user_and_redirect_to_the_welcome', async () => {
     (signIn as jest.Mock).mockResolvedValue({ ok: true, user: { email: 'joe@example.com' } });
     const controller = new SignInController();
     const res = mockResponse();
@@ -101,6 +106,19 @@ describe('SignInController', () => {
     await controller.post(req, res);
 
     expect(req.session.user).toEqual({ email: 'joe@example.com' });
+    expect(res.redirected).toBe('/account/welcome');
+  });
+
+  test('a_later_sign_in_should_redirect_to_the_account', async () => {
+    (signIn as jest.Mock).mockResolvedValue({ ok: true, user: { email: 'joe@example.com' } });
+    await markOnboarded('joe@example.com');
+    const controller = new SignInController();
+    const res = mockResponse();
+    const req = mockRequest({ signIn: content });
+    req.body = { email: 'joe@example.com', password: 'any' };
+
+    await controller.post(req, res);
+
     expect(res.redirected).toBe('/account');
   });
 

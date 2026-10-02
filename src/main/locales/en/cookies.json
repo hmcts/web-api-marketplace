@@ -1,10 +1,11 @@
 {
-  "title": "Cookie preferences - Find a Court or Tribunal - GOV.UK",
-  "serviceName": "Find a Court or Tribunal",
+  "title": "Cookies - HMCTS API Marketplace - GOV.UK",
+  "serviceName": "HMCTS API Marketplace",
   "h1": "Cookies",
   "p1": "Cookies are files saved on your phone, tablet or computer when you visit a website. Most websites need cookies to work properly.",
   "p2": "This service uses cookies to:",
   "bullets": [
+    "keep you signed in",
     "store your language selection",
     "store your cookie preferences",
     "measure how you use the service so it can be improved"
@@ -19,9 +20,11 @@
   "additionalCookies": "Government services may set additional cookies and, if so, will have their own cookie policy and banner.",
   "homePageLink": "Go to homepage",
   "language_": {
-    "header": "1. To store your language selection",
+    "header": "1. To keep you signed in and store your language selection",
     "i18nDescription": "Your language selection: English or Welsh",
-    "i18nDuration": "1 year"
+    "i18nDuration": "1 year",
+    "sessionDescription": "Keeps you signed in, and remembers your answers between the pages of a form",
+    "sessionDuration": "When you close your browser, or after 20 minutes without activity"
   },
   "preferences": {
     "header": "2. To store your cookie preferences",
@@ -59,8 +62,14 @@
   "optionsHeader1": "Allow cookies that measure website use?",
   "optionsHeader2": "Allow cookies that measure website application performance monitoring?",
   "analyticsCookieOptions": [
-    { "value": "on", "text": "Use cookies that measure my website use" },
-    { "value": "off", "text": "Do not use cookies that measure my website use" }
+    {
+      "value": "on",
+      "text": "Use cookies that measure my website use"
+    },
+    {
+      "value": "off",
+      "text": "Do not use cookies that measure my website use"
+    }
   ],
   "performanceCookieOptions": [
     {

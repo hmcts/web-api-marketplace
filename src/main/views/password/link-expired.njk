@@ -1,0 +1,17 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "This link has expired - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">This link has expired</h1>
+    <p class="govuk-body">The link to reset your password has expired or has already been used. Links work once, for 1 hour.</p>
+    {{ govukButton({ text: "Send a new reset link", href: "/forgotten-password", attributes: { id: "new-reset-link" } }) }}
+  </div>
+</div>
+{% endblock %}

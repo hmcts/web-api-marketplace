@@ -1,0 +1,44 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "macros/errors.njk" import errorSummary %}
+
+{% set pageTitle = ("Error: " if errors.length) + "Create a new password - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ errorSummary(errors) }}
+
+    <h1 class="govuk-heading-xl">Create a new password</h1>
+
+    <form method="post" action="/reset-password" novalidate>
+      <input type="hidden" name="token" value="{{ token }}">
+
+      {{ govukInput({
+        label: { text: "New password", classes: "govuk-label--m" },
+        hint: { text: "Your password must be at least 12 characters long." },
+        id: "password",
+        name: "password",
+        type: "password",
+        autocomplete: "new-password",
+        errorMessage: { text: errorFor.password } if errorFor.password
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Confirm your new password", classes: "govuk-label--m" },
+        id: "password-confirm",
+        name: "password-confirm",
+        type: "password",
+        autocomplete: "new-password",
+        errorMessage: { text: errorFor["password-confirm"] } if errorFor["password-confirm"]
+      }) }}
+
+      {{ govukButton({ text: "Save new password", attributes: { id: "reset-submit" } }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "This link has expired - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "account" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">This link has expired</h1>
+    <p class="govuk-body">The link to confirm your email address has expired or has already been used.</p>
+    <p class="govuk-body">If you have already confirmed your address, you can <a class="govuk-link" href="/sign-in">sign in</a>.</p>
+    {{ govukButton({ text: "Send a new confirmation email", href: "/verify-email/resend", attributes: { id: "resend-link" } }) }}
+  </div>
+</div>
+{% endblock %}

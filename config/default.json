@@ -45,6 +45,9 @@
     "url": "https://hmcts.github.io/amp-catalog/apis.json"
   },
   "marketplaceSite": {
-    "url": "https://hmcts.github.io/hmcts-api-marketplace/"
+    "url": "/"
+  },
+  "notify": {
+    "showEmailsOnPage": true
   }
 }

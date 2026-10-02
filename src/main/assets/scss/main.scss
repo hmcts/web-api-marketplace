@@ -14,6 +14,13 @@
   word-break: break-all;
 }
 
+// Client IDs, secrets and subscription keys: monospaced so 0/O and l/1 can be told apart
+// when someone copies one by eye, and allowed to break because they have no spaces.
+.apim-credential {
+  font-family: monospace;
+  word-break: break-all;
+}
+
 .cookie-preference-success {
   display: none;
 }

@@ -5,8 +5,9 @@ import request from 'supertest';
 import { app } from '../../main/app';
 
 /**
- * The service name links back to the public marketplace site, so someone who came here to
- * subscribe or publish can return to the front door. The GOV.UK crown is left alone.
+ * The service name links to the marketplace's front door. Since AMP-1247 that is this
+ * service's own home page; it was the GitHub Pages site before. The GOV.UK crown is left
+ * alone.
  *
  * The address is configuration, not a literal in the template: the site was served from
  * /v2/ and has since moved to the root of the same host, so the next move is a
@@ -40,8 +41,10 @@ describe('The link back to the marketplace site', () => {
       });
   });
 
-  test('the_configured_site_should_be_the_public_marketplace_and_not_this_service', async () => {
-    expect(configured).to.match(/^https:\/\/hmcts\.github\.io\/hmcts-api-marketplace/);
+  test('the_configured_site_should_default_to_this_service_now_the_pages_have_moved_here', async () => {
+    // AMP-1247 migrated the GitHub Pages content into this service, so the front door is
+    // here. Linking out to hmcts.github.io would take users to the copy being retired.
+    expect(configured).to.equal('/');
   });
 
   test('every_page_should_carry_the_link_not_just_the_home_page', async () => {

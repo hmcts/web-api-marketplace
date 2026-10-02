@@ -1,6 +1,6 @@
 {
-  "title": "Dewisiadau Cwcis - Dod o hyd i Lys neu Dribiwnlys - GOV.UK",
-  "serviceName": "Dod o hyd i Lys neu Dribiwnlys",
+  "title": "Dewisiadau Cwcis - HMCTS API Marketplace - GOV.UK",
+  "serviceName": "HMCTS API Marketplace",
   "h1": "Cwcis",
   "p1": "Ffeiliau sy'n cael eu cadw ar eich ffôn symudol, tabled neu gyfrifiadur yw cwcis. Mae angen cwcis ar y rhan fwyaf o wefannau iddynt weithio'n iawn.",
   "p2": "Mae'r wefan hon yn defnyddio cwcis i:",
@@ -17,11 +17,12 @@
   "saved": "Cafodd eich gosodiadau cwcis eu cadw",
   "additionalCookies": "Gall gwasanaethau'r llywodraeth osod cwcis ychwanegol ac, os felly, bydd ganddynt bolisi a baner cwcis eu hunain.",
   "homePageLink": "Ewch i'r hafan",
-
   "language_": {
     "header": "1. Storio eich dewis iaith",
     "i18nDescription": "Eich dewis iaith: Cymraeg neu Saesneg",
-    "i18nDuration": "1 flwyddyn"
+    "i18nDuration": "1 flwyddyn",
+    "sessionDescription": "Keeps you signed in, and remembers your answers between the pages of a form",
+    "sessionDuration": "When you close your browser, or after 20 minutes without activity"
   },
   "preferences": {
     "header": "2. Storio eich dewisiadau cwcis",

@@ -1,0 +1,24 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+
+{% set pageTitle = "Request submitted - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "catalogue" %}
+{% set hideBackLink = true %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({
+      titleText: "Request submitted",
+      html: "Reference number<br><strong id=\"confirmation-reference\">" + reference + "</strong>"
+    }) }}
+    <h2 class="govuk-heading-m">What happens next</h2>
+    <p class="govuk-body">
+      The marketplace team will review your request and may contact you to find out more. You can see it in
+      <a class="govuk-link" href="/account#tab-requests">My requests</a>, or go back to the
+      <a class="govuk-link" href="/api-catalogue">API catalogue</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

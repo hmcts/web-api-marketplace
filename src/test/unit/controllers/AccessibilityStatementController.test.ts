@@ -11,7 +11,7 @@ describe('AccessibilityStatementController', () => {
     const response = {
       render: () => '',
     } as unknown as Response;
-    const data = { pageTitle: 'Accessibility statement for the ‘Find a Court or Tribunal’ service' };
+    const data = { pageTitle: 'Accessibility statement - HMCTS API Marketplace - GOV.UK' };
     const request = mockRequest({ accessibilityStatement: data });
     const responseMock = mock(response);
 

@@ -1,0 +1,61 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "macros/errors.njk" import errorSummary %}
+
+{% set pageTitle = ("Error: " if errors.length) + "Application details - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "applications" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Your account", href: "/account" },
+  { text: "Manage applications", href: "/account/applications" }
+] %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ errorSummary(errors) }}
+
+    <span class="govuk-caption-l">Add new application</span>
+    <h1 class="govuk-heading-xl">Application details</h1>
+
+    <form method="post" action="/account/applications/new/details" novalidate>
+
+      {{ govukRadios({
+        name: "environment",
+        fieldset: { legend: { text: "Select your environment", classes: "govuk-fieldset__legend--m" } },
+        hint: { html: 'You must have a separate application for each environment. For production, <a class="govuk-link" href="/account/production-credentials">request production credentials</a>.' },
+        items: environments,
+        value: draft.environment,
+        errorMessage: { text: errorFor.environment } if errorFor.environment
+      }) }}
+
+      {{ govukInput({
+        label: { text: "What is your application name?", classes: "govuk-label--m" },
+        hint: { text: "You can use the same name once in each environment." },
+        id: "name",
+        name: "name",
+        value: draft.name,
+        autocomplete: "off",
+        errorMessage: { text: errorFor.name } if errorFor.name
+      }) }}
+
+      {{ govukTextarea({
+        label: { text: "Describe your application (optional)", classes: "govuk-label--m" },
+        hint: { text: "What it does and who uses it. This helps API owners understand how their API is used." },
+        id: "description",
+        name: "description",
+        value: draft.description,
+        errorMessage: { text: errorFor.description } if errorFor.description
+      }) }}
+
+      {{ govukButton({ text: "Continue", attributes: { id: "details-continue" } }) }}
+      <p class="govuk-body"><a class="govuk-link" href="/account/applications">Cancel</a></p>
+    </form>
+  </div>
+</div>
+{% endblock %}

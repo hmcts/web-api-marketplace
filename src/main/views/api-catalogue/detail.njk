@@ -1,0 +1,60 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = api.title + " - API catalogue - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "catalogue" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "API catalogue", href: "/api-catalogue" }
+] %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">API catalogue</span>
+    <h1 class="govuk-heading-xl">{{ api.title }}</h1>
+
+    {% if api.description %}
+      <p class="govuk-body-l">{{ api.description }}</p>
+    {% endif %}
+
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Name" }, value: { text: api.name } },
+        { key: { text: "Owning team" }, value: { text: api.team or "Not recorded" } },
+        { key: { text: "Status" }, value: { text: "Published" } }
+      ]
+    }) }}
+
+    <h2 class="govuk-heading-m">Documentation</h2>
+
+    <ul class="govuk-list">
+      <li><a class="govuk-link" href="{{ docsUrl }}" rel="noreferrer noopener" target="_blank">Read the API reference (opens in new tab)</a></li>
+      <li><a class="govuk-link" href="{{ repoUrl }}" rel="noreferrer noopener" target="_blank">View the source repository on GitHub (opens in new tab)</a></li>
+    </ul>
+
+    <h2 class="govuk-heading-m">Use this API</h2>
+
+    <p class="govuk-body">
+      Add this API to an application to get a subscription key for it. Your application&rsquo;s client
+      ID and secret authorise your calls.
+    </p>
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Add to a new application", href: "/account/applications/new", attributes: { id: "add-to-application" } }) }}
+      <a class="govuk-link" href="/subscribe">Request access to this API</a>
+    </div>
+
+    <p class="govuk-body">
+      You need a <a class="govuk-link" href="/register">developer account</a> to create an application.
+      Read the <a class="govuk-link" href="/get-started/consumer-guidance">consumer guidance</a> before you start.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

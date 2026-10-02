@@ -1,0 +1,18 @@
+{#
+  Shows the email this service would have sent, because GOV.UK Notify is not connected
+  yet and nothing is actually delivered. Without it nobody could confirm an address or
+  reset a password. Controlled by notify.showEmailsOnPage (NOTIFY_SHOW_EMAILS_ON_PAGE),
+  and must be switched off once Notify is wired in.
+#}
+{% if showEmailsOnPage and outbox %}
+  <div class="govuk-inset-text" id="email-preview">
+    <p class="govuk-body govuk-!-font-weight-bold">Email preview: GOV.UK Notify is not connected yet, so this was not sent</p>
+    <p class="govuk-body-s">To: {{ outbox.to }}<br>Subject: {{ outbox.subject }}</p>
+    {% for paragraph in outbox.paragraphs %}
+      <p class="govuk-body-s">{{ paragraph }}</p>
+    {% endfor %}
+    {% if outbox.link %}
+      <p class="govuk-body"><a class="govuk-link" href="{{ outbox.link.href }}" id="email-preview-link">{{ outbox.link.text }}</a></p>
+    {% endif %}
+  </div>
+{% endif %}

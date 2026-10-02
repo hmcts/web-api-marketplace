@@ -4,8 +4,9 @@
 
 {% extends "template.njk" %}
 
+{% set pageTitle = "Sign in - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "account" %}
-{% set hideBackLink = true %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }] %}
 
 {% block content %}
 
@@ -22,6 +23,12 @@
           titleText: errorSummaryTitle,
           errorList: [{ text: serviceError }],
           attributes: { id: "service-error" }
+        }) }}
+      {% elif unverified %}
+        {{ govukErrorSummary({
+          titleText: errorSummaryTitle,
+          errorList: [{ text: errorUnverified, href: "/verify-email/resend" }],
+          attributes: { id: "unverified-error" }
         }) }}
       {% elif error %}
         {{ govukErrorSummary({
@@ -58,6 +65,10 @@
         {{ govukButton({ text: submitButton, attributes: { id: "sign-in-submit" } }) }}
 
       </form>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/forgotten-password" id="forgotten-password">{{ forgottenPassword }}</a>
+      </p>
 
     </div>
   </div>
