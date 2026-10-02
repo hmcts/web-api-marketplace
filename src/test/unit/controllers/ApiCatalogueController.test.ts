@@ -18,7 +18,46 @@ describe('ApiCatalogueController', () => {
     await new ApiCatalogueController().list(anonymous(), res);
 
     expect(res.view).toBe('api-catalogue/index');
-    expect(res.data).toMatchObject({ query: '', results: CATALOGUE, unavailable: false });
+    expect(res.data).toMatchObject({ query: '', unavailable: false });
+    expect((res.data?.results as { name: string }[]).map(api => api.name)).toEqual(['api-one', 'api-two']);
+  });
+
+  test('browsing_should_group_apis_by_letter_and_link_only_letters_that_have_any', async () => {
+    (getCatalogueApis as jest.Mock).mockResolvedValue([
+      { name: 'api-cp-crime-hearing', title: 'CP Crime Hearing API' },
+      { name: 'api-cp-crime-defendant-details', title: 'Defendant Details' },
+      { name: 'api-cp-crime-court-list-publisher', title: 'Crime Court List Publisher' },
+      { name: 'api-x', title: '2026 API' },
+    ]);
+    const res = mockResponse();
+
+    await new ApiCatalogueController().list(anonymous(), res);
+
+    const groups = res.data?.groups as { letter: string; apis: { title: string }[] }[];
+    expect(groups.map(group => group.letter)).toEqual(['C', 'D', '#']);
+    expect(groups[0].apis.map(api => api.title)).toEqual(['CP Crime Hearing API', 'Crime Court List Publisher']);
+
+    const letters = res.data?.letters as { letter: string; present: boolean }[];
+    expect(letters).toHaveLength(26);
+    expect(letters.filter(item => item.present).map(item => item.letter)).toEqual(['C', 'D']);
+  });
+
+  test('a_search_should_list_matches_without_letters', async () => {
+    const res = mockResponse();
+
+    await new ApiCatalogueController().list(anonymous({ query: { q: 'api' } }), res);
+
+    expect(res.data?.groups).toEqual([]);
+    expect((res.data?.letters as { present: boolean }[]).some(item => item.present)).toBe(false);
+  });
+
+  test('every_api_should_carry_its_platform_and_domain', async () => {
+    (getCatalogueApis as jest.Mock).mockResolvedValue([{ name: 'api-cp-refdata-courthearing', title: 'Courts' }]);
+    const res = mockResponse();
+
+    await new ApiCatalogueController().list(anonymous(), res);
+
+    expect((res.data?.results as object[])[0]).toMatchObject({ platform: 'Common Platform', domain: 'Reference data' });
   });
 
   test.each([
@@ -51,7 +90,7 @@ describe('ApiCatalogueController', () => {
 
     expect(res.view).toBe('api-catalogue/detail');
     expect(res.data).toMatchObject({
-      api: CATALOGUE[0],
+      api: { ...CATALOGUE[0], platform: 'Other', domain: 'Other' },
       docsUrl: 'https://hmcts.github.io/api-one/',
       repoUrl: 'https://github.com/hmcts/api-one',
     });

@@ -65,6 +65,30 @@ export function linksFor(name: string): { docsUrl: string; repoUrl: string } {
   };
 }
 
+/**
+ * The catalogue feed carries no domain or platform, so both are read from the repository
+ * name, as the GitHub Pages catalogue does. They are for browsing only — a name that
+ * matches no rule is "Other" rather than a wrong guess. Ordered: the first match wins.
+ */
+const DOMAIN_RULES: [RegExp, string][] = [
+  [/^api-cp-ai-/, 'AI'],
+  [/^api-cp-refdata-/, 'Reference data'],
+  [/prosecution-case|results-pcr|caseadmin|defendant/, 'Case administration'],
+  [/scheduling|listing|court-list/, 'Scheduling and listing'],
+  [/hearing/, 'Hearings'],
+];
+
+/** Every API in the feed is api-cp-* today. Add a rule when another platform appears. */
+const PLATFORM_RULES: [RegExp, string][] = [[/^api-cp-/, 'Common Platform']];
+
+export function domainOf(name: string): string {
+  return DOMAIN_RULES.find(([pattern]) => pattern.test(name))?.[1] ?? 'Other';
+}
+
+export function platformOf(name: string): string {
+  return PLATFORM_RULES.find(([pattern]) => pattern.test(name))?.[1] ?? 'Other';
+}
+
 /** Only for tests — the module-level cache otherwise leaks between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
