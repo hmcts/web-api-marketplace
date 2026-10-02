@@ -184,4 +184,60 @@ describe('AccountController', () => {
       expect(deleteRequest).not.toHaveBeenCalled();
     });
   });
+
+  describe('requests held by this service', () => {
+    const { MemoryStore, useDataStore } = require('../../../main/modules/store');
+    const { addLocalRequest, listLocalRequests } = require('../../../main/services/LocalRequests');
+
+    beforeEach(() => useDataStore(new MemoryStore()));
+
+    test('they_should_be_listed_with_the_backends_newest_first_and_production_ones_linked', async () => {
+      (getRequestsFor as jest.Mock).mockResolvedValue({ ok: true, requests: [request] });
+      const production = await addLocalRequest(user.email, 'PRODUCTION', []);
+      const res = mockResponse();
+
+      await new AccountController().get(mockRequest({ account: content }, { user: user as never }), res);
+
+      const listed = res.data?.myRequests as { reference: string; href?: string; status: string }[];
+      expect(listed.map(item => item.reference)).toEqual([production.reference, request.reference]);
+      expect(listed[0]).toMatchObject({
+        href: `/account/production-credentials/${production.reference}`,
+        status: 'Submitted',
+      });
+    });
+
+    test('an_account_registered_here_should_not_ask_the_backend_for_its_requests', async () => {
+      const res = mockResponse();
+
+      await new AccountController().get(
+        mockRequest({ account: content }, { user: { ...user, local: true } as never }),
+        res
+      );
+
+      expect(getRequestsFor).not.toHaveBeenCalled();
+      expect(res.data?.couldNotLoad).toBe(false);
+    });
+
+    test('deleting_one_should_remove_it_here_without_asking_the_backend', async () => {
+      const held = await addLocalRequest(user.email, 'NEW_API', []);
+      const req = mockRequest({ account: content }, { user: user as never });
+      req.body = { reference: held.reference, type: 'NEW_API' };
+
+      await new AccountController().remove(req, mockResponse());
+
+      expect(req.session.requestNotice).toBe('deleted');
+      expect(deleteRequest).not.toHaveBeenCalled();
+      expect(await listLocalRequests(user.email)).toEqual([]);
+    });
+
+    test('an_account_registered_here_should_never_delete_through_the_backend', async () => {
+      const req = mockRequest({ account: content }, { user: { ...user, local: true } as never });
+      req.body = { reference: 'AR-2026-IPCOC1', type: 'SUBSCRIPTION' };
+
+      await new AccountController().remove(req, mockResponse());
+
+      expect(req.session.requestNotice).toBe('deleteFailed');
+      expect(deleteRequest).not.toHaveBeenCalled();
+    });
+  });
 });

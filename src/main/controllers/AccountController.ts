@@ -65,16 +65,25 @@ export default class AccountController {
     const reference = String(body.reference ?? '').trim();
     const type = body.type;
 
-    // Held here first: a reference this user owns in the data store is deleted there.
-    // Anything else goes to the backend, which checks the owner itself.
-    const deleted =
-      reference === ''
-        ? false
-        : (await deleteLocalRequest(user.email, reference)) ||
-          (!user.local && isRequestType(type) ? await deleteRequest(user.id, type, reference) : false);
+    const deleted = reference !== '' && (await this.deleteFor(user, type, reference));
 
     req.session.requestNotice = deleted ? 'deleted' : 'deleteFailed';
     req.session.save(() => res.redirect('/account'));
+  }
+
+  /**
+   * Held here first: a reference this user owns in the data store is deleted there.
+   * Anything else goes to the backend, which checks the owner itself — unless the account
+   * was registered here, which the backend has never heard of.
+   */
+  private async deleteFor(user: SignedInUser, type: unknown, reference: string): Promise<boolean> {
+    if (await deleteLocalRequest(user.email, reference)) {
+      return true;
+    }
+    if (user.local || !isRequestType(type)) {
+      return false;
+    }
+    return deleteRequest(user.id, type, reference);
   }
 
   private forDisplay(request: RequestSummary & { href?: string }, language: string | undefined) {

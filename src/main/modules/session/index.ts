@@ -100,9 +100,7 @@ export function takeReturnTo(req: AppRequest, fallback: string): string {
   const returnTo = req.session?.returnTo;
   delete req.session?.returnTo;
 
-  return returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') && !returnTo.startsWith('/\\')
-    ? returnTo
-    : fallback;
+  return returnTo?.startsWith('/') && !returnTo.startsWith('//') && !returnTo.startsWith('/\\') ? returnTo : fallback;
 }
 
 /** Reads the one-off banner set by the page before, and clears it. */

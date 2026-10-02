@@ -41,19 +41,18 @@ describe('The link back to the marketplace site', () => {
       });
   });
 
-  test('the_configured_site_should_default_to_this_service_now_the_pages_have_moved_here', async () => {
+  test('the_configured_site_should_default_to_this_service_now_the_pages_have_moved_here', () => {
     // AMP-1247 migrated the GitHub Pages content into this service, so the front door is
     // here. Linking out to hmcts.github.io would take users to the copy being retired.
     expect(configured).to.equal('/');
   });
 
   test('every_page_should_carry_the_link_not_just_the_home_page', async () => {
-    for (const path of ['/sign-in', '/cookies', '/accessibility-statement']) {
-      await request(app)
-        .get(path)
-        .expect(res => {
-          expect(serviceNameHref(res.text), `service name on ${path}`).to.equal(configured);
-        });
-    }
+    const paths = ['/sign-in', '/cookies', '/accessibility-statement'];
+    const pages = await Promise.all(paths.map(path => request(app).get(path)));
+
+    pages.forEach((res, index) => {
+      expect(serviceNameHref(res.text), `service name on ${paths[index]}`).to.equal(configured);
+    });
   });
 });

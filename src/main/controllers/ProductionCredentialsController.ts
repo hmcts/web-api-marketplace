@@ -157,7 +157,7 @@ export default class ProductionCredentialsController {
     const request = await getLocalRequest(user.email, String(req.params.reference));
 
     // Another user's reference is "not found", the same as one that does not exist.
-    if (!request || request.type !== 'PRODUCTION') {
+    if (request?.type !== 'PRODUCTION') {
       next();
       return;
     }
@@ -238,8 +238,8 @@ export default class ProductionCredentialsController {
   private summaryRows(answers: Answers, applications: Application[]): SummaryRow[] {
     const application = applications.find(candidate => candidate.id === answers.application);
     const goLive = this.goLiveDate(answers);
-    const label = (options: { value: string; text: string }[], value: unknown) =>
-      options.find(option => option.value === value)?.text ?? String(value ?? '');
+    const label = (options: { value: string; text: string }[], value: Answers[string] | undefined) =>
+      options.find(option => option.value === value)?.text ?? (typeof value === 'string' ? value : '');
 
     return [
       {

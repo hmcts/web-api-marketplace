@@ -60,61 +60,86 @@ describe('Links', () => {
     ]) {
       expect(visited, `${path} should be linked from somewhere`).to.include(path);
     }
-    expect(visited.some(path => /^\/account\/production-credentials\/PCR-/.test(path))).to.equal(true);
+    expect(visited.some(path => path.startsWith('/account/production-credentials/PCR-'))).to.equal(true);
   });
 });
 
 /** Pages a crawler must not follow: signing out ends the signed-in crawl. */
-const SKIP = ['/sign-out'];
+const SKIP = new Set(['/sign-out']);
 
+interface Visit {
+  /** Internal pages this one links or redirects to. */
+  next: string[];
+  failure?: string;
+}
+
+/**
+ * Breadth first, a level of pages at a time: every link found on one level becomes the
+ * next.
+ */
 async function crawl(agent: Agent, signedOut: boolean): Promise<string[]> {
-  const queue = ['/'];
   const visited = new Set<string>();
   const failures: string[] = [];
 
-  while (queue.length) {
-    const url = queue.shift() as string;
-    const path = url.split('?')[0];
-
-    if (visited.has(url) || SKIP.includes(path)) {
-      continue;
+  const crawlLevel = async (level: string[]): Promise<void> => {
+    const unseen = [...new Set(level)].filter(url => !visited.has(url) && !SKIP.has(url.split('?')[0]));
+    if (!unseen.length) {
+      return;
     }
-    visited.add(url);
+    unseen.forEach(url => visited.add(url));
 
-    const res = await agent.get(url);
-    const location: string | undefined = res.headers.location;
+    const visits = await visitAll(agent, unseen, signedOut);
+    failures.push(...visits.flatMap(result => (result.failure ? [result.failure] : [])));
+    await crawlLevel(visits.flatMap(result => result.next));
+  };
 
-    // A redirect within the service — sign in turning away a signed-out visitor, or
-    // /register sending someone already signed in to their account — is fine as long as
-    // where it leads works, so it is followed rather than reported.
-    if (res.status === 302 && location?.startsWith('/') && !location.startsWith('//')) {
-      if (location === '/sign-in' && !signedOut) {
-        failures.push(`${url} sent a signed-in user to sign in`);
-      }
-      queue.push(location);
-      continue;
-    }
-
-    if (res.status !== 200) {
-      failures.push(`${url} answered ${res.status}${location ? ` to ${location}` : ''}`);
-      continue;
-    }
-
-    for (const [, href] of (res.text ?? '').matchAll(/href="([^"]*)"/g)) {
-      const target = href.replace(/&amp;/g, '&').split('#')[0];
-      if (
-        target.startsWith('/') &&
-        !target.startsWith('//') &&
-        !target.startsWith('/assets/') &&
-        !/\.\w+$/.test(target)
-      ) {
-        queue.push(target);
-      }
-    }
-  }
+  await crawlLevel(['/']);
 
   expect(failures, `broken links:\n${failures.join('\n')}`).to.deep.equal([]);
   return [...visited].map(url => url.split('?')[0]);
+}
+
+/**
+ * Visits the pages one after another. Not in parallel: supertest starts a server per
+ * request, and several at once reset each other's connections.
+ */
+async function visitAll(agent: Agent, urls: string[], signedOut: boolean): Promise<Visit[]> {
+  if (!urls.length) {
+    return [];
+  }
+  const first = await visit(agent, urls[0], signedOut);
+  return [first, ...(await visitAll(agent, urls.slice(1), signedOut))];
+}
+
+async function visit(agent: Agent, url: string, signedOut: boolean): Promise<Visit> {
+  const res = await agent.get(url);
+  const location: string | undefined = res.headers.location;
+
+  // A redirect within the service — sign in turning away a signed-out visitor, or
+  // /register sending someone already signed in to their account — is fine as long as
+  // where it leads works, so it is followed rather than reported.
+  if (res.status === 302 && location && isInternal(location)) {
+    const turnedAway = location === '/sign-in' && !signedOut;
+    return { next: [location], failure: turnedAway ? `${url} sent a signed-in user to sign in` : undefined };
+  }
+
+  if (res.status !== 200) {
+    const where = location ? ' to ' + location : '';
+    return { next: [], failure: `${url} answered ${res.status}${where}` };
+  }
+
+  return { next: linksIn(res.text ?? '') };
+}
+
+/** Every link on the page to another page of this service — not assets, not other sites. */
+function linksIn(html: string): string[] {
+  return [...html.matchAll(/href="([^"]*)"/g)]
+    .map(([, href]) => href.replaceAll('&amp;', '&').split('#')[0])
+    .filter(target => isInternal(target) && !target.startsWith('/assets/') && !/\.\w+$/.test(target));
+}
+
+function isInternal(target: string): boolean {
+  return target.startsWith('/') && !target.startsWith('//');
 }
 
 async function submitProductionRequest(agent: Agent, applicationId: string): Promise<void> {

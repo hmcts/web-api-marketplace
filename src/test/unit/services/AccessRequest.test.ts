@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import {
   DECLARATIONS,
   submitAccessRequest,
@@ -7,6 +8,7 @@ import {
   toAnswers,
   validate,
 } from '../../../main/services/AccessRequest';
+import { listLocalRequests } from '../../../main/services/LocalRequests';
 
 const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
@@ -184,5 +186,16 @@ describe('AccessRequest', () => {
     const errors = validate(toAnswers({ ...completeBody, 'use-case': 'x'.repeat(256) }), apiNames);
 
     expect(errors).toEqual([{ name: 'use-case', text: 'Your description must be 255 characters or fewer' }]);
+  });
+
+  test('an_account_registered_here_should_be_stored_locally_and_not_sent_to_the_backend', async () => {
+    useDataStore(new MemoryStore());
+
+    const result = await submitAccessRequest(toAnswers(completeBody), { ...REQUESTER, local: true }, 'RAG Service API');
+
+    expect(result.ok).toBe(true);
+    expect(result.reference).toMatch(/^SUB-/);
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect((await listLocalRequests(REQUESTER.email))[0].type).toBe('SUBSCRIPTION');
   });
 });

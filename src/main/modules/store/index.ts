@@ -30,30 +30,32 @@ export interface DataStore {
 export class MemoryStore implements DataStore {
   private readonly documents = new Map<string, { json: string; expiresAt?: number }>();
 
-  public async get<T>(key: string): Promise<T | undefined> {
+  public get<T>(key: string): Promise<T | undefined> {
     const document = this.documents.get(key);
 
     if (!document) {
-      return undefined;
+      return Promise.resolve(undefined);
     }
     if (document.expiresAt !== undefined && document.expiresAt <= Date.now()) {
       this.documents.delete(key);
-      return undefined;
+      return Promise.resolve(undefined);
     }
     // Stored as JSON so a caller mutating what it read cannot change the stored copy,
     // which is how the Redis store behaves too.
-    return JSON.parse(document.json) as T;
+    return Promise.resolve(JSON.parse(document.json) as T);
   }
 
-  public async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
+  public set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     this.documents.set(key, {
       json: JSON.stringify(value),
       expiresAt: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined,
     });
+    return Promise.resolve();
   }
 
-  public async delete(key: string): Promise<void> {
+  public delete(key: string): Promise<void> {
     this.documents.delete(key);
+    return Promise.resolve();
   }
 }
 

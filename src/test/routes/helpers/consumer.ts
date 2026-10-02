@@ -19,9 +19,9 @@ export type Agent = ReturnType<typeof request.agent>;
 
 /** The link in the email preview shown on the page after an email is "sent". */
 export function emailLink(html: string): string {
-  const href = html.match(/href="([^"]+)" id="email-preview-link"/)?.[1];
+  const href = /href="([^"]+)" id="email-preview-link"/.exec(html)?.[1];
   expect(href, 'the page should preview the email with its link').to.be.a('string');
-  return (href as string).replace(/&amp;/g, '&');
+  return (href as string).replaceAll('&amp;', '&');
 }
 
 /** Registers and confirms an account through the real journey, returning a fresh agent. */

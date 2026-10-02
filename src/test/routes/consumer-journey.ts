@@ -315,8 +315,8 @@ describe('Consumer onboarding journey', () => {
       });
 
       const created = await agent.post('/account/applications/new/check-answers').expect(200);
-      const secret = created.text.match(/id="client-secret"[^>]*>([^<]+)</)?.[1] as string;
-      const id = created.text.match(/href="\/account\/applications\/([0-9a-f-]{36})"/)?.[1] as string;
+      const secret = /id="client-secret"[^>]*>([^<]+)</.exec(created.text)?.[1] as string;
+      const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       expect(created.text).to.contain('Application created');
       expect(created.text).to.contain('You will not be able to see it again');
@@ -475,7 +475,7 @@ describe('Consumer onboarding journey', () => {
       });
 
       const confirmation = await agent.post('/account/production-credentials/check-answers').expect(200);
-      const reference = confirmation.text.match(/id="confirmation-reference">(PCR-[0-9A-F]{8})</)?.[1] as string;
+      const reference = /id="confirmation-reference">(PCR-[0-9A-F]{8})</.exec(confirmation.text)?.[1] as string;
       expect(reference).to.be.a('string');
 
       await agent.get(`/account/production-credentials/${reference}`).expect(res => {
@@ -545,7 +545,7 @@ describe('Consumer onboarding journey', () => {
       expect(account.text).to.contain('Publish an API');
       expect(account.text).to.contain('Request a new API');
 
-      const reference = account.text.match(/(SUB-[0-9A-F]{8})/)?.[1] as string;
+      const reference = /(SUB-[0-9A-F]{8})/.exec(account.text)?.[1] as string;
       await agent.post('/account/delete-request').type('form').send({ reference, type: 'SUBSCRIPTION' }).expect(302);
       await agent.get('/account').expect(res => {
         expect(res.text).to.contain('Your request has been deleted');
