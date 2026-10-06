@@ -74,6 +74,15 @@ The consumer onboarding journey, end to end:
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
 
+### Architecture decisions
+
+Developer accounts (create account, verify email, sign in, forgotten password) are governed by
+[ADR 0001 in `service-api-marketplace`](https://github.com/hmcts/service-api-marketplace/blob/master/docs/adr/0001-developer-accounts-and-email-verification.md).
+`service-api-marketplace` owns credentials and sends account email through GOV.UK Notify; this
+frontend acts as a backend-for-frontend, holding the session but no credentials. Cross-cutting
+marketplace decisions live in that repo's [ADR log](https://github.com/hmcts/service-api-marketplace/tree/master/docs/adr),
+not here.
+
 ### Stand-ins until service-api-marketplace has the endpoints
 
 These are deliberate, and each is confined to one service so it can be swapped for a backend
