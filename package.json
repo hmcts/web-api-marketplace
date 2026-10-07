@@ -159,7 +159,12 @@
     "postcss": "8.5.26",
     "@opentelemetry/propagator-jaeger": "2.9.0",
     "colord": "2.9.4",
-    "moment": "2.31.0"
+    "moment": "2.31.0",
+    "proxy-addr": "2.0.8",
+    "source-map-js": "1.2.2",
+    "postcss-selector-parser": "7.1.6",
+    "@opentelemetry/instrumentation-pg": "0.73.0",
+    "@opentelemetry/instrumentation-mysql": "0.67.0"
   },
   "packageManager": "yarn@4.17.1"
 }
