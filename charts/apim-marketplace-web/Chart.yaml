@@ -8,5 +8,5 @@ maintainers:
   - name: DTS API Marketplace
 dependencies:
   - name: nodejs
-    version: 3.2.1
+    version: 3.3.1
     repository: oci://hmctsprod.azurecr.io/helm
