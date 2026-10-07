@@ -12,3 +12,6 @@ playwright-report/
 test-results/
 functional-output/
 smoke-output/
+
+# Design documents moved verbatim from hmcts/hmcts-api-marketplace
+design/
