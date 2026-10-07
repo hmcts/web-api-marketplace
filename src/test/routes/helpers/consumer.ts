@@ -1,7 +1,39 @@
+import { Server } from 'node:http';
+
 import { expect } from 'chai';
 import request from 'supertest';
 
 import { app } from '../../../main/app';
+
+let server: Server | undefined;
+
+/**
+ * One listening server for the whole test file. Handing supertest the app instead starts
+ * a new server on a new port for every request, and with several test files running at
+ * once that churn occasionally sends a request to a port that has just been closed and
+ * reused — the journeys here make hundreds of requests, so it showed up as rare, random
+ * failures.
+ */
+export function testServer(): Server {
+  server ??= app.listen(0);
+  return server;
+}
+
+afterAll(
+  () =>
+    new Promise<void>(resolve => {
+      if (server) {
+        server.close(() => resolve());
+      } else {
+        resolve();
+      }
+    })
+);
+
+/** A browser: a cookie jar against the shared test server. */
+export function newAgent(): ReturnType<typeof request.agent> {
+  return request.agent(testServer());
+}
 
 export const CATALOGUE = [
   {
@@ -26,7 +58,7 @@ export function emailLink(html: string): string {
 
 /** Registers and confirms an account through the real journey, returning a fresh agent. */
 export async function registeredAccount(email: string): Promise<Agent> {
-  const agent = request.agent(app);
+  const agent = newAgent();
 
   await agent
     .post('/register')
@@ -58,7 +90,7 @@ export async function signedInConsumer(email: string): Promise<Agent> {
 
 /** Creates an application through the real journey and returns its id. */
 export async function createdApplication(agent: Agent, name = 'Case tracker'): Promise<string> {
-  await agent.post('/account/applications/new/details').type('form').send({ environment: 'sandbox', name }).expect(302);
+  await agent.post('/account/applications/new/details').type('form').send({ name }).expect(302);
   await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name }).expect(302);
   const created = await agent.post('/account/applications/new/check-answers').expect(200);
 
