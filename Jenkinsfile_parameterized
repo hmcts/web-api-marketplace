@@ -7,4 +7,4 @@ properties([
     ])
 ])
 
-withParameterizedPipeline('nodejs', 'apim', 'marketplace-web', params.ENVIRONMENT, 'sandbox') {}
+withParameterizedPipeline('nodejs', 'amp', 'marketplace-web', params.ENVIRONMENT, 'sandbox') {}
