@@ -6,7 +6,6 @@ jest.mock('../../main/services/ApiCatalogue', () => ({
   getCatalogueApis: jest.fn(),
 }));
 
-import { app } from '../../main/app';
 import { MemoryStore, useDataStore } from '../../main/modules/store';
 
 import {
@@ -14,8 +13,10 @@ import {
   PASSWORD,
   createdApplication,
   emailLink,
+  newAgent,
   registeredAccount,
   signedInConsumer,
+  testServer,
 } from './helpers/consumer';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
@@ -33,7 +34,7 @@ describe('Consumer onboarding journey', () => {
 
   describe('creating an account', () => {
     test('registering_should_ask_the_user_to_check_their_email_and_preview_the_link', async () => {
-      const agent = request.agent(app);
+      const agent = newAgent();
 
       await agent
         .post('/register')
@@ -57,7 +58,7 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('an_incomplete_form_should_report_every_problem', async () => {
-      await request(app)
+      await request(testServer())
         .post('/register')
         .type('form')
         .send({ password: 'short', 'password-confirm': 'short' })
@@ -78,7 +79,7 @@ describe('Consumer onboarding journey', () => {
 
     test('registering_an_address_twice_should_look_the_same_but_send_an_already_registered_email', async () => {
       await registeredAccount('ada@example.com');
-      const agent = request.agent(app);
+      const agent = newAgent();
 
       await agent
         .post('/register')
@@ -102,7 +103,7 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('signing_in_before_confirming_should_say_so_and_offer_a_new_email', async () => {
-      const agent = request.agent(app);
+      const agent = newAgent();
       await agent.post('/register').type('form').send({
         'first-name': 'Ada',
         'last-name': 'Lovelace',
@@ -125,7 +126,7 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('a_confirmation_link_should_work_once', async () => {
-      const agent = request.agent(app);
+      const agent = newAgent();
       await agent.post('/register').type('form').send({
         'first-name': 'Ada',
         'last-name': 'Lovelace',
@@ -145,7 +146,7 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('resending_should_send_a_link_that_confirms_the_account', async () => {
-      const agent = request.agent(app);
+      const agent = newAgent();
       await agent.post('/register').type('form').send({
         'first-name': 'Ada',
         'last-name': 'Lovelace',
@@ -206,7 +207,7 @@ describe('Consumer onboarding journey', () => {
     test('a_wrong_password_should_be_refused_without_asking_the_backend', async () => {
       await registeredAccount('ada@example.com');
 
-      await request(app)
+      await request(testServer())
         .post('/sign-in')
         .type('form')
         .send({ email: 'ada@example.com', password: 'not the password' })
@@ -234,7 +235,7 @@ describe('Consumer onboarding journey', () => {
   describe('forgotten password', () => {
     test('resetting_should_replace_the_password', async () => {
       await registeredAccount('ada@example.com');
-      const agent = request.agent(app);
+      const agent = newAgent();
 
       await agent.post('/forgotten-password').type('form').send({ email: 'ada@example.com' }).expect(302);
       const link = emailLink((await agent.get('/forgotten-password/check-email')).text);
@@ -254,12 +255,12 @@ describe('Consumer onboarding journey', () => {
         .expect(res => expect(res.text).to.contain('Your password has been changed'));
 
       await agent.get(link).expect(res => expect(res.text).to.contain('This link has expired'));
-      await request(app)
+      await request(testServer())
         .post('/sign-in')
         .type('form')
         .send({ email: 'ada@example.com', password: PASSWORD })
         .expect(401);
-      await request(app)
+      await request(testServer())
         .post('/sign-in')
         .type('form')
         .send({ email: 'ada@example.com', password: 'a brand new password' })
@@ -267,7 +268,7 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('an_unknown_address_should_get_the_same_page_and_no_link', async () => {
-      const agent = request.agent(app);
+      const agent = newAgent();
 
       await agent.post('/forgotten-password').type('form').send({ email: 'nobody@example.com' }).expect(302);
       await agent.get('/forgotten-password/check-email').expect(res => {
@@ -291,13 +292,12 @@ describe('Consumer onboarding journey', () => {
         .send({})
         .expect(res => {
           expect(res.status).to.equal(400);
-          expect(res.text).to.contain('Select an environment');
           expect(res.text).to.contain('Enter an application name');
         });
       await agent
-        .post('/account/applications/new/details')
-        .type('form')
-        .send({ environment: 'sandbox', name: 'Case tracker' });
+        .get('/account/applications/new/details')
+        .expect(res => expect(res.text).to.not.contain('Select your environment'));
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker' });
       await agent
         .post('/account/applications/new/apis')
         .type('form')
@@ -310,7 +310,6 @@ describe('Consumer onboarding journey', () => {
 
       await agent.get('/account/applications/new/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
-        expect(res.text).to.contain('Sandbox');
         expect(res.text).to.contain('CP Crime Hearing API, Defendant Details');
       });
 
@@ -335,22 +334,16 @@ describe('Consumer onboarding journey', () => {
       await agent.get('/account/applications').expect(res => expect(res.text.match(/Case tracker/g)).to.have.length(1));
     });
 
-    test('the_same_name_cannot_be_used_twice_in_one_environment', async () => {
+    test('the_same_name_cannot_be_used_twice', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await createdApplication(agent, 'Case tracker');
 
       await agent
         .post('/account/applications/new/details')
         .type('form')
-        .send({ environment: 'sandbox', name: 'case tracker' })
-        .expect(res =>
-          expect(res.text).to.contain('You already have an application with this name in this environment')
-        );
-      await agent
-        .post('/account/applications/new/details')
-        .type('form')
-        .send({ environment: 'aat', name: 'Case tracker' })
-        .expect(302);
+        .send({ name: 'case tracker' })
+        .expect(res => expect(res.text).to.contain('You already have an application with this name'));
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker 2' }).expect(302);
     });
 
     test('viewing_an_api_should_show_its_publisher_id_and_subscription_key', async () => {

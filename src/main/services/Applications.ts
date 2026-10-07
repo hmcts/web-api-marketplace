@@ -27,6 +27,13 @@ export const ENVIRONMENTS = [
   { value: 'aat', text: 'Integration test (AAT)', hint: { text: 'For end-to-end testing before go-live.' } },
 ];
 
+/**
+ * The environment every application created here is in. The user is not asked: the
+ * self-service journey only issues sandbox credentials, and anything beyond the sandbox
+ * goes through a production credentials request.
+ */
+export const SELF_SERVICE_ENVIRONMENT = 'sandbox';
+
 export const APPLICATION_NAME_MAX_LENGTH = 100;
 export const DESCRIPTION_MAX_LENGTH = 500;
 
@@ -72,10 +79,6 @@ export async function getApplication(ownerEmail: string, id: string): Promise<Ap
 export async function validateDetails(ownerEmail: string, draft: ApplicationDraft): Promise<FieldError[]> {
   const errors: FieldError[] = [];
 
-  if (!ENVIRONMENTS.some(environment => environment.value === draft.environment)) {
-    errors.push({ name: 'environment', text: 'Select an environment' });
-  }
-
   const name = draft.name ?? '';
   if (!name) {
     errors.push({ name: 'name', text: 'Enter an application name' });
@@ -87,7 +90,7 @@ export async function validateDetails(ownerEmail: string, draft: ApplicationDraf
         application.environment === draft.environment && application.name.toLowerCase() === name.toLowerCase()
     )
   ) {
-    errors.push({ name: 'name', text: 'You already have an application with this name in this environment' });
+    errors.push({ name: 'name', text: 'You already have an application with this name' });
   }
 
   if ((draft.description ?? '').length > DESCRIPTION_MAX_LENGTH) {
