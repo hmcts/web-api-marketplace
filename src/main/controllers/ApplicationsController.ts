@@ -8,6 +8,7 @@ import {
   APPLICATION_NAME_MAX_LENGTH,
   Application,
   ApplicationDraft,
+  ApplicationOwner,
   ENVIRONMENTS,
   SELF_SERVICE_ENVIRONMENT,
   createApplication,
@@ -20,6 +21,7 @@ import {
   validateApis,
   validateDetails,
 } from '../services/Applications';
+import { ApplicationsUnavailableError } from '../services/BackendApplications';
 import { credentialsAreSimulated, maskSecret } from '../services/Credentials';
 import { SignedInUser } from '../services/SignIn';
 import { FieldError, toAnswerList, toAnswerText } from '../services/answers';
@@ -35,6 +37,11 @@ import { FieldError, toAnswerList, toAnswerText } from '../services/answers';
  *
  * A client secret is shown exactly once — on the page that follows creating or
  * regenerating it — and never stored, matching how Entra ID treats secrets.
+ *
+ * Applications registered by service-api-marketplace can be listed, viewed and created
+ * but not yet changed: it has no endpoints to change an application's APIs, rotate its
+ * secret or delete it. Those pages answer "not found" for such an application, and its
+ * page does not link to them.
  */
 @route('/account/applications')
 export default class ApplicationsController {
@@ -44,7 +51,17 @@ export default class ApplicationsController {
       return;
     }
 
-    const applications = await listApplications(this.owner(req));
+    let applications: Application[];
+    try {
+      applications = await listApplications(this.owner(req));
+    } catch (error) {
+      if (!(error instanceof ApplicationsUnavailableError)) {
+        throw error;
+      }
+      res.status(503).render('applications/index', { unavailable: true, groups: [], count: 0 });
+      return;
+    }
+
     res.render('applications/index', {
       notice: takeNotice(req),
       groups: ENVIRONMENTS.map(environment => ({
@@ -182,11 +199,21 @@ export default class ApplicationsController {
       return;
     }
 
-    const { application, clientSecret } = await createApplication(
-      this.owner(req),
-      draft as Required<ApplicationDraft>,
-      catalogue
-    );
+    let created;
+    try {
+      created = await createApplication(this.owner(req), draft as Required<ApplicationDraft>, catalogue);
+    } catch (error) {
+      if (!(error instanceof ApplicationsUnavailableError)) {
+        throw error;
+      }
+      // The answers are kept, so trying again is one click.
+      res.status(503).render('applications/new/check-answers', {
+        ...(await this.checkAnswersData(draft)),
+        errors: [{ name: 'create-application', text: 'Your application could not be created. Try again later.' }],
+      });
+      return;
+    }
+    const { application, clientSecret } = created;
 
     // Cleared before the page renders, so going back and resubmitting cannot create the
     // application a second time.
@@ -195,7 +222,7 @@ export default class ApplicationsController {
       res.render('applications/new/confirmation', {
         application,
         clientSecret,
-        simulated: credentialsAreSimulated,
+        simulated: this.simulated(application),
       })
     );
   }
@@ -213,16 +240,17 @@ export default class ApplicationsController {
     res.render('applications/detail', {
       application,
       environment: environmentName(application.environment),
-      maskedSecret: maskSecret(application.secretHint),
+      maskedSecret: application.secretHint ? maskSecret(application.secretHint) : 'Not shown',
       notice: takeNotice(req),
-      simulated: credentialsAreSimulated,
+      simulated: this.simulated(application),
+      manageable: !application.managedByBackend,
     });
   }
 
   @route('/:id/apis')
   @GET()
   public async editApis(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -239,7 +267,7 @@ export default class ApplicationsController {
   @route('/:id/apis')
   @POST()
   public async saveEditedApis(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -284,13 +312,13 @@ export default class ApplicationsController {
       return;
     }
 
-    res.render('applications/api', { application, subscription, simulated: credentialsAreSimulated });
+    res.render('applications/api', { application, subscription, simulated: this.simulated(application) });
   }
 
   @route('/:id/client-secret')
   @GET()
   public async confirmRegenerate(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -300,7 +328,7 @@ export default class ApplicationsController {
   @route('/:id/client-secret')
   @POST()
   public async regenerate(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -309,14 +337,14 @@ export default class ApplicationsController {
     res.render('applications/client-secret-new', {
       application,
       clientSecret,
-      simulated: credentialsAreSimulated,
+      simulated: this.simulated(application),
     });
   }
 
   @route('/:id/delete')
   @GET()
   public async confirmDelete(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -326,7 +354,7 @@ export default class ApplicationsController {
   @route('/:id/delete')
   @POST()
   public async remove(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
+    const application = await this.findManageable(req, res, next);
     if (!application) {
       return;
     }
@@ -347,8 +375,12 @@ export default class ApplicationsController {
 
   // ---------------------------------------------------------------------- helpers
 
-  private owner(req: AppRequest): string {
-    return (req.session.user as SignedInUser).email;
+  private owner(req: AppRequest): ApplicationOwner {
+    return req.session.user as SignedInUser;
+  }
+
+  private simulated(application: Application): boolean {
+    return credentialsAreSimulated && !application.managedByBackend;
   }
 
   /**
@@ -364,6 +396,16 @@ export default class ApplicationsController {
     const application = await getApplication(this.owner(req), String(req.params.id));
     if (!application) {
       next();
+    }
+    return application;
+  }
+
+  /** As find, for the pages that change an application, which only this service can do yet. */
+  private async findManageable(req: AppRequest, res: Response, next: NextFunction): Promise<Application | undefined> {
+    const application = await this.find(req, res, next);
+    if (application?.managedByBackend) {
+      next();
+      return undefined;
     }
     return application;
   }

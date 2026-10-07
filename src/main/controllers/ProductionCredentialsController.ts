@@ -69,7 +69,7 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await listApplications(user.email);
+    const applications = await listApplications(user);
     const answers = this.toAnswers(req.body as Record<string, unknown>);
     const errors = this.validate(answers, applications);
 
@@ -97,7 +97,7 @@ export default class ProductionCredentialsController {
 
     const user = req.session.user as SignedInUser;
     res.render('production-credentials/check-answers', {
-      rows: this.summaryRows(draft, await listApplications(user.email)),
+      rows: this.summaryRows(draft, await listApplications(user)),
     });
   }
 
@@ -109,7 +109,7 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await listApplications(user.email);
+    const applications = await listApplications(user);
     const draft = req.session.productionDraft;
 
     // Checked again: the application chosen may have been deleted since in another tab.
@@ -274,7 +274,7 @@ export default class ProductionCredentialsController {
     errors: FieldError[],
     applications?: Application[]
   ): Promise<Record<string, unknown>> {
-    const owned = applications ?? (await listApplications(user.email));
+    const owned = applications ?? (await listApplications(user));
 
     return {
       answers,

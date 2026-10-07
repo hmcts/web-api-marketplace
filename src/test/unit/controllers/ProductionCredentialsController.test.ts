@@ -31,7 +31,7 @@ describe('ProductionCredentialsController', () => {
     useDataStore(new MemoryStore());
     applicationId = (
       await createApplication(
-        LOCAL_USER.email,
+        LOCAL_USER,
         { environment: 'sandbox', name: 'Tracker', description: '', apis: ['api-one'] },
         CATALOGUE
       )
