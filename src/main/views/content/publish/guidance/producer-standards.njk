@@ -10,7 +10,6 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
 
@@ -217,15 +216,6 @@
       text: "Full detail on the legal framework, data minimisation, audit, breaches and
              accountability is set out in the Data Governance Standards, which are being moved into
              this service."
-    }) }}
-
-    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-
-    <h2 class="govuk-heading-l" id="ready">Ready to publish?</h2>
-
-    {{ govukButton({
-      text: "Submit an API for publication",
-      href: "/publish"
     }) }}
 
   </div>

@@ -23,12 +23,13 @@ describe('Account page', () => {
     expect(html).toContain(user.orgName);
   });
 
-  test('the_requests_tab_should_say_there_are_none_yet_and_point_at_both_journeys', () => {
+  test('the_requests_tab_should_say_there_are_none_yet_and_point_at_the_available_journeys', () => {
     const html = env.render('account.njk', { ...i18n, user });
 
     expect(html).toContain('You have not submitted any requests yet');
     expect(html).toContain('href="/subscribe"');
-    expect(html).toContain('href="/publish"');
+    expect(html).toContain('href="/account/production-credentials"');
+    expect(html).not.toContain('href="/publish"');
   });
 
   test('signing_out_should_be_a_post_so_no_link_can_trigger_it', () => {
