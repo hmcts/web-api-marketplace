@@ -16,10 +16,6 @@
       "href": "/subscribe"
     },
     {
-      "text": "Submit an API for publication",
-      "href": "/publish"
-    },
-    {
       "text": "Request production credentials",
       "href": "/account/production-credentials"
     }
@@ -57,13 +53,6 @@
         "heading": "Onboarding to APIs and services",
         "href": "/get-started/onboarding-guide",
         "body": "Find out how to get assured for an API or service before your software goes live."
-      }
-    ],
-    [
-      {
-        "heading": "Publish an API",
-        "href": "/publish/guidance",
-        "body": "If your team owns an API, list it in the marketplace so other teams can find it, understand it, and request access."
       }
     ]
   ]
