@@ -9,6 +9,7 @@ import {
   Application,
   ApplicationDraft,
   ENVIRONMENTS,
+  SELF_SERVICE_ENVIRONMENT,
   createApplication,
   deleteApplication,
   environmentName,
@@ -87,7 +88,7 @@ export default class ApplicationsController {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const draft: ApplicationDraft = {
       ...req.session.applicationDraft,
-      environment: toAnswerText(body, 'environment'),
+      environment: SELF_SERVICE_ENVIRONMENT,
       name: toAnswerText(body, 'name'),
       description: toAnswerText(body, 'description'),
     };
@@ -376,7 +377,6 @@ export default class ApplicationsController {
       draft,
       errors,
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      environments: ENVIRONMENTS,
       nameMaxLength: APPLICATION_NAME_MAX_LENGTH,
     };
   }
@@ -407,11 +407,6 @@ export default class ApplicationsController {
 
     return {
       rows: [
-        {
-          key: 'Environment',
-          value: environmentName(draft.environment ?? ''),
-          href: '/account/applications/new/details',
-        },
         { key: 'Application name', value: draft.name, href: '/account/applications/new/details' },
         { key: 'Description', value: draft.description || 'None', href: '/account/applications/new/details' },
         { key: 'APIs', value: titles.join(', '), href: '/account/applications/new/apis' },

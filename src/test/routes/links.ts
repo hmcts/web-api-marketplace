@@ -1,16 +1,14 @@
 import { expect } from 'chai';
-import request from 'supertest';
 
 jest.mock('../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
 }));
 
-import { app } from '../../main/app';
 import { CONTENT_PAGES } from '../../main/controllers/ContentController';
 import { MemoryStore, useDataStore } from '../../main/modules/store';
 
-import { Agent, CATALOGUE, createdApplication, signedInConsumer } from './helpers/consumer';
+import { Agent, CATALOGUE, createdApplication, newAgent, signedInConsumer } from './helpers/consumer';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
@@ -31,7 +29,7 @@ describe('Links', () => {
   });
 
   test('every_link_reachable_signed_out_should_work', async () => {
-    const visited = await crawl(request.agent(app), true);
+    const visited = await crawl(newAgent(), true);
 
     // The migrated guidance pages and the legal pages must all be reachable from the
     // home page by following links, not merely exist.

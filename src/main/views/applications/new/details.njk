@@ -1,6 +1,5 @@
 {% extends "template.njk" %}
 
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
@@ -25,18 +24,9 @@
 
     <form method="post" action="/account/applications/new/details" novalidate>
 
-      {{ govukRadios({
-        name: "environment",
-        fieldset: { legend: { text: "Select your environment", classes: "govuk-fieldset__legend--m" } },
-        hint: { html: 'You must have a separate application for each environment. For production, <a class="govuk-link" href="/account/production-credentials">request production credentials</a>.' },
-        items: environments,
-        value: draft.environment,
-        errorMessage: { text: errorFor.environment } if errorFor.environment
-      }) }}
-
       {{ govukInput({
         label: { text: "What is your application name?", classes: "govuk-label--m" },
-        hint: { text: "You can use the same name once in each environment." },
+        hint: { text: "A name you will recognise, such as the name of the software that will call our APIs." },
         id: "name",
         name: "name",
         value: draft.name,

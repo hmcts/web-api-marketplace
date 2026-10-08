@@ -59,7 +59,7 @@ describe('Access control on the form journeys', () => {
 
     await agent.get('/').expect(res => {
       expect(res.text).to.contain('href="/subscribe"');
-      expect(res.text).to.contain('href="/publish"');
+      expect(res.text).to.not.contain('href="/publish"');
     });
     await agent.get('/subscribe').expect(res => expect(res.status).to.equal(200));
     await agent.get('/publish').expect(res => expect(res.status).to.equal(200));

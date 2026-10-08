@@ -57,13 +57,14 @@ describe('Applications', () => {
     expect((await getApplication('ada@example.com', application.id))?.secretHint).toBe(next.slice(0, 3));
   });
 
-  test('details_should_need_an_environment_and_a_name_unique_within_it', async () => {
+  test('details_should_need_a_name_the_user_has_not_already_used', async () => {
     await createApplication('ada@example.com', draft, catalogue);
 
-    expect((await validateDetails('ada@example.com', {})).map(error => error.name)).toEqual(['environment', 'name']);
-    expect(await validateDetails('ada@example.com', { environment: 'sandbox', name: 'tracker' })).toHaveLength(1);
-    expect(await validateDetails('ada@example.com', { environment: 'aat', name: 'Tracker' })).toEqual([]);
-    expect(await validateDetails('ada@example.com', { environment: 'production', name: 'New' })).toHaveLength(1);
+    expect((await validateDetails('ada@example.com', {})).map(error => error.name)).toEqual(['name']);
+    expect(await validateDetails('ada@example.com', { environment: 'sandbox', name: 'tracker' })).toEqual([
+      { name: 'name', text: 'You already have an application with this name' },
+    ]);
+    expect(await validateDetails('ada@example.com', { environment: 'sandbox', name: 'New' })).toEqual([]);
   });
 
   test('apis_should_be_at_least_one_from_the_catalogue', () => {

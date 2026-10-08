@@ -7,7 +7,7 @@
     "tabLabel": "Fy ngheisiadau",
     "heading": "Fy ngheisiadau",
     "intro": "Everything you have submitted: access requests, APIs submitted for publication, requests for a new API and production credentials requests.",
-    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a>, <a class=\"govuk-link\" href=\"/publish\">Publish an API</a> or <a class=\"govuk-link\" href=\"/account/production-credentials\">Request production credentials</a>.",
+    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/account/production-credentials\">Request production credentials</a>.",
     "unavailable": "Nid oedd modd llwytho eich ceisiadau ar hyn o bryd. Rhowch gynnig arall arni ymhen ychydig funudau.",
     "tableCaption": "Ceisiadau rydych wedi’u cyflwyno",
     "columnStatus": "Statws",
@@ -62,10 +62,6 @@
           {
             "text": "Request a new API",
             "href": "/api-catalogue/request-new-api"
-          },
-          {
-            "text": "Publish an API",
-            "href": "/publish"
           }
         ]
       },

@@ -90,11 +90,13 @@ describe('ApplicationsController', () => {
       await controller().saveDetails(asUser({ body: {} }), res);
 
       expect(res.statusCode).toBe(400);
-      expect(Object.keys(res.data?.errorFor as object)).toEqual(['environment', 'name']);
+      expect(Object.keys(res.data?.errorFor as object)).toEqual(['name']);
     });
 
-    test('valid_details_should_go_on_to_choosing_apis', async () => {
-      const req = asUser({ body: { environment: 'sandbox', name: 'Tracker', description: 'Tracks cases' } });
+    test('valid_details_should_go_on_to_choosing_apis_in_the_sandbox', async () => {
+      // An environment posted with the form is ignored: every application created here
+      // is a sandbox one.
+      const req = asUser({ body: { environment: 'aat', name: 'Tracker', description: 'Tracks cases' } });
       const res = mockResponse();
 
       await controller().saveDetails(req, res);
@@ -108,7 +110,7 @@ describe('ApplicationsController', () => {
     });
 
     test('changing_details_once_apis_are_chosen_should_return_to_check_answers', async () => {
-      const req = asUser({ body: { environment: 'aat', name: 'Tracker' }, session: { applicationDraft: DRAFT } });
+      const req = asUser({ body: { name: 'Tracker 2' }, session: { applicationDraft: DRAFT } });
       const res = mockResponse();
 
       await controller().saveDetails(req, res);
@@ -177,7 +179,6 @@ describe('ApplicationsController', () => {
       await controller().checkAnswers(asUser({ session: { applicationDraft: DRAFT } }), res);
 
       expect(res.data?.rows).toEqual([
-        { key: 'Environment', value: 'Sandbox', href: '/account/applications/new/details' },
         { key: 'Application name', value: 'Tracker', href: '/account/applications/new/details' },
         { key: 'Description', value: 'None', href: '/account/applications/new/details' },
         { key: 'APIs', value: 'API one', href: '/account/applications/new/apis' },
