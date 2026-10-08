@@ -23,7 +23,11 @@
   </div>
 </div>
 
-{% if count == 0 %}
+{% if unavailable %}
+  <div class="govuk-inset-text" id="applications-unavailable">
+    Your applications cannot be shown right now. Try again later.
+  </div>
+{% elif count == 0 %}
   <p class="govuk-body" id="applications-empty">You have no applications yet.</p>
 {% endif %}
 

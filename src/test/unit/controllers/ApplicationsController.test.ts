@@ -9,20 +9,46 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
   getCatalogueApis: jest.fn(),
 }));
 
+jest.mock('../../../main/services/BackendApplications', () => ({
+  ...jest.requireActual('../../../main/services/BackendApplications'),
+  fetchApplications: jest.fn(),
+  registerApplication: jest.fn(),
+}));
+
 const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+const {
+  ApplicationsUnavailableError,
+  fetchApplications,
+  registerApplication,
+} = require('../../../main/services/BackendApplications');
+
+/** An account the backend knows, whose applications service-api-marketplace holds. */
+const BACKEND_USER = { ...LOCAL_USER, id: 7, local: false, email: 'grace@example.com' };
+const BACKEND_APPLICATION = {
+  id: 12,
+  name: 'Tracker',
+  environment: 'sandbox',
+  clientId: 'real-client-id',
+  apiCredentials: [{ apiShortCode: 'api-one', publisherId: 'product-one', subscriptionKey: 'real-key' }],
+};
+
+const asBackendUser: typeof asUser = (parts = {}) =>
+  asUser({ ...parts, session: { user: BACKEND_USER as never, ...parts.session } });
 
 const DRAFT = { environment: 'sandbox', name: 'Tracker', description: '', apis: ['api-one'] };
 
 const controller = () => new ApplicationsController();
 
 async function existing() {
-  return (await createApplication(LOCAL_USER.email, DRAFT, CATALOGUE)).application;
+  return (await createApplication(LOCAL_USER, DRAFT, CATALOGUE)).application;
 }
 
 describe('ApplicationsController', () => {
   beforeEach(() => {
     useDataStore(new MemoryStore());
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    (fetchApplications as jest.Mock).mockReset().mockResolvedValue([BACKEND_APPLICATION]);
+    (registerApplication as jest.Mock).mockReset();
   });
 
   describe('signed out', () => {
@@ -300,7 +326,7 @@ describe('ApplicationsController', () => {
 
       expect(confirm.view).toBe('applications/client-secret');
       expect(done.view).toBe('applications/client-secret-new');
-      expect((await getApplication(LOCAL_USER.email, application.id))?.secretHint).toBe(
+      expect((await getApplication(LOCAL_USER, application.id))?.secretHint).toBe(
         (done.data?.clientSecret as string).slice(0, 3)
       );
     });
@@ -315,7 +341,7 @@ describe('ApplicationsController', () => {
 
       expect(confirm.view).toBe('applications/delete');
       expect(unconfirmed.redirected).toBe(`/account/applications/${application.id}`);
-      expect(await getApplication(LOCAL_USER.email, application.id)).toBeDefined();
+      expect(await getApplication(LOCAL_USER, application.id)).toBeDefined();
     });
 
     test('a_confirmed_delete_should_remove_it_and_say_so', async () => {
@@ -327,7 +353,7 @@ describe('ApplicationsController', () => {
 
       expect(res.redirected).toBe('/account/applications');
       expect(req.session.notice?.text).toContain('Tracker has been deleted');
-      expect(await getApplication(LOCAL_USER.email, application.id)).toBeUndefined();
+      expect(await getApplication(LOCAL_USER, application.id)).toBeUndefined();
     });
 
     test('every_action_on_an_unknown_id_should_be_not_found', async () => {
@@ -344,6 +370,101 @@ describe('ApplicationsController', () => {
       await controller().remove(req(), mockResponse(), next);
 
       expect(next).toHaveBeenCalledTimes(7);
+    });
+  });
+
+  describe('an application held by the backend', () => {
+    const NEW_DRAFT = { ...DRAFT, name: 'Another' };
+
+    test('the_list_should_come_from_the_backend', async () => {
+      const res = mockResponse();
+
+      await controller().list(asBackendUser(), res);
+
+      expect(fetchApplications).toHaveBeenCalledWith(7);
+      expect(res.data?.count).toBe(1);
+    });
+
+    test('a_backend_that_cannot_list_should_say_so_rather_than_show_none', async () => {
+      (fetchApplications as jest.Mock).mockRejectedValue(new ApplicationsUnavailableError('down'));
+      const res = mockResponse();
+
+      await controller().list(asBackendUser(), res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.data?.unavailable).toBe(true);
+    });
+
+    test('creating_should_show_the_real_credentials_once', async () => {
+      (registerApplication as jest.Mock).mockResolvedValue({
+        ...BACKEND_APPLICATION,
+        id: 13,
+        name: 'Another',
+        clientSecret: 'abc8Q~real-secret',
+      });
+      const req = asBackendUser({ session: { applicationDraft: NEW_DRAFT } });
+      const res = mockResponse();
+
+      await controller().create(req, res);
+
+      expect(res.view).toBe('applications/new/confirmation');
+      expect(res.data?.clientSecret).toBe('abc8Q~real-secret');
+      expect(res.data?.simulated).toBe(false);
+      expect(req.session.applicationDraft).toBeUndefined();
+    });
+
+    test('a_failed_registration_should_keep_the_answers_and_say_so', async () => {
+      (registerApplication as jest.Mock).mockRejectedValue(new ApplicationsUnavailableError('503'));
+      const req = asBackendUser({ session: { applicationDraft: NEW_DRAFT } });
+      const res = mockResponse();
+
+      await controller().create(req, res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.view).toBe('applications/new/check-answers');
+      expect(res.data?.errors).toEqual([
+        { name: 'create-application', text: 'Your application could not be created. Try again later.' },
+      ]);
+      expect(req.session.applicationDraft).toEqual(NEW_DRAFT);
+    });
+
+    test('the_detail_page_should_not_offer_what_the_backend_cannot_do', async () => {
+      const res = mockResponse();
+
+      await controller().detail(asBackendUser({ params: { id: '12' } }), res, jest.fn());
+
+      expect(res.view).toBe('applications/detail');
+      expect(res.data?.manageable).toBe(false);
+      expect(res.data?.simulated).toBe(false);
+      expect(res.data?.maskedSecret).toBe('Not shown');
+    });
+
+    test('an_api_should_show_its_real_subscription_key', async () => {
+      const res = mockResponse();
+
+      await controller().api(asBackendUser({ params: { id: '12', api: 'api-one' } }), res, jest.fn());
+
+      expect((res.data?.subscription as { subscriptionKey: string }).subscriptionKey).toBe('real-key');
+    });
+
+    test('changing_rotating_and_deleting_should_be_not_found', async () => {
+      const params = { id: '12' };
+      const calls = [
+        (next: jest.Mock) => controller().editApis(asBackendUser({ params }), mockResponse(), next),
+        (next: jest.Mock) =>
+          controller().saveEditedApis(asBackendUser({ params, body: { apis: ['api-two'] } }), mockResponse(), next),
+        (next: jest.Mock) => controller().confirmRegenerate(asBackendUser({ params }), mockResponse(), next),
+        (next: jest.Mock) => controller().regenerate(asBackendUser({ params }), mockResponse(), next),
+        (next: jest.Mock) => controller().confirmDelete(asBackendUser({ params }), mockResponse(), next),
+        (next: jest.Mock) =>
+          controller().remove(asBackendUser({ params, body: { confirm: 'yes' } }), mockResponse(), next),
+      ];
+
+      for (const call of calls) {
+        const next = jest.fn();
+        await call(next);
+        expect(next).toHaveBeenCalledTimes(1);
+      }
     });
   });
 });

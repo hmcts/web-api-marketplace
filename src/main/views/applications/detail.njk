@@ -30,7 +30,7 @@
         { key: { text: "Application name" }, value: { text: application.name } },
         { key: { text: "Application ID" }, value: { html: '<span class="apim-credential">' + application.id + '</span>' } },
         { key: { text: "Environment" }, value: { text: environment } },
-        { key: { text: "Created" }, value: { text: application.createdAt | date } },
+        { key: { text: "Created" }, value: { text: (application.createdAt | date) if application.createdAt else "Not recorded" } },
         { key: { text: "Description" }, value: { text: application.description or "None" } }
       ]
     }) }}
@@ -42,8 +42,8 @@
         { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
         {
           key: { text: "Client secret" },
-          value: { html: '<span class="apim-credential" id="masked-secret">' + maskedSecret + '</span><br><span class="govuk-hint">Expires ' + (application.secretExpiresAt | date) + '</span>' },
-          actions: { items: [{ href: base + "/client-secret", text: "Regenerate", visuallyHiddenText: "client secret", attributes: { id: "regenerate-secret" } }] }
+          value: { html: '<span class="apim-credential" id="masked-secret">' + maskedSecret + '</span>' + ('<br><span class="govuk-hint">Expires ' + (application.secretExpiresAt | date) + '</span>' if application.secretExpiresAt else '') },
+          actions: { items: [{ href: base + "/client-secret", text: "Regenerate", visuallyHiddenText: "client secret", attributes: { id: "regenerate-secret" } }] if manageable else [] }
         }
       ]
     }) }}
@@ -69,18 +69,22 @@
       <p class="govuk-body">No APIs added yet.</p>
     {% endif %}
 
+    {% if manageable %}
     <div class="govuk-button-group">
       {{ govukButton({ text: "Add or remove APIs", href: base + "/apis", classes: "govuk-button--secondary", attributes: { id: "change-apis" } }) }}
     </div>
+    {% endif %}
 
     <h2 class="govuk-heading-m">Going live</h2>
     <p class="govuk-body">
       When this application has been tested, <a class="govuk-link" href="/account/production-credentials?application={{ application.id }}">request production credentials</a> for it.
     </p>
 
+    {% if manageable %}
     <h2 class="govuk-heading-m">Delete this application</h2>
     <p class="govuk-body">Its client ID, secret and subscription keys stop working straight away.</p>
     {{ govukButton({ text: "Delete application", href: base + "/delete", classes: "govuk-button--warning", attributes: { id: "delete-application" } }) }}
+    {% endif %}
 
     <p class="govuk-body"><a class="govuk-link" href="/account/applications">Back to your applications</a></p>
   </div>
