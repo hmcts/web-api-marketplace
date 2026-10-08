@@ -1,6 +1,6 @@
 {
   "secrets": {
-    "apim": {
+    "amp": {
       "APP_INSIGHTS_CONNECTION_STRING": "APP_INSIGHTS_CONNECTION_STRING"
     }
   },
