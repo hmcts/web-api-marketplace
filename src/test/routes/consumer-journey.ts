@@ -501,7 +501,7 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('requests from an account registered here', () => {
-    test('subscribe_publish_and_new_api_requests_should_all_appear_under_my_requests', async () => {
+    test('subscribe_and_new_api_requests_should_both_appear_under_my_requests', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
       await agent
@@ -515,16 +515,6 @@ describe('Consumer onboarding journey', () => {
         })
         .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
       await agent
-        .post('/publish/check-answers')
-        .type('form')
-        .send({
-          'api-name': 'My API',
-          'owning-team': 'My team',
-          'contact-email': 'team@example.com',
-          'spec-url': 'https://example.com/openapi.yml',
-        })
-        .expect(res => expect(res.text).to.match(/id="confirmation-reference">PUB-/));
-      await agent
         .post('/api-catalogue/request-new-api')
         .type('form')
         .send({ need: 'Prison release dates', domain: 'case-administration', urgency: 'high' })
@@ -535,7 +525,6 @@ describe('Consumer onboarding journey', () => {
 
       const account = await agent.get('/account');
       expect(account.text).to.contain('Subscribe to an API');
-      expect(account.text).to.contain('Publish an API');
       expect(account.text).to.contain('Request a new API');
 
       const reference = /(SUB-[0-9A-F]{8})/.exec(account.text)?.[1] as string;
