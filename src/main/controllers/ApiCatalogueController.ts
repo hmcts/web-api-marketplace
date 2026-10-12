@@ -38,8 +38,7 @@ export default class ApiCatalogueController {
 
   /**
    * Hands on to the next route for a name the catalogue does not list, rather than
-   * answering 404 itself: /api-catalogue/request-new-api is another controller's, and
-   * this one is registered first.
+   * answering 404 itself, so the app's own not found page answers.
    */
   @route('/:name')
   @GET()

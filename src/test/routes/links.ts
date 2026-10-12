@@ -54,7 +54,6 @@ describe('Links', () => {
       `/account/applications/${id}/client-secret`,
       `/account/applications/${id}/delete`,
       '/account/production-credentials',
-      '/api-catalogue/request-new-api',
     ]) {
       expect(visited, `${path} should be linked from somewhere`).to.include(path);
     }
