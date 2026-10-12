@@ -87,7 +87,7 @@ call without touching the journeys:
   are **not registered with either**, and every page that shows them says so. Secrets are
   shown once and only their first three characters are kept.
 - **Production credentials and new API requests** (`services/LocalRequests.ts`) — stored here
-  and listed under My requests alongside the backend's own. So are subscribe and publish
+  and listed under My requests alongside the backend's own. So are subscribe
   requests from accounts registered here, which the backend would refuse.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off

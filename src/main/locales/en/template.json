@@ -48,8 +48,7 @@
   },
   "breadcrumb": {
     "home": "Home",
-    "subscribe": "Subscribe to an API",
-    "publish": "Publish an API"
+    "subscribe": "Subscribe to an API"
   },
   "phaseTag": "Beta"
 }
