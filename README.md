@@ -69,7 +69,6 @@ The consumer onboarding journey, end to end:
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
 | Request production credentials, follow it    | `/account/production-credentials`, `.../:reference`      |
-| Request a new API                            | `/api-catalogue/request-new-api`                         |
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
@@ -86,7 +85,7 @@ call without touching the journeys:
   client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
   are **not registered with either**, and every page that shows them says so. Secrets are
   shown once and only their first three characters are kept.
-- **Production credentials and new API requests** (`services/LocalRequests.ts`) — stored here
+- **Production credentials requests** (`services/LocalRequests.ts`) — stored here
   and listed under My requests alongside the backend's own. So are subscribe
   requests from accounts registered here, which the backend would refuse.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the

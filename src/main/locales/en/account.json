@@ -60,8 +60,8 @@
             "href": "/subscribe"
           },
           {
-            "text": "Request a new API",
-            "href": "/api-catalogue/request-new-api"
+            "text": "Email the API Marketplace team to request a new API",
+            "href": "mailto:APIMarketplace@hmcts.net"
           }
         ]
       },

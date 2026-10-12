@@ -101,7 +101,7 @@ describe('ApiCatalogueController', () => {
     const res = mockResponse();
     const next = jest.fn();
 
-    await new ApiCatalogueController().detail(anonymous({ params: { name: 'request-new-api' } }), res, next);
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'not-a-listed-api' } }), res, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.view).toBeUndefined();

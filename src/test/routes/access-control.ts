@@ -70,6 +70,21 @@ describe('Access control on the form journeys', () => {
     }
   );
 
+  test.each(['/api-catalogue/request-new-api', '/api-catalogue/request-new-api/check-answers'])(
+    'the_request_a_new_api_journey_at_%s_should_be_switched_off_even_when_signed_in',
+    async path => {
+      (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
+      const agent = request.agent(app);
+
+      await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
+
+      await request(app)
+        .get(path)
+        .expect(res => expect(res.status).to.equal(404));
+      await agent.get(path).expect(res => expect(res.status).to.equal(404));
+    }
+  );
+
   test('the_publish_guidance_pages_should_still_be_reachable', async () => {
     await request(app)
       .get('/publish/guidance')

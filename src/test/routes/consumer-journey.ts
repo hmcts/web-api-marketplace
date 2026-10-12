@@ -501,7 +501,7 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('requests from an account registered here', () => {
-    test('subscribe_and_new_api_requests_should_both_appear_under_my_requests', async () => {
+    test('a_subscribe_request_should_appear_under_my_requests_and_be_deletable', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
       await agent
@@ -514,18 +514,9 @@ describe('Consumer onboarding journey', () => {
           declarations: ['in-scope', 'oauth-ready', 'dsa-dpa', 'governance'],
         })
         .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
-      await agent
-        .post('/api-catalogue/request-new-api')
-        .type('form')
-        .send({ need: 'Prison release dates', domain: 'case-administration', urgency: 'high' })
-        .expect(302);
-      await agent
-        .post('/api-catalogue/request-new-api/check-answers')
-        .expect(res => expect(res.text).to.match(/id="confirmation-reference">NEW-/));
 
       const account = await agent.get('/account');
       expect(account.text).to.contain('Subscribe to an API');
-      expect(account.text).to.contain('Request a new API');
 
       const reference = /(SUB-[0-9A-F]{8})/.exec(account.text)?.[1] as string;
       await agent.post('/account/delete-request').type('form').send({ reference, type: 'SUBSCRIPTION' }).expect(302);
