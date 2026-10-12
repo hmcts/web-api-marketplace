@@ -20,11 +20,6 @@ const guarded: [string, string][] = [
   ['GET', '/subscribe/check-answers'],
   ['POST', '/subscribe/check-answers'],
   ['GET', '/subscribe/confirmation'],
-  ['GET', '/publish'],
-  ['POST', '/publish'],
-  ['GET', '/publish/check-answers'],
-  ['POST', '/publish/check-answers'],
-  ['GET', '/publish/confirmation'],
   ['GET', '/account'],
   ['POST', '/account/delete-request'],
 ];
@@ -46,7 +41,6 @@ describe('Access control on the form journeys', () => {
       .get('/')
       .expect(res => {
         expect(res.text).to.not.contain('href="/subscribe"');
-        expect(res.text).to.not.contain('href="/publish"');
         expect(res.text).to.contain('href="/sign-in"');
       });
   });
@@ -57,12 +51,32 @@ describe('Access control on the form journeys', () => {
 
     await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
 
-    await agent.get('/').expect(res => {
-      expect(res.text).to.contain('href="/subscribe"');
-      expect(res.text).to.not.contain('href="/publish"');
-    });
+    await agent.get('/').expect(res => expect(res.text).to.contain('href="/subscribe"'));
     await agent.get('/subscribe').expect(res => expect(res.status).to.equal(200));
-    await agent.get('/publish').expect(res => expect(res.status).to.equal(200));
+  });
+
+  test.each(['/publish', '/publish/check-answers', '/publish/confirmation'])(
+    'the_publish_an_api_journey_at_%s_should_be_switched_off_even_when_signed_in',
+    async path => {
+      (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
+      const agent = request.agent(app);
+
+      await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
+
+      await request(app)
+        .get(path)
+        .expect(res => expect(res.status).to.equal(404));
+      await agent.get(path).expect(res => expect(res.status).to.equal(404));
+    }
+  );
+
+  test('the_publish_guidance_pages_should_still_be_reachable', async () => {
+    await request(app)
+      .get('/publish/guidance')
+      .expect(res => expect(res.status).to.equal(200));
+    await request(app)
+      .get('/publish/guidance/data-governance')
+      .expect(res => expect(res.status).to.equal(200));
   });
 
   test('the_sign_in_form_itself_should_stay_reachable_when_signed_out', async () => {
