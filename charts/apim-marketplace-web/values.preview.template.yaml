@@ -1,4 +1,8 @@
 nodejs:
+  # Each preview has its own address, which Entra must also have registered to sign in.
+  environment:
+    ENTRA_REDIRECT_URI: https://${SERVICE_FQDN}/auth/callback
+    ENTRA_POST_LOGOUT_REDIRECT_URI: https://${SERVICE_FQDN}/
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}

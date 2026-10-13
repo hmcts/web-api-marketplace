@@ -5,9 +5,18 @@ import * as https from 'https';
 import * as path from 'path';
 
 import { app } from './app';
+import { assertEntraConfigured } from './modules/entra/config';
 import { Logger } from './modules/logging';
 
 const logger = Logger.getLogger('server');
+
+// Here rather than in app.ts, so the tests can build the app and point it at a stub tenant.
+try {
+  assertEntraConfigured();
+} catch (error) {
+  logger.error((error as Error).message);
+  process.exit(1);
+}
 
 /**
  * Whichever server is actually listening — https in development, plain http elsewhere.

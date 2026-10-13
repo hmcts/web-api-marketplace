@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
 jest.mock('../../main/services/Requests', () => ({
   getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
   deleteRequest: jest.fn().mockResolvedValue(true),
@@ -10,9 +9,14 @@ jest.mock('../../main/services/Requests', () => ({
 
 import { app } from '../../main/app';
 
-const { signIn } = require('../../main/services/SignIn');
+import { claimsFor, signInThroughEntra } from './helpers/entra';
 
-const user = { email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
+const signedIn = async () => {
+  const agent = request.agent(app);
+  await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
+  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
+  return agent;
+};
 
 const guarded: [string, string][] = [
   ['GET', '/subscribe'],
@@ -25,8 +29,6 @@ const guarded: [string, string][] = [
 ];
 
 describe('Access control on the form journeys', () => {
-  beforeEach(() => (signIn as jest.Mock).mockReset());
-
   test.each(guarded)('a_signed_out_%s_to_%s_should_be_redirected_to_sign_in', async (method, path) => {
     const send = method === 'POST' ? request(app).post(path).send({}) : request(app).get(path);
 
@@ -46,10 +48,7 @@ describe('Access control on the form journeys', () => {
   });
 
   test('a_signed_in_user_should_be_offered_the_journeys_and_able_to_open_them', async () => {
-    (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
-    const agent = request.agent(app);
-
-    await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
+    const agent = await signedIn();
 
     await agent.get('/').expect(res => expect(res.text).to.contain('href="/subscribe"'));
     await agent.get('/subscribe').expect(res => expect(res.status).to.equal(200));
@@ -58,10 +57,7 @@ describe('Access control on the form journeys', () => {
   test.each(['/publish', '/publish/check-answers', '/publish/confirmation'])(
     'the_publish_an_api_journey_at_%s_should_be_switched_off_even_when_signed_in',
     async path => {
-      (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
-      const agent = request.agent(app);
-
-      await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
+      const agent = await signedIn();
 
       await request(app)
         .get(path)
@@ -94,9 +90,9 @@ describe('Access control on the form journeys', () => {
       .expect(res => expect(res.status).to.equal(200));
   });
 
-  test('the_sign_in_form_itself_should_stay_reachable_when_signed_out', async () => {
+  test('sign_in_itself_should_stay_reachable_when_signed_out', async () => {
     await request(app)
       .get('/sign-in')
-      .expect(res => expect(res.status).to.equal(200));
+      .expect(res => expect(res.status).to.equal(302));
   });
 });

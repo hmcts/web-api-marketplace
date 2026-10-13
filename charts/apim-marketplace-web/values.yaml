@@ -21,3 +21,11 @@ nodejs:
     APPLICATIONINSIGHTS_ENABLED: 'false'
     # In-cluster address of service-api-marketplace (release apim-marketplace, type java).
     API_URL: http://apim-marketplace-java
+    # Sign in is Microsoft Entra External ID. Deployed environments have no Entra defaults:
+    # the app refuses to start unless ENTRA_CLIENT_ID, ENTRA_AUTHORIZE_ENDPOINT and
+    # ENTRA_TOKEN_ENDPOINT are set for the environment's own tenant (per-environment values,
+    # e.g. in cnp-flux-config), and ENTRA_CLIENT_SECRET comes from the apim-{env} key vault
+    # via an aadIdentityName + keyVaults block. Both URIs below must be registered on the app
+    # registration exactly as written, or Entra refuses the sign in (AADSTS50011).
+    ENTRA_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
+    ENTRA_POST_LOGOUT_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/

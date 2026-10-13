@@ -19,6 +19,7 @@ export class PropertiesVolume {
     this.setSecret(`secrets.${vault}.REDIS_PORT`, 'session.redis.port');
     this.setSecret(`secrets.${vault}.REDIS_KEY`, 'session.redis.key');
     this.setSecret(`secrets.${vault}.SESSION_SECRET`, 'session.secret');
+    this.setSecret(`secrets.${vault}.ENTRA_CLIENT_SECRET`, 'entra.clientSecret');
   }
 
   private setSecret(fromPath: string, toPath: string): void {

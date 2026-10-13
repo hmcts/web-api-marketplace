@@ -1,5 +1,3 @@
-jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
-
 // Submitting reaches the backend, which these tests must not depend on being up.
 jest.mock('../../main/services/AccessRequest', () => ({
   ...jest.requireActual('../../main/services/AccessRequest'),

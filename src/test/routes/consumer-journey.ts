@@ -8,16 +8,8 @@ jest.mock('../../main/services/ApiCatalogue', () => ({
 
 import { MemoryStore, useDataStore } from '../../main/modules/store';
 
-import {
-  CATALOGUE,
-  PASSWORD,
-  createdApplication,
-  emailLink,
-  newAgent,
-  registeredAccount,
-  signedInConsumer,
-  testServer,
-} from './helpers/consumer';
+import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
+import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
@@ -33,150 +25,41 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('creating an account', () => {
-    test('registering_should_ask_the_user_to_check_their_email_and_preview_the_link', async () => {
+    test('create_a_developer_account_should_open_entra_on_its_create_account_form', async () => {
       const agent = newAgent();
 
-      await agent
-        .post('/register')
-        .type('form')
-        .send({
-          'first-name': 'Ada',
-          'last-name': 'Lovelace',
-          email: 'ada@example.com',
-          organisation: 'Analytical Engines Ltd',
-          role: 'consumer',
-          password: PASSWORD,
-          'password-confirm': PASSWORD,
-        })
-        .expect(res => expect(res.headers.location).to.equal('/register/check-email'));
-
-      await agent.get('/register/check-email').expect(res => {
-        expect(res.text).to.contain('Check your email');
-        expect(res.text).to.contain('ada@example.com');
-        expect(emailLink(res.text)).to.match(/^\/verify-email\?token=/);
+      await agent.get('/register').expect(res => expect(res.headers.location).to.equal('/sign-in?prompt=create'));
+      await agent.get('/sign-in?prompt=create').expect(res => {
+        const sentTo = new URL(res.headers.location);
+        expect(sentTo.origin + sentTo.pathname).to.equal(stubEntra().authorizeEndpoint);
+        expect(sentTo.searchParams.get('prompt')).to.equal('create');
       });
     });
 
-    test('an_incomplete_form_should_report_every_problem', async () => {
+    test('forgotten_your_password_should_go_to_sign_in_where_entra_offers_the_reset', async () => {
       await request(testServer())
-        .post('/register')
-        .type('form')
-        .send({ password: 'short', 'password-confirm': 'short' })
-        .expect(res => {
-          expect(res.status).to.equal(400);
-          for (const message of [
-            'Enter your first name',
-            'Enter your last name',
-            'Enter your email address',
-            'Enter your organisation or team',
-            'Select whether you are registering as a consumer or a producer',
-            'at least 12 characters',
-          ]) {
-            expect(res.text).to.contain(message);
-          }
-        });
+        .get('/forgotten-password')
+        .expect(res => expect(res.headers.location).to.equal('/sign-in'));
     });
 
-    test('registering_an_address_twice_should_look_the_same_but_send_an_already_registered_email', async () => {
-      await registeredAccount('ada@example.com');
-      const agent = newAgent();
+    test('a_signed_in_user_asking_to_create_an_account_should_go_to_their_account', async () => {
+      const agent = await signedInConsumer('ada@example.com');
 
-      await agent
-        .post('/register')
-        .type('form')
-        .send({
-          'first-name': 'Someone',
-          'last-name': 'Else',
-          email: 'ADA@example.com',
-          organisation: 'Elsewhere',
-          role: 'consumer',
-          password: 'a different password',
-          'password-confirm': 'a different password',
-        })
-        .expect(302);
-
-      await agent.get('/register/check-email').expect(res => {
-        expect(res.text).to.contain('Check your email');
-        expect(res.text).to.contain('You already have an account');
-        expect(emailLink(res.text)).to.equal('/sign-in');
-      });
-    });
-
-    test('signing_in_before_confirming_should_say_so_and_offer_a_new_email', async () => {
-      const agent = newAgent();
-      await agent.post('/register').type('form').send({
-        'first-name': 'Ada',
-        'last-name': 'Lovelace',
-        email: 'ada@example.com',
-        organisation: 'Analytical Engines Ltd',
-        role: 'consumer',
-        password: PASSWORD,
-        'password-confirm': PASSWORD,
-      });
-
-      await agent
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: PASSWORD })
-        .expect(res => {
-          expect(res.status).to.equal(401);
-          expect(res.text).to.contain('You need to confirm your email address');
-          expect(res.text).to.contain('href="/verify-email/resend"');
-        });
-    });
-
-    test('a_confirmation_link_should_work_once', async () => {
-      const agent = newAgent();
-      await agent.post('/register').type('form').send({
-        'first-name': 'Ada',
-        'last-name': 'Lovelace',
-        email: 'ada@example.com',
-        organisation: 'Analytical Engines Ltd',
-        role: 'consumer',
-        password: PASSWORD,
-        'password-confirm': PASSWORD,
-      });
-      const link = emailLink((await agent.get('/register/check-email')).text);
-
-      await agent.get(link).expect(res => expect(res.text).to.contain('Email address confirmed'));
-      await agent.get(link).expect(res => {
-        expect(res.status).to.equal(400);
-        expect(res.text).to.contain('This link has expired');
-      });
-    });
-
-    test('resending_should_send_a_link_that_confirms_the_account', async () => {
-      const agent = newAgent();
-      await agent.post('/register').type('form').send({
-        'first-name': 'Ada',
-        'last-name': 'Lovelace',
-        email: 'ada@example.com',
-        organisation: 'Analytical Engines Ltd',
-        role: 'consumer',
-        password: PASSWORD,
-        'password-confirm': PASSWORD,
-      });
-
-      await agent.post('/verify-email/resend').type('form').send({ email: 'ada@example.com' }).expect(302);
-      const link = emailLink((await agent.get('/register/check-email')).text);
-
-      await agent.get(link).expect(res => expect(res.text).to.contain('Email address confirmed'));
+      await agent.get('/register').expect(res => expect(res.headers.location).to.equal('/account'));
     });
   });
 
   describe('signing in', () => {
     test('the_first_sign_in_should_go_through_the_welcome_and_on_to_applications', async () => {
-      const agent = await registeredAccount('ada@example.com');
+      const agent = newAgent();
 
-      await agent
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: PASSWORD })
-        .expect(res => expect(res.headers.location).to.equal('/account/welcome'));
+      await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
+        expect(res.headers.location).to.equal('/account/welcome')
+      );
 
       await agent.get('/account/welcome').expect(res => {
         expect(res.text).to.contain('Welcome, Ada');
-        expect(res.text).to.contain('Analytical Engines Ltd');
+        expect(res.text).to.contain('ada@example.com');
       });
       await agent
         .post('/account/welcome')
@@ -184,37 +67,26 @@ describe('Consumer onboarding journey', () => {
         .send({})
         .expect(res => {
           expect(res.status).to.equal(400);
+          expect(res.text).to.contain('Enter your organisation or team');
+          expect(res.text).to.contain('Select whether you are a consumer or a producer');
           expect(res.text).to.contain('Confirm that you have read and agree to the guidelines');
         });
       await agent
         .post('/account/welcome')
         .type('form')
-        .send({ agree: 'yes' })
+        .send({ organisation: 'Analytical Engines Ltd', role: 'consumer', agree: 'yes' })
         .expect(res => expect(res.headers.location).to.equal('/account/applications'));
+
+      await agent.get('/account').expect(res => expect(res.text).to.contain('Analytical Engines Ltd'));
     });
 
     test('later_sign_ins_should_skip_the_welcome', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/sign-out').expect(302);
 
-      await agent
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: PASSWORD })
-        .expect(res => expect(res.headers.location).to.equal('/account'));
-    });
-
-    test('a_wrong_password_should_be_refused_without_asking_the_backend', async () => {
-      await registeredAccount('ada@example.com');
-
-      await request(testServer())
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: 'not the password' })
-        .expect(res => {
-          expect(res.status).to.equal(401);
-          expect(res.text).to.contain('Incorrect email or password');
-        });
+      await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
+        expect(res.headers.location).to.equal('/account')
+      );
     });
 
     test('signing_in_should_return_to_the_page_that_asked_for_it', async () => {
@@ -224,57 +96,22 @@ describe('Consumer onboarding journey', () => {
       await agent
         .get('/account/production-credentials')
         .expect(res => expect(res.headers.location).to.equal('/sign-in'));
-      await agent
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: PASSWORD })
-        .expect(res => expect(res.headers.location).to.equal('/account/production-credentials'));
-    });
-  });
-
-  describe('forgotten password', () => {
-    test('resetting_should_replace_the_password', async () => {
-      await registeredAccount('ada@example.com');
-      const agent = newAgent();
-
-      await agent.post('/forgotten-password').type('form').send({ email: 'ada@example.com' }).expect(302);
-      const link = emailLink((await agent.get('/forgotten-password/check-email')).text);
-      expect(link).to.match(/^\/reset-password\?token=/);
-
-      const token = new URL(link, 'http://localhost').searchParams.get('token');
-      await agent.get(link).expect(res => expect(res.text).to.contain('Create a new password'));
-      await agent
-        .post('/reset-password')
-        .type('form')
-        .send({ token, password: 'a brand new password', 'password-confirm': 'something else' })
-        .expect(res => expect(res.text).to.contain('The passwords you entered do not match'));
-      await agent
-        .post('/reset-password')
-        .type('form')
-        .send({ token, password: 'a brand new password', 'password-confirm': 'a brand new password' })
-        .expect(res => expect(res.text).to.contain('Your password has been changed'));
-
-      await agent.get(link).expect(res => expect(res.text).to.contain('This link has expired'));
-      await request(testServer())
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: PASSWORD })
-        .expect(401);
-      await request(testServer())
-        .post('/sign-in')
-        .type('form')
-        .send({ email: 'ada@example.com', password: 'a brand new password' })
-        .expect(302);
+      await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
+        expect(res.headers.location).to.equal('/account/production-credentials')
+      );
     });
 
-    test('an_unknown_address_should_get_the_same_page_and_no_link', async () => {
+    test('cancelling_on_entra_should_leave_the_visitor_signed_out_and_say_so', async () => {
       const agent = newAgent();
+      const started = await agent.get('/sign-in').expect(302);
+      const state = new URL(started.headers.location).searchParams.get('state');
 
-      await agent.post('/forgotten-password').type('form').send({ email: 'nobody@example.com' }).expect(302);
-      await agent.get('/forgotten-password/check-email').expect(res => {
-        expect(res.text).to.contain('Check your email');
-        expect(res.text).to.not.contain('email-preview-link');
+      await agent.get(`/auth/callback?error=access_denied&state=${state}`).expect(res => {
+        expect(res.status).to.equal(400);
+        expect(res.text).to.contain('There is a problem signing you in');
+        expect(res.text).to.contain('href="/sign-in"');
       });
+      await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
     });
   });
 
