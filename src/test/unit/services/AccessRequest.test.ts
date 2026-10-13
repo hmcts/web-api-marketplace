@@ -1,13 +1,7 @@
 import axios from 'axios';
 
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
-import {
-  DECLARATIONS,
-  submitAccessRequest,
-  summaryRows,
-  toAnswers,
-  validate,
-} from '../../../main/services/AccessRequest';
+import { submitAccessRequest, summaryRows, toAnswers, validate } from '../../../main/services/AccessRequest';
 import { listLocalRequests } from '../../../main/services/LocalRequests';
 
 const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
@@ -24,7 +18,6 @@ const completeBody = {
   'api-name': 'api-cp-ai-rag',
   'call-volume': 'low',
   'use-case': 'Ingesting documents for the case bundle service.',
-  declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 
 jest.mock('axios');
@@ -41,7 +34,7 @@ describe('AccessRequest', () => {
   test('an_empty_submission_should_report_every_required_field_in_form_order', () => {
     const errors = validate(toAnswers({}), apiNames);
 
-    expect(errors.map(error => error.name)).toEqual(['api-name', 'call-volume', 'use-case', 'declarations']);
+    expect(errors.map(error => error.name)).toEqual(['api-name', 'call-volume', 'use-case']);
   });
 
   test('an_api_that_is_not_in_the_catalogue_should_be_rejected', () => {
@@ -66,18 +59,11 @@ describe('AccessRequest', () => {
     expect(validate(answers, apiNames)).toEqual([]);
   });
 
-  test('confirming_only_some_declarations_should_be_rejected', () => {
-    const errors = validate(toAnswers({ ...completeBody, declarations: ['in-scope', 'oauth-ready'] }), apiNames);
+  test('declarations_posted_by_hand_should_not_come_back_into_the_answers', () => {
+    const answers = toAnswers({ ...completeBody, declarations: ['in-scope', 'oauth-ready'] });
 
-    expect(errors).toEqual([{ name: 'declarations', text: 'You must confirm all four declarations' }]);
-  });
-
-  test('a_single_checked_declaration_should_be_read_as_a_list_not_a_string', () => {
-    expect(toAnswers({ declarations: 'in-scope' }).declarations).toEqual(['in-scope']);
-  });
-
-  test('a_non_string_declaration_should_be_discarded_rather_than_stringified', () => {
-    expect(toAnswers({ declarations: [{ toString: () => 'in-scope' }] }).declarations).toEqual([]);
+    expect(answers).not.toHaveProperty('declarations');
+    expect(validate(answers, apiNames)).toEqual([]);
   });
 
   test('surrounding_whitespace_should_be_trimmed_from_text_answers', () => {
@@ -147,10 +133,10 @@ describe('AccessRequest', () => {
       environment: 'unspecified',
       expectedVolume: 'low',
       useCase: 'Ingesting documents for the case bundle service.',
-      // Still sent: the backend cannot read a body without it. Taken from the compulsory
-      // declaration now that the question has gone.
+      // Still sent: the backend cannot read a body without them, though the form asks for
+      // neither the capability nor a declaration any more.
       oauth2Capable: true,
-      declaration: DECLARATIONS.map(declaration => declaration.value).join(', '),
+      declaration: 'unspecified',
     });
   });
 

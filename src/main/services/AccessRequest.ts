@@ -1,7 +1,7 @@
 import { Logger } from '../modules/logging';
 
 import { addLocalRequest } from './LocalRequests';
-import { Choice, FieldError, SummaryRow, toAnswerList, toAnswerText } from './answers';
+import { Choice, FieldError, SummaryRow, toAnswerText } from './answers';
 import { SubmitResult, postSubmission } from './submissions';
 
 // Re-exported so importers that predate services/answers keep working unchanged.
@@ -38,6 +38,9 @@ const SUBSCRIPTIONS_PATH = '/subscriptions';
  */
 const ENVIRONMENT_NOT_ASKED = 'unspecified';
 
+/** Likewise the declaration, which the form no longer carries but the backend still expects. */
+const DECLARATION_NOT_ASKED = 'unspecified';
+
 /** Matches the backend's own limit, so an over-long description fails on the form. */
 export const USE_CASE_MAX_LENGTH = 255;
 
@@ -52,28 +55,6 @@ export const CALL_VOLUMES: Choice[] = [
   { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
 ];
 
-export const DECLARATIONS: Choice[] = [
-  {
-    value: 'in-scope',
-    text: 'I confirm my use case is within the intended scope of this API and I am not requesting access speculatively',
-  },
-  {
-    value: 'oauth-ready',
-    // The trailing "or I have said I need guidance" went with the OAuth question: there is
-    // no longer anywhere to say it, so promising it here would point at nothing.
-    text: 'My system can implement OAuth 2.0 with JWT bearer tokens',
-  },
-  {
-    value: 'dsa-dpa',
-    text: 'A Data Sharing Agreement or Data Processing Agreement is in place or being arranged for APIs containing personal data',
-  },
-  // The Data Governance Standards page was dropped with the rest of the static content,
-  // so this declaration no longer links anywhere. Anyone ticking it is accepting a
-  // document this service does not publish — worth restoring a link to wherever the
-  // standards actually live before this is asked of real users.
-  { value: 'governance', text: 'I have read and accept the Data Governance Standards' },
-];
-
 /**
  * What the form asks for. The requester is not in here: their name, organisation and
  * email come from the signed-in session, so they cannot be posted and cannot be edited
@@ -83,10 +64,9 @@ export interface AccessRequestAnswers {
   'api-name': string;
   'call-volume': string;
   'use-case': string;
-  declarations: string[];
 }
 
-export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = ['api-name', 'call-volume', 'use-case', 'declarations'];
+export const ANSWER_FIELDS: (keyof AccessRequestAnswers)[] = ['api-name', 'call-volume', 'use-case'];
 
 export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnswers {
   const text = (name: string) => toAnswerText(body, name);
@@ -95,7 +75,6 @@ export function toAnswers(body: Record<string, unknown> = {}): AccessRequestAnsw
     'api-name': text('api-name'),
     'call-volume': text('call-volume'),
     'use-case': text('use-case'),
-    declarations: toAnswerList(body?.declarations),
   };
 }
 
@@ -121,9 +100,6 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
       text: `Your description must be ${USE_CASE_MAX_LENGTH} characters or fewer`,
     });
   }
-  if (!DECLARATIONS.every(declaration => answers.declarations.includes(declaration.value))) {
-    errors.push({ name: 'declarations', text: 'You must confirm all four declarations' });
-  }
 
   return errors;
 }
@@ -141,7 +117,6 @@ export function summaryRows(answers: AccessRequestAnswers, apiTitle: string, req
     { key: 'API', value: apiTitle || answers['api-name'] },
     { key: 'Expected call volume', value: labelFor(CALL_VOLUMES, answers['call-volume']) },
     { key: 'Use case', value: answers['use-case'] },
-    { key: 'Declarations', value: `All ${DECLARATIONS.length} confirmed` },
   ];
 }
 
@@ -178,12 +153,13 @@ export async function submitAccessRequest(
       environment: ENVIRONMENT_NOT_ASKED,
       expectedVolume: answers['call-volume'],
       useCase: answers['use-case'],
-      // Derived from the declaration rather than dropped. The backend refuses a body with
-      // no oauth2Capable at all — not a validation error but an unreadable-request 400 —
-      // and the declaration is compulsory, so anyone who gets this far has confirmed the
-      // capability that the removed question used to ask about.
-      oauth2Capable: answers.declarations.includes('oauth-ready'),
-      declaration: answers.declarations.join(', '),
+      // The form no longer asks about OAuth capability or carries declarations, but the
+      // backend refuses a body with no oauth2Capable at all — not a validation error but an
+      // unreadable-request 400 — so both are still sent: the capability as true, as every
+      // HMCTS API requires OAuth 2.0, and the declaration marked as never asked. Drop them
+      // once the backend stops requiring them.
+      oauth2Capable: true,
+      declaration: DECLARATION_NOT_ASKED,
     }
   );
 }

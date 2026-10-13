@@ -511,7 +511,6 @@ describe('Consumer onboarding journey', () => {
           'api-name': CATALOGUE[0].name,
           'call-volume': 'low',
           'use-case': 'Testing',
-          declarations: ['in-scope', 'oauth-ready', 'dsa-dpa', 'governance'],
         })
         .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
 

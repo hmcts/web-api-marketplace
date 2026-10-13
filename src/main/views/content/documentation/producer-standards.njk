@@ -1,10 +1,10 @@
 {% extends "template.njk" %}
 
 {% set pageTitle = "API producer standards - HMCTS API Marketplace - GOV.UK" %}
-{% set section = "publish" %}
+{% set section = "documentation" %}
 {% set breadcrumbs = [
   { text: "Home", href: "/" },
-  { text: "Publish an API", href: "/publish/guidance" }
+  { text: "Documentation", href: "/documentation" }
 ] %}
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
@@ -61,7 +61,7 @@
 
     <ul class="govuk-list govuk-list--bullet">
       <li><code>info.title</code> &mdash; a clear, human-readable API name</li>
-      <li><code>info.description</code> &mdash; a plain-English summary of what the API does</li>
+      <li><code>info.description</code> &mdash; a summary of what the API does</li>
       <li><code>info.version</code> &mdash; the current version, stamped automatically from the GitHub release tag</li>
       <li>at least one path with at least one operation</li>
     </ul>
@@ -150,7 +150,7 @@
       <dt class="govuk-!-font-weight-bold">Title</dt>
       <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Clear, human-readable name &mdash; not the repository slug.</dd>
 
-      <dt class="govuk-!-font-weight-bold">Plain-English description</dt>
+      <dt class="govuk-!-font-weight-bold">Description</dt>
       <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">A consumer-focused summary of what the API does, who it is for, and what data it returns. Shown under &ldquo;What does this API do?&rdquo;.</dd>
 
       <dt class="govuk-!-font-weight-bold">Contact email</dt>
