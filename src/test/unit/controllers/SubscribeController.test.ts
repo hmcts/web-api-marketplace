@@ -1,5 +1,4 @@
 import SubscribeController from '../../../main/controllers/SubscribeController';
-import { DECLARATIONS } from '../../../main/services/AccessRequest';
 import { describeSignInGuard, signedIn } from '../helpers/signInGuard';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -18,7 +17,6 @@ const completeBody = {
   'api-name': 'api-cp-ai-rag',
   'call-volume': 'low',
   'use-case': 'Ingesting documents for the case bundle service.',
-  declarations: DECLARATIONS.map(declaration => declaration.value),
 };
 
 describe('SubscribeController', () => {

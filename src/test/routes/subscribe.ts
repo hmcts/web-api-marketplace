@@ -8,7 +8,6 @@ jest.mock('../../main/services/AccessRequest', () => ({
 
 import { expect } from 'chai';
 
-import { DECLARATIONS } from '../../main/services/AccessRequest';
 import { getCatalogueApis } from '../../main/services/ApiCatalogue';
 
 import { describeFormJourney, signedInAgent } from './helpers/formJourney';
@@ -18,7 +17,6 @@ const answersFor = async () => ({
   'api-name': (await getCatalogueApis())[0].name,
   'call-volume': 'low',
   'use-case': 'Ingesting documents for the case bundle service.',
-  declarations: DECLARATIONS.map(declaration => declaration.value),
 });
 
 describeFormJourney({
@@ -46,14 +44,14 @@ describe('Questions dropped from the subscribe form', () => {
     });
   });
 
-  test('the_declaration_should_no_longer_promise_an_answer_the_form_cannot_take', async () => {
+  test('the_form_should_have_no_declaration_section', async () => {
     const agent = await signedInAgent();
 
     await agent.get('/subscribe').expect(res => {
-      // The OAuth declaration used to end "or I have said I need guidance", which pointed
-      // at the question that has gone.
-      expect(res.text).to.not.contain('or I have said I need guidance');
-      expect(res.text).to.contain('My system can implement OAuth 2.0 with JWT bearer tokens');
+      expect(res.status).to.equal(200);
+      expect(res.text).to.not.contain('Declaration');
+      expect(res.text).to.not.contain('name="declarations"');
+      expect(res.text).to.not.contain('My system can implement OAuth 2.0');
     });
   });
 

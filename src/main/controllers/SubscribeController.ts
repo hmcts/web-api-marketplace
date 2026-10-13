@@ -6,7 +6,6 @@ import { requireSignIn } from '../modules/session';
 import {
   AccessRequestAnswers,
   CALL_VOLUMES,
-  DECLARATIONS,
   FieldError,
   Requester,
   submitAccessRequest,
@@ -128,7 +127,6 @@ export default class SubscribeController {
         catalogue.map(api => ({ value: api.name, text: api.title }))
       ),
       callVolumes: CALL_VOLUMES,
-      declarations: DECLARATIONS,
     };
   }
 

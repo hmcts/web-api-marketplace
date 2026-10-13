@@ -19,14 +19,14 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/documentation/technology-introduction': 'content/documentation/technology-introduction',
   '/documentation/building-software': 'content/documentation/building-software',
   '/documentation/glossary': 'content/documentation/glossary',
+  '/documentation/publish-an-api': 'content/documentation/publish-an-api',
+  '/documentation/producer-standards': 'content/documentation/producer-standards',
+  '/documentation/data-governance': 'content/documentation/data-governance',
   '/documentation/case-studies': 'content/documentation/case-studies',
   '/documentation/our-api-technologies': 'content/documentation/our-api-technologies',
   '/documentation/our-capabilities': 'content/documentation/our-capabilities',
   '/help': 'content/help/index',
   '/help/resources': 'content/help/resources',
-  '/publish/guidance': 'content/publish/guidance/index',
-  '/publish/guidance/producer-standards': 'content/publish/guidance/producer-standards',
-  '/publish/guidance/data-governance': 'content/publish/guidance/data-governance',
   '/privacy': 'content/privacy',
 };
 

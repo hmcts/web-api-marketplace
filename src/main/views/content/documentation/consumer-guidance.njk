@@ -9,7 +9,6 @@
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
-{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
@@ -40,9 +39,7 @@
     <h3 class="govuk-heading-m">Understand what you need</h3>
 
     <ul class="govuk-list govuk-list--bullet">
-      <li>Read the API&rsquo;s plain-English description and understand what data it returns, and what it does not</li>
-      <li>Check the classification &mdash; Official-Sensitive APIs require additional justification and may have longer approval times</li>
-      <li>Confirm your service or use case is within the intended scope of the API. Do not request access speculatively.</li>
+      <li>Read the API&rsquo;s description and understand what data it returns, and what it does not</li>
     </ul>
 
     <h3 class="govuk-heading-m">Check your organisation is eligible</h3>
@@ -50,49 +47,20 @@
     <ul class="govuk-list govuk-list--bullet">
       <li>You must be part of HMCTS Digital and Technology Solutions, a justice sector partner, or an approved third party</li>
       <li>You need a valid work email address to register</li>
-      <li>Your organisation must have a data sharing agreement in place where required &mdash; check with the API owner</li>
+      <li>Your organisation must have a data sharing agreement in place where required</li>
     </ul>
-
-    {{ govukInsetText({
-      html: 'Not sure whether your use case is appropriate?
-             <a class="govuk-link" href="/help">Contact the marketplace team</a> before you submit
-             anything &mdash; it is a much cheaper conversation than a rejected request.'
-    }) }}
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
     <h2 class="govuk-heading-l" id="making-a-request">2. Making an access request</h2>
 
-    <h3 class="govuk-heading-m">What you will need to provide</h3>
-
-    <dl class="govuk-body">
-      <dt class="govuk-!-font-weight-bold">Use case description</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">What you are building, and why you need this API.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Environment</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Whether you need sandbox, production, or both.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Expected call volume</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Low, medium or high &mdash; this helps the producer plan capacity.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Authentication readiness</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Confirmation that your system can implement OAuth 2.0 with JWT bearer tokens.</dd>
-    </dl>
-
-    <h3 class="govuk-heading-m">What happens next</h3>
-
     <ul class="govuk-list govuk-list--bullet">
-      <li>The API owner reviews your request</li>
-      <li>You will be notified whether it is approved or rejected</li>
-      <li>If rejected, a reason will be given and you may resubmit with additional information</li>
-      <li>Once approved, your credentials will be issued via a secure channel</li>
+      <li><a class="govuk-link" href="/sign-in">Sign in</a> to your developer account, or <a class="govuk-link" href="/register">register</a> if you do not have one yet</li>
+      <li>You test with dummy data first. Your Try it now credentials and keys are issued automatically, with no review</li>
+      <li>When you are ready for live data, you request production credentials for an application you have tested, describing what you are building and why you need the API</li>
+      <li>The HMCTS Data Access Panel reviews your request. This is currently an offline process, so look out for emails asking for clarification or confirming the outcome</li>
+      <li>If approved, the API Marketplace team issues your production credentials and keys</li>
     </ul>
-
-    {{ govukWarningText({
-      text: "Do not attempt to access an API before your request has been approved. Unauthorised access
-             attempts are logged and may affect future requests.",
-      iconFallbackText: "Warning"
-    }) }}
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
@@ -207,7 +175,7 @@
 
     <p class="govuk-body">
       For the full set of obligations, read the
-      <a class="govuk-link" href="/publish/guidance/data-governance">data governance standards</a>.
+      <a class="govuk-link" href="/documentation/data-governance">data governance standards</a>.
     </p>
 
     {{ govukButton({
