@@ -1,8 +1,11 @@
 {% extends "template.njk" %}
 
 {% set pageTitle = "Publish an API - HMCTS API Marketplace - GOV.UK" %}
-{% set section = "publish" %}
-{% set breadcrumbs = [{ text: "Home", href: "/" }] %}
+{% set section = "documentation" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Documentation", href: "/documentation" }
+] %}
 
 {% block content %}
 
@@ -18,7 +21,7 @@
 
     <p class="govuk-body">
       The marketplace doesn&rsquo;t own or run any of the APIs it lists &mdash; your team keeps that.
-      What it does is make your API discoverable, documented in plain English, and reachable through
+      What it does is make your API discoverable, documented, and reachable through
       a consistent access request process.
     </p>
 
@@ -26,7 +29,7 @@
 
     <ul class="govuk-list">
       <li>
-        <a class="govuk-link" href="/publish/guidance/producer-standards">API producer standards</a>
+        <a class="govuk-link" href="/documentation/producer-standards">API producer standards</a>
         &mdash; what your API must meet before it can be listed
       </li>
     </ul>
