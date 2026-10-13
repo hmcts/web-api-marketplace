@@ -41,7 +41,7 @@
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/express-session": "^1.19.0",
-    "@types/lodash": "4.17.25",
+    "@types/lodash": "4.17.26",
     "@types/nunjucks": "3.2.6",
     "@types/require-directory": "2.1.7",
     "applicationinsights": "3.16.0",
