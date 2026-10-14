@@ -14,7 +14,6 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/documentation': 'content/documentation/index',
   '/documentation/architecture': 'content/documentation/architecture',
   '/documentation/architecture-principles': 'content/documentation/architecture-principles',
-  '/documentation/consumer-onboarding': 'content/documentation/consumer-onboarding',
   '/documentation/consumer-guidance': 'content/documentation/consumer-guidance',
   '/documentation/technology-introduction': 'content/documentation/technology-introduction',
   '/documentation/building-software': 'content/documentation/building-software',
