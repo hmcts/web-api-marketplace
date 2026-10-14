@@ -1,10 +1,7 @@
 import { assertEntraConfigured, entraConfig } from '../../../main/modules/entra/config';
+import { withCleanEnv } from '../helpers/env';
 
-/**
- * In AKS the vault mount gives the tenant ID rather than the endpoints, so the endpoints are
- * the tenant's own: External ID publishes them, and its issuer, under
- * https://<tenant-id>.ciamlogin.com/<tenant-id>/.
- */
+// In AKS the vault mount gives the tenant ID, so the endpoints are the tenant's own
 const SETTINGS = [
   'ENTRA_CLIENT_ID',
   'ENTRA_CLIENT_SECRET',
@@ -17,24 +14,7 @@ const SETTINGS = [
 ];
 
 describe('entraConfig', () => {
-  const saved: Record<string, string | undefined> = {};
-
-  beforeEach(() => {
-    SETTINGS.forEach(name => {
-      saved[name] = process.env[name];
-      delete process.env[name];
-    });
-  });
-
-  afterEach(() => {
-    SETTINGS.forEach(name => {
-      if (saved[name] === undefined) {
-        delete process.env[name];
-      } else {
-        process.env[name] = saved[name];
-      }
-    });
-  });
+  withCleanEnv(SETTINGS);
 
   test('with_only_a_tenant_id_the_endpoints_should_be_the_tenants_own', () => {
     process.env.ENTRA_TENANT_ID = 'the-tenant';
