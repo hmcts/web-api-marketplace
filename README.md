@@ -27,6 +27,21 @@ yarn start:dev
 Then <https://localhost:3344>. The development server uses a self-signed certificate,
 so expect a browser warning.
 
+Or let the server read the secret from Key Vault as it starts, with `DefaultAzureCredential`
+(`modules/entra/secret.ts`) — your `az login` session locally, the pod's workload identity
+(a managed identity) in AKS. The value stays in the process; nothing is written to a file:
+
+```bash
+az login   # once; you must be a reader of the secret
+export ENTRA_KEY_VAULT=kvspsextidsbox
+export ENTRA_KEY_VAULT_SECRET=entra-app-web-api-marketplace-secret
+export ENTRA_CLIENT_ID=8d56b09c-7e56-4bbb-8aa7-b26e1fc67969   # the app that secret belongs to
+yarn start:dev
+```
+
+The client ID and the secret must belong to the same app registration, or Entra answers
+`AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
+
 The server refuses to start without `ENTRA_CLIENT_SECRET`. Export it; do not put it in a
 file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
 `config/development.json`, loaded only when `NODE_ENV` is `development`). Deployed
@@ -150,7 +165,11 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   not start.
 - **Entra client secret in the key vault.** AKS gets `ENTRA_CLIENT_SECRET` from the
   `apim-{env}` vault (`modules/properties-volume`), which needs the same `aadIdentityName`
-  and `keyVaults` as App Insights above. Until it is there the pod will not start. Each
+  and `keyVaults` as App Insights above. Until it is there the pod will not start. Alternatively,
+  set `ENTRA_KEY_VAULT` and `ENTRA_KEY_VAULT_SECRET` and the server reads it itself with the
+  pod's workload identity: in sandbox that is `apim-sandbox-mi`, already a reader of
+  `kvspsextidsbox/entra-app-web-api-marketplace-secret` (external-entra-id), and federated to
+  service account `apim` in namespace `apim`. Each
   environment's `/auth/callback` and home page must also be registered on the app
   registration (see the chart).
 - **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
