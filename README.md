@@ -82,7 +82,7 @@ src/main/
   server.ts              entrypoint (HTTPS in dev, HTTP in AKS)
   controllers/           awilix-express decorated routes, loaded by convention
   interfaces/            AppRequest — express Request plus i18next typing
-  locales/{en,cy}/       one JSON file per page
+  locales/en/            one JSON file per page
   modules/               appinsights, awilix, entra, helmet, i18next, logging,
                          nunjucks, properties-volume, session, store
   views/                 nunjucks templates
@@ -182,9 +182,6 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`).
   Previews have sign in switched off, since each has its own address and Entra takes no
   wildcard redirect URIs.
-- **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
-  language toggle works, but the Welsh content is not translated. Decide whether this service
-  needs Welsh at all before commissioning translation.
 - **No feedback survey.** The phase banner links to `#`. Needs a real survey URL.
 - **No analytics or RUM.** `analytics.gtmContainerId` and all `dynatrace.jstags` are empty, so
   neither script is rendered. Populate them with this service's own identifiers — the values

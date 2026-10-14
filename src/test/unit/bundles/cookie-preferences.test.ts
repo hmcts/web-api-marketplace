@@ -42,7 +42,7 @@ describe('cookie-preferences bundle', () => {
           expect.objectContaining({
             categoryName: 'essential',
             optional: false,
-            cookies: expect.arrayContaining(['i18next', 'formCookie', 'connect.sid']),
+            cookies: expect.arrayContaining(['formCookie', 'connect.sid']),
           }),
           expect.objectContaining({
             categoryName: 'analytics',

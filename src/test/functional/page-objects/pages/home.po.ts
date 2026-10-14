@@ -5,12 +5,8 @@ import { Base } from '../base';
 export class HomePage extends Base {
   private readonly backLink = this.page.locator('a.govuk-back-link');
 
-  async goto(lng?: string): Promise<void> {
-    if (lng) {
-      await this.page.goto(`/?lng=${lng}`);
-    } else {
-      await this.page.goto('/');
-    }
+  async goto(): Promise<void> {
+    await this.page.goto('/');
   }
 
   async expectHeadingToContainText(text: string): Promise<void> {

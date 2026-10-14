@@ -46,7 +46,7 @@ const config = {
     {
       categoryName: 'essential',
       optional: false,
-      cookies: ['i18next', 'formCookie', 'connect.sid'],
+      cookies: ['formCookie', 'connect.sid'],
     },
     {
       categoryName: 'analytics',

@@ -1,6 +1,6 @@
 import express, { NextFunction, Response } from 'express';
-import i18next, { Resource, use } from 'i18next';
-import { LanguageDetector, handle } from 'i18next-http-middleware';
+import i18next, { Resource, init } from 'i18next';
+import { handle } from 'i18next-http-middleware';
 import requireDir from 'require-directory';
 
 import { AppRequest } from '../../interfaces/AppRequest';
@@ -9,21 +9,22 @@ const resources = requireDir(module, '../../', {
   include: /locales/,
 }).locales as Resource;
 
+/**
+ * The page text, from locales/en. The service is in English only, so there is no language
+ * to detect: no ?lng= switch and no language cookie.
+ */
 export class I18next {
   constructor() {
     const options = {
-      preload: ['en', 'cy'],
+      lng: 'en',
+      preload: ['en'],
       resources,
       fallbackLng: 'en',
-      supportedLngs: ['en', 'cy'],
+      supportedLngs: ['en'],
       showSupportNotice: false,
-      detection: {
-        order: ['querystring', 'cookie'],
-        caches: ['cookie'],
-      },
     };
 
-    use(LanguageDetector).init(options);
+    init(options);
   }
 
   public enableFor(app: express.Express): void {
