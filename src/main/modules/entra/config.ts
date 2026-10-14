@@ -15,6 +15,15 @@ import config from 'config';
  * custom-environment-variables.json, which the config package reads only once.
  */
 export const entraConfig = {
+  /**
+   * Off only when ENTRA_ENABLED is exactly `false`, for an environment with no tenant set up
+   * for it yet (each preview, AAT, demo). Sign in then says it is unavailable instead of the
+   * server refusing to start. Any other value, or none, leaves it on, so an environment that
+   * has simply forgotten its settings still refuses to start and says which are missing.
+   */
+  get enabled(): boolean {
+    return process.env.ENTRA_ENABLED !== 'false';
+  },
   get clientId(): string {
     return process.env.ENTRA_CLIENT_ID || config.get<string>('entra.clientId');
   },

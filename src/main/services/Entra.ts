@@ -122,10 +122,13 @@ export async function verifiedClaims(idToken: string, expectedNonce: string | un
  * leave the Entra one in place, and the next "Sign in" would go straight through as the
  * same person without asking.
  *
- * Falls back to the home page if the tenant cannot be reached: the user is signed out of
- * this service regardless, which is the part that matters most.
+ * Falls back to the home page if the tenant cannot be reached, or sign in is switched off:
+ * the user is signed out of this service regardless, which is the part that matters most.
  */
 export async function logoutUrl(): Promise<string> {
+  if (!entraConfig.enabled) {
+    return '/';
+  }
   try {
     const { endSessionEndpoint } = await tenant();
     if (!endSessionEndpoint) {

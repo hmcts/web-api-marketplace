@@ -4,6 +4,7 @@ import { GET, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
+import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
 import { authorizeUrl, isEntraPrompt } from '../services/Entra';
 
@@ -16,6 +17,8 @@ const logger = Logger.getLogger('sign-in');
  *
  * `?prompt=create` opens Entra on its create-account form, for the "Create a developer
  * account" links.
+ *
+ * With sign in switched off (ENTRA_ENABLED=false) it says sign in is unavailable instead.
  */
 @route('/sign-in')
 export default class SignInController {
@@ -23,6 +26,10 @@ export default class SignInController {
   public get(req: AppRequest, res: Response): void {
     if (req.session?.user) {
       res.redirect('/account');
+      return;
+    }
+    if (!entraConfig.enabled) {
+      signInProblem(req, res, 503, 'unavailable');
       return;
     }
 
@@ -42,4 +49,12 @@ export default class SignInController {
 /** Enough of a random value to follow it through the log, not enough to replay it. */
 export function short(value: string): string {
   return `${value.slice(0, 8)}...`;
+}
+
+export type SignInProblem = 'cancelled' | 'expired' | 'unavailable' | 'rejected';
+
+/** The sign-in page, saying why the user is not signed in (see views/sign-in.njk). */
+export function signInProblem(req: AppRequest, res: Response, status: number, problem: SignInProblem): void {
+  const content = req.i18n?.getDataByLanguage(req.lng)?.signIn as Record<string, unknown> | undefined;
+  res.status(status).render('sign-in', { ...content, problem });
 }

@@ -5,8 +5,7 @@ import * as https from 'https';
 import * as path from 'path';
 
 import { app } from './app';
-import { assertEntraConfigured } from './modules/entra/config';
-import { loadEntraClientSecret } from './modules/entra/secret';
+import { prepareEntra } from './modules/entra/startup';
 import { Logger } from './modules/logging';
 
 const logger = Logger.getLogger('server');
@@ -54,11 +53,9 @@ function listen(): void {
 }
 
 // Here rather than in app.ts, so the tests can build the app and point it at a stub tenant.
-// The secret is read before the check, because it may have to come from Key Vault.
-loadEntraClientSecret()
-  .then(source => {
-    assertEntraConfigured();
-    logger.info(`Entra client secret from ${source}`);
+prepareEntra()
+  .then(status => {
+    logger.info(status);
     listen();
   })
   .catch(error => {

@@ -1,8 +1,9 @@
 nodejs:
-  # Each preview has its own address, which Entra must also have registered to sign in.
+  # No Entra tenant is set up for previews: each has its own address, and Entra will not
+  # take a wildcard redirect URI. Sign in is switched off, so the app starts and says sign
+  # in is unavailable, rather than refusing to start for want of ENTRA_* settings.
   environment:
-    ENTRA_REDIRECT_URI: https://${SERVICE_FQDN}/auth/callback
-    ENTRA_POST_LOGOUT_REDIRECT_URI: https://${SERVICE_FQDN}/
+    ENTRA_ENABLED: 'false'
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}

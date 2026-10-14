@@ -63,3 +63,45 @@ describe('Signing in with Entra', () => {
     await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
   });
 });
+
+describe('With Entra switched off', () => {
+  let saved: string | undefined;
+
+  beforeEach(() => {
+    saved = process.env.ENTRA_ENABLED;
+    process.env.ENTRA_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    if (saved === undefined) {
+      delete process.env.ENTRA_ENABLED;
+    } else {
+      process.env.ENTRA_ENABLED = saved;
+    }
+  });
+
+  test('sign_in_should_say_it_is_unavailable_rather_than_go_to_entra', async () => {
+    await request(app)
+      .get('/sign-in')
+      .expect(res => {
+        expect(res.status).to.equal(503);
+        expect(res.text).to.contain('Sign in is not available at the moment');
+      });
+  });
+
+  test('a_callback_should_not_sign_anyone_in', async () => {
+    const agent = request.agent(app);
+
+    await agent.get('/auth/callback?code=anything&state=anything').expect(res => expect(res.status).to.equal(503));
+    await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
+  });
+
+  test('sign_out_should_go_home_rather_than_to_entra', async () => {
+    await request(app)
+      .post('/sign-out')
+      .expect(res => {
+        expect(res.status).to.equal(302);
+        expect(res.headers.location).to.equal('/');
+      });
+  });
+});

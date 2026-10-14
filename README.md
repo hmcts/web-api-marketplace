@@ -54,6 +54,10 @@ accident. The settings:
 `ENTRA_POST_LOGOUT_REDIRECT_URI`. The tenant ID alone gives both endpoints, on the tenant's own
 host `https://<tenant-id>.ciamlogin.com/<tenant-id>/`.
 
+An environment with no tenant yet sets `ENTRA_ENABLED=false` instead. The server then starts
+with none of these, and sign in says it is unavailable. Only the exact value `false` switches
+it off, so an environment that has just forgotten its settings still refuses to start.
+
 `https://localhost:3344/auth/callback` and `https://localhost:3344/` must both be registered
 as redirect URIs on the app registration: the first for signing in, the second for coming
 back after signing out. They are managed in hmcts/external-entra-id
@@ -170,12 +174,14 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   where hmcts/external-entra-id writes them, and read with the pod's workload identity
   (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`). `modules/properties-volume` maps them into
   the Entra config.
-- **Entra in AAT and demo** has nothing in cnp-flux-config yet, so those pods will not start.
-  They need a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and
+- **Entra in AAT and demo** is switched off (`ENTRA_ENABLED=false` in cnp-flux-config's
+  `aat.yaml` and `demo.yaml`, and in `values.aat.template.yaml` for the pipeline's AAT deploy),
+  so sign in there says it is unavailable. Switching it on needs a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and
   `kv-entra-prod`), the app registered there, and the same `keyVaults` and `workloadClientID`.
 - **Redirect URIs still to register** on `web-api-marketplace` in external-entra-id: each
-  environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`), and the
-  preview addresses (`https://<preview host>/auth/callback`), which otherwise get `AADSTS50011`.
+  environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`).
+  Previews have sign in switched off, since each has its own address and Entra takes no
+  wildcard redirect URIs.
 - **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
   language toggle works, but the Welsh content is not translated. Decide whether this service
   needs Welsh at all before commissioning translation.

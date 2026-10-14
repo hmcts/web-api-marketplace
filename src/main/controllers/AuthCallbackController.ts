@@ -2,16 +2,15 @@ import { GET, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
+import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
 import { takeReturnTo } from '../modules/session';
 import { EntraClaims, exchangeCodeForIdToken, verifiedClaims } from '../services/Entra';
 import { findProfile, toSignedInUser } from '../services/Profiles';
 
-import { short } from './SignInController';
+import { SignInProblem, short, signInProblem } from './SignInController';
 
 const logger = Logger.getLogger('sign-in');
-
-type Problem = 'cancelled' | 'expired' | 'unavailable' | 'rejected';
 
 /**
  * Entra sends the browser back here with a single-use code, or with an error. The code is
@@ -26,6 +25,12 @@ export default class AuthCallbackController {
   @GET()
   public async get(req: AppRequest, res: Response): Promise<void> {
     const { code, state, error, error_description: errorDescription } = req.query as Record<string, string | undefined>;
+    if (!entraConfig.enabled) {
+      // Nothing can have been started with Entra, so there is nothing to finish.
+      this.problem(req, res, 503, 'unavailable');
+      return;
+    }
+
     const started = req.session?.entraSignIn;
     delete req.session?.entraSignIn;
 
@@ -93,8 +98,7 @@ export default class AuthCallbackController {
     });
   }
 
-  private problem(req: AppRequest, res: Response, status: number, problem: Problem): void {
-    const content = req.i18n?.getDataByLanguage(req.lng)?.signIn as Record<string, unknown> | undefined;
-    res.status(status).render('sign-in', { ...content, problem });
+  private problem(req: AppRequest, res: Response, status: number, problem: SignInProblem): void {
+    signInProblem(req, res, status, problem);
   }
 }
