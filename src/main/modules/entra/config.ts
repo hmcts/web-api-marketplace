@@ -83,6 +83,8 @@ export function assertEntraConfigured(): void {
       '',
       '  export ENTRA_CLIENT_SECRET=...   # from the Entra app registration',
       '',
+      'Or read it from Key Vault: set ENTRA_KEY_VAULT and ENTRA_KEY_VAULT_SECRET.',
+      '',
       'A deployed environment must set every ENTRA_* value for its own tenant. Never put the secret in a file here.',
     ].join('\n')
   );

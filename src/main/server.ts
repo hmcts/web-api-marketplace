@@ -6,17 +6,10 @@ import * as path from 'path';
 
 import { app } from './app';
 import { assertEntraConfigured } from './modules/entra/config';
+import { loadEntraClientSecret } from './modules/entra/secret';
 import { Logger } from './modules/logging';
 
 const logger = Logger.getLogger('server');
-
-// Here rather than in app.ts, so the tests can build the app and point it at a stub tenant.
-try {
-  assertEntraConfigured();
-} catch (error) {
-  logger.error((error as Error).message);
-  process.exit(1);
-}
 
 /**
  * Whichever server is actually listening — https in development, plain http elsewhere.
@@ -42,21 +35,36 @@ const DRAIN_MS = 4000;
 /** How long to wait for open connections to finish before exiting regardless. */
 const FORCE_EXIT_MS = 10000;
 
-if (app.locals.ENV === 'development') {
-  const sslDirectory = path.join(__dirname, 'resources', 'localhost-ssl');
-  const sslOptions = {
-    cert: fs.readFileSync(path.join(sslDirectory, 'localhost.crt')),
-    key: fs.readFileSync(path.join(sslDirectory, 'localhost.key')),
-  };
-  server = https.createServer(sslOptions, app);
-  server.listen(port, () => {
-    logger.info(`Application started: https://localhost:${port}`);
-  });
-} else {
-  server = app.listen(port, () => {
-    logger.info(`Application started: http://localhost:${port}`);
-  });
+function listen(): void {
+  if (app.locals.ENV === 'development') {
+    const sslDirectory = path.join(__dirname, 'resources', 'localhost-ssl');
+    const sslOptions = {
+      cert: fs.readFileSync(path.join(sslDirectory, 'localhost.crt')),
+      key: fs.readFileSync(path.join(sslDirectory, 'localhost.key')),
+    };
+    server = https.createServer(sslOptions, app);
+    server.listen(port, () => {
+      logger.info(`Application started: https://localhost:${port}`);
+    });
+  } else {
+    server = app.listen(port, () => {
+      logger.info(`Application started: http://localhost:${port}`);
+    });
+  }
 }
+
+// Here rather than in app.ts, so the tests can build the app and point it at a stub tenant.
+// The secret is read before the check, because it may have to come from Key Vault.
+loadEntraClientSecret()
+  .then(source => {
+    assertEntraConfigured();
+    logger.info(`Entra client secret from ${source}`);
+    listen();
+  })
+  .catch(error => {
+    logger.error((error as Error).message);
+    process.exit(1);
+  });
 
 function gracefulShutdownHandler(signal: string) {
   if (shuttingDown) {
