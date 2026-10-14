@@ -53,6 +53,7 @@
   "entra": {
     "clientId": "",
     "clientSecret": "",
+    "tenantId": "",
     "authorizeEndpoint": "",
     "tokenEndpoint": "",
     "redirectUri": "",

@@ -28,17 +28,18 @@ Then <https://localhost:3344>. The development server uses a self-signed certifi
 so expect a browser warning.
 
 Or let the server read the secret from Key Vault as it starts, with `DefaultAzureCredential`
-(`modules/entra/secret.ts`) — your `az login` session locally, the pod's workload identity
-(a managed identity) in AKS. The value stays in the process; nothing is written to a file:
+(`modules/entra/secret.ts`) and your `az login` session. The value stays in the process;
+nothing is written to a file:
 
 ```bash
 az login   # once; you must be a reader of the secret
 export ENTRA_KEY_VAULT=kvspsextidsbox
 export ENTRA_KEY_VAULT_SECRET=entra-app-web-api-marketplace-secret
-export ENTRA_CLIENT_ID=8d56b09c-7e56-4bbb-8aa7-b26e1fc67969   # the app that secret belongs to
 yarn start:dev
 ```
 
+`config/development.json` signs in as `web-api-marketplace` (`8d56b09c-…`), the app
+registration hmcts/external-entra-id manages in the sandbox tenant and whose secret that is.
 The client ID and the secret must belong to the same app registration, or Entra answers
 `AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
 
@@ -48,12 +49,16 @@ file in this repo. Locally everything else defaults to the HMCTS sandbox tenant 
 environments run as `production` and have no defaults: they refuse to start until every
 setting is given for their own tenant, so none can sign users in against the sandbox by
 accident. The settings:
-`ENTRA_CLIENT_ID`, `ENTRA_AUTHORIZE_ENDPOINT`, `ENTRA_TOKEN_ENDPOINT`,
-`ENTRA_DISCOVERY_ENDPOINT`, `ENTRA_REDIRECT_URI` and `ENTRA_POST_LOGOUT_REDIRECT_URI`.
+`ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_TENANT_ID` (or `ENTRA_AUTHORIZE_ENDPOINT` and
+`ENTRA_TOKEN_ENDPOINT`), `ENTRA_DISCOVERY_ENDPOINT`, `ENTRA_REDIRECT_URI` and
+`ENTRA_POST_LOGOUT_REDIRECT_URI`. The tenant ID alone gives both endpoints, on the tenant's own
+host `https://<tenant-id>.ciamlogin.com/<tenant-id>/`.
 
 `https://localhost:3344/auth/callback` and `https://localhost:3344/` must both be registered
-as redirect URIs on the app registration (Authentication → Web): the first for signing in,
-the second for coming back after signing out. On an address that is not registered, Entra
+as redirect URIs on the app registration: the first for signing in, the second for coming
+back after signing out. They are managed in hmcts/external-entra-id
+(`tenants/sbox/config/apps.yaml`, `web-api-marketplace`), which removes any added in the portal.
+Only the first is registered there so far. On an address that is not registered, Entra
 refuses with `AADSTS50011` before showing its form. To run elsewhere, register that
 address's two URIs and set `PORT`, `ENTRA_REDIRECT_URI` and `ENTRA_POST_LOGOUT_REDIRECT_URI`
 to match.
@@ -160,18 +165,17 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
   the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
   and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
-- **Entra settings per environment.** Each deployed environment needs its own
-  `ENTRA_CLIENT_ID`, `ENTRA_AUTHORIZE_ENDPOINT` and `ENTRA_TOKEN_ENDPOINT`, or the pod will
-  not start.
-- **Entra client secret in the key vault.** AKS gets `ENTRA_CLIENT_SECRET` from the
-  `apim-{env}` vault (`modules/properties-volume`), which needs the same `aadIdentityName`
-  and `keyVaults` as App Insights above. Until it is there the pod will not start. Alternatively,
-  set `ENTRA_KEY_VAULT` and `ENTRA_KEY_VAULT_SECRET` and the server reads it itself with the
-  pod's workload identity: in sandbox that is `apim-sandbox-mi`, already a reader of
-  `kvspsextidsbox/entra-app-web-api-marketplace-secret` (external-entra-id), and federated to
-  service account `apim` in namespace `apim`. Each
-  environment's `/auth/callback` and home page must also be registered on the app
-  registration (see the chart).
+- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`):
+  `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
+  where hmcts/external-entra-id writes them, and read with the pod's workload identity
+  (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`). `modules/properties-volume` maps them into
+  the Entra config.
+- **Entra in AAT and demo** has nothing in cnp-flux-config yet, so those pods will not start.
+  They need a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and
+  `kv-entra-prod`), the app registered there, and the same `keyVaults` and `workloadClientID`.
+- **Redirect URIs still to register** on `web-api-marketplace` in external-entra-id: each
+  environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`), and the
+  preview addresses (`https://<preview host>/auth/callback`), which otherwise get `AADSTS50011`.
 - **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
   language toggle works, but the Welsh content is not translated. Decide whether this service
   needs Welsh at all before commissioning translation.
