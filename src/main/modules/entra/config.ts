@@ -22,11 +22,19 @@ export const entraConfig = {
   get clientSecret(): string | undefined {
     return process.env.ENTRA_CLIENT_SECRET || config.get<string>('entra.clientSecret') || undefined;
   },
+  /** From the key vault in AKS, alongside the client ID and secret. Enough for both endpoints. */
+  get tenantId(): string {
+    return process.env.ENTRA_TENANT_ID || config.get<string>('entra.tenantId');
+  },
   get authorizeEndpoint(): string {
-    return process.env.ENTRA_AUTHORIZE_ENDPOINT || config.get<string>('entra.authorizeEndpoint');
+    return (
+      process.env.ENTRA_AUTHORIZE_ENDPOINT ||
+      config.get<string>('entra.authorizeEndpoint') ||
+      tenantEndpoint('authorize')
+    );
   },
   get tokenEndpoint(): string {
-    return process.env.ENTRA_TOKEN_ENDPOINT || config.get<string>('entra.tokenEndpoint');
+    return process.env.ENTRA_TOKEN_ENDPOINT || config.get<string>('entra.tokenEndpoint') || tenantEndpoint('token');
   },
   /**
    * Where the tenant publishes its issuer, signing keys and sign-out address. Derived from
@@ -52,6 +60,16 @@ export const entraConfig = {
   },
   scope: 'openid profile email',
 };
+
+/**
+ * An endpoint on the tenant's own host. External ID publishes its endpoints, and its issuer,
+ * under https://<tenant-id>.ciamlogin.com/<tenant-id>/ — see that tenant's
+ * /v2.0/.well-known/openid-configuration. Empty without a tenant ID, so the setting is reported.
+ */
+function tenantEndpoint(name: string): string {
+  const tenantId = entraConfig.tenantId;
+  return tenantId ? `https://${tenantId}.ciamlogin.com/${tenantId}/oauth2/v2.0/${name}` : '';
+}
 
 /** Every setting sign in needs, by the environment variable that sets it. */
 const REQUIRED: [string, () => string | undefined][] = [
@@ -86,6 +104,7 @@ export function assertEntraConfigured(): void {
       'Or read it from Key Vault: set ENTRA_KEY_VAULT and ENTRA_KEY_VAULT_SECRET.',
       '',
       'A deployed environment must set every ENTRA_* value for its own tenant. Never put the secret in a file here.',
+      'ENTRA_TENANT_ID alone sets both endpoints; in AKS it is mounted from the tenant’s key vault.',
     ].join('\n')
   );
 }
