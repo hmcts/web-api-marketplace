@@ -42,13 +42,17 @@
     <h2 class="govuk-heading-m">Use this API</h2>
 
     <p class="govuk-body">
-      Add this API to an application to get a subscription key for it. Your application&rsquo;s client
-      ID and secret authorise your calls.
+      Add this API to an application to try it out with dummy data. Your Try it now credentials, a
+      subscription key, client ID and secret, are issued automatically with no review.
+    </p>
+
+    <p class="govuk-body">
+      When you are ready to use live data, request production credentials for the application you
+      have tested. Your request is reviewed by the HMCTS Data Access Panel.
     </p>
 
     <div class="govuk-button-group">
       {{ govukButton({ text: "Add to a new application", href: "/account/applications/new", attributes: { id: "add-to-application" } }) }}
-      <a class="govuk-link" href="/subscribe">Request access to this API</a>
     </div>
 
     <p class="govuk-body">
