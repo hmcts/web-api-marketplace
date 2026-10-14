@@ -4,7 +4,6 @@
 {% set section = "get-started" %}
 {% set breadcrumbs = [{ text: "Home", href: "/" }] %}
 
-{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
@@ -18,23 +17,30 @@
       Learn about what APIs we offer and how you can connect to them.
     </p>
 
-    {{ govukInsetText({
-      html: 'If you own an API and want to list it on the marketplace, read the
-             <a class="govuk-link" href="/documentation/producer-standards#producer-onboarding">producer
-             onboarding steps</a> instead.'
-    }) }}
+    <h2 class="govuk-heading-l" id="what-is-it">What is the HMCTS API Marketplace?</h2>
+
+    <p class="govuk-body">
+      The HMCTS API Marketplace is a central catalogue of data APIs from across His Majesty&rsquo;s
+      Courts and Tribunals Service. Think of it as a library for data &mdash; teams can browse,
+      understand, and request access to data feeds that power justice services.
+    </p>
+
+    <p class="govuk-body">
+      The marketplace does not build or host the APIs itself. It makes them discoverable, documented,
+      and accessible in one place &mdash; with governance controls to ensure only the right people can
+      access the right data.
+    </p>
 
     <h2 class="govuk-heading-l" id="steps">Steps to get connected</h2>
 
     <h3 class="govuk-heading-m">1. Learn about our APIs</h3>
 
     <p class="govuk-body">
-      Before you design your software, read the
-      <a class="govuk-link" href="/documentation/consumer-onboarding">consumer onboarding steps</a> and check the
+      Before you design your software, check the
       <a class="govuk-link" href="/documentation/consumer-guidance">consumer guidance</a> for rate
       limits and error handling. Review the
       <a class="govuk-link" href="/documentation/data-governance">data governance standards</a> for the data
-      classification and legal obligations that apply. All our APIs use OAuth 2.0 with JWT bearer tokens.
+      classification and legal obligations that apply.
     </p>
 
     <h3 class="govuk-heading-m">2. Confirm your use case</h3>
@@ -85,7 +91,7 @@
 
     <p class="govuk-body">
       If you have any issues, either during development or once your software is live, you can
-      <a class="govuk-link" href="/help">contact the marketplace team</a>.
+      contact the marketplace team at <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
     </p>
 
     <p class="govuk-body">
