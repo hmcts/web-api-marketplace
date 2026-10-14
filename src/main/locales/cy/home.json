@@ -48,11 +48,6 @@
         "heading": "Our architecture",
         "href": "/documentation/architecture",
         "body": "Architecture is integral to the design and delivery of all products and services that we produce and maintain for the justice system."
-      },
-      {
-        "heading": "Onboarding to APIs and services",
-        "href": "/documentation/consumer-onboarding",
-        "body": "Find out how to get assured for an API or service before your software goes live."
       }
     ]
   ]
