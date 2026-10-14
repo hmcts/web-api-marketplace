@@ -30,12 +30,15 @@ const limiter = RateLimit({
 
 export const app = express();
 app.locals.ENV = env;
+// First, before anything reads config: config locks itself on its first get(), and the
+// secrets mounted from Key Vault (Redis, the session secret, Entra) can only be added before.
+new PropertiesVolume().enableFor(app);
+
 // Whether pages may show the emails GOV.UK Notify would have sent — see services/Notify.
 app.locals.showEmailsOnPage = config.get<boolean>('notify.showEmailsOnPage');
 
 const logger = Logger.getLogger('app');
 
-new PropertiesVolume().enableFor(app);
 new AppInsights().enable();
 new Nunjucks(
   config.get('dynatrace'),
