@@ -7,11 +7,9 @@ export interface SignedInUser {
   email: string;
   firstName: string;
   lastName: string;
-  orgName: string;
   /**
    * Set for a user the backend does not know. Their submissions go to the data store,
    * since the backend would reject a user id it has never seen — see services/Profiles.
    */
   local?: boolean;
-  role?: 'consumer' | 'producer';
 }

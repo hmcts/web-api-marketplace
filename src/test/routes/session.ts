@@ -13,7 +13,7 @@ import { claimsFor, signInThroughEntra } from './helpers/entra';
 const signedIn = async () => {
   const agent = request.agent(app);
   await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
+  await agent.post('/account/welcome').send({ agree: 'yes' });
   return agent;
 };
 
@@ -45,7 +45,7 @@ describe('Session and the account navigation', () => {
     await agent.get('/account').expect(res => {
       expect(res.status).to.equal(200);
       expect(res.text).to.contain('Joe Bloggs');
-      expect(res.text).to.contain('HMCTS DTS');
+      expect(res.text).to.contain('joe@example.com');
     });
   });
 

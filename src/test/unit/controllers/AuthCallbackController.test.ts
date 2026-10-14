@@ -40,22 +40,19 @@ describe('AuthCallbackController', () => {
       email: 'ada@example.com',
       firstName: 'Ada',
       lastName: 'Lovelace',
-      orgName: '',
-      role: undefined,
     });
   });
 
-  test('a_later_sign_in_should_bring_the_profile_and_skip_the_welcome', async () => {
-    await saveProfile(ADA.oid, { orgName: 'Analytical Engines Ltd', role: 'producer', onboardedAt: 'then' });
+  test('a_later_sign_in_should_skip_the_welcome', async () => {
+    await saveProfile(ADA.oid, { onboardedAt: 'then' });
 
-    const { req, res } = await callback();
+    const { res } = await callback();
 
     expect(res.redirected).toBe('/account');
-    expect(req.session.user).toMatchObject({ orgName: 'Analytical Engines Ltd', role: 'producer' });
   });
 
   test('a_later_sign_in_should_return_to_the_page_that_asked_for_it', async () => {
-    await saveProfile(ADA.oid, { orgName: 'Analytical Engines Ltd', role: 'consumer', onboardedAt: 'then' });
+    await saveProfile(ADA.oid, { onboardedAt: 'then' });
 
     const { res } = await callback(
       backFromEntra(

@@ -14,7 +14,7 @@ const { getRequestsFor, deleteRequest } = require('../../../main/services/Reques
 
 const content = { heading: 'Your account', signOutButton: 'Sign out' };
 
-const user = { id: 1, email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
+const user = { id: 1, email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs' };
 
 const request = {
   reference: 'AR-2026-IPCOC1',

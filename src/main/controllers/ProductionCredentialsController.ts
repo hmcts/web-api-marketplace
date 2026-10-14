@@ -53,7 +53,6 @@ export default class ProductionCredentialsController {
     const user = req.session.user as SignedInUser;
     const preselected = typeof req.query.application === 'string' ? req.query.application : undefined;
     const answers: Answers = {
-      organisation: user.orgName,
       'security-contact': user.email,
       ...req.session.productionDraft,
       ...(preselected ? { application: preselected } : {}),

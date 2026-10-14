@@ -6,7 +6,6 @@
   "p2": "This service uses cookies to:",
   "bullets": [
     "keep you signed in",
-    "store your language selection",
     "store your cookie preferences",
     "measure how you use the service so it can be improved"
   ],
@@ -20,9 +19,7 @@
   "additionalCookies": "Government services may set additional cookies and, if so, will have their own cookie policy and banner.",
   "homePageLink": "Go to homepage",
   "language_": {
-    "header": "1. To keep you signed in and store your language selection",
-    "i18nDescription": "Your language selection: English or Welsh",
-    "i18nDuration": "1 year",
+    "header": "1. To keep you signed in",
     "sessionDescription": "Keeps you signed in, and remembers your answers between the pages of a form",
     "sessionDuration": "When you close your browser, or after 20 minutes without activity"
   },

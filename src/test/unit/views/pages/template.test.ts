@@ -23,7 +23,7 @@ describe('Base template', () => {
     });
 
     expect(html).toContain(i18n.serviceName);
-    // The Cymraeg/English toggle was removed: no page offers a Welsh version yet.
+    // The service is in English only, so there is no language toggle.
     expect(html).not.toContain('apim-language');
   });
 

@@ -14,7 +14,7 @@ export async function signedInAgent(): Promise<ReturnType<typeof request.agent>>
   const agent = request.agent(app);
 
   await signInThroughEntra(agent, claimsFor('joe.bloggs@justice.gov.uk', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
+  await agent.post('/account/welcome').send({ agree: 'yes' });
   return agent;
 }
 

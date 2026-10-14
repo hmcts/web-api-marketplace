@@ -109,7 +109,7 @@ src/main/
   server.ts              entrypoint (HTTPS in dev, HTTP in AKS)
   controllers/           awilix-express decorated routes, loaded by convention
   interfaces/            AppRequest — express Request plus i18next typing
-  locales/{en,cy}/       one JSON file per page
+  locales/en/            one JSON file per page
   modules/               appinsights, awilix, entra, helmet, i18next, logging,
                          nunjucks, properties-volume, session, store
   views/                 nunjucks templates
@@ -132,7 +132,7 @@ The consumer onboarding journey, end to end:
 | -------------------------------------------- | -------------------------------------------------------- |
 | Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
 | Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
-| First sign in: organisation, guidelines      | `/account/welcome`                                       |
+| First sign in: guidelines                    | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -155,7 +155,7 @@ reaches this service. The flow is OpenID Connect's authorization code flow:
    token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
    keys, issuer, audience, expiry and `nonce`.
 4. The session starts with the token's `oid`, name and email. The first time, `/account/welcome`
-   asks for the organisation and account type Entra does not hold, and keeps them against the
+   asks the user to agree to the guidelines for using HMCTS APIs, and records that against the
    `oid` (`services/Profiles.ts`).
 
 Signing out ends Entra's session too, then comes back to the home page.
@@ -169,7 +169,7 @@ are skipped.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Profiles** (`services/Profiles.ts`) — each user's organisation and account type, keyed by
+- **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
   their Entra `oid`. The backend cannot resolve an Entra user yet, so every user is treated
   as one it does not know (`local`): their subscribe requests go to the data store, and
   requests the backend already holds are not listed for them.
@@ -209,9 +209,6 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`).
   Previews have sign in switched off, since each has its own address and Entra takes no
   wildcard redirect URIs.
-- **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
-  language toggle works, but the Welsh content is not translated. Decide whether this service
-  needs Welsh at all before commissioning translation.
 - **No feedback survey.** The phase banner links to `#`. Needs a real survey URL.
 - **No analytics or RUM.** `analytics.gtmContainerId` and all `dynatrace.jstags` are empty, so
   neither script is rendered. Populate them with this service's own identifiers — the values

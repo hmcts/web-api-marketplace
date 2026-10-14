@@ -21,9 +21,8 @@
         {{ govukSummaryList({
           rows: [
             { key: { text: "Name" },       value: { text: user.firstName + " " + user.lastName } },
-            { key: { text: "Email" },      value: { text: user.email } },
-            { key: { text: organisation }, value: { text: user.orgName } }
-          ].concat([{ key: { text: accountType }, value: { text: "Producer" if user.role == "producer" else "Consumer" } }] if user.role else [])
+            { key: { text: "Email" },      value: { text: user.email } }
+          ]
         }) }}
 
         {# POST, so no link or prefetcher can sign the user out. #}
