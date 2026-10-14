@@ -105,7 +105,7 @@ The consumer onboarding journey, end to end:
 | -------------------------------------------- | -------------------------------------------------------- |
 | Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
 | Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
-| First sign in: organisation, guidelines      | `/account/welcome`                                       |
+| First sign in: guidelines                    | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -128,7 +128,7 @@ reaches this service. The flow is OpenID Connect's authorization code flow:
    token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
    keys, issuer, audience, expiry and `nonce`.
 4. The session starts with the token's `oid`, name and email. The first time, `/account/welcome`
-   asks for the organisation and account type Entra does not hold, and keeps them against the
+   asks the user to agree to the guidelines for using HMCTS APIs, and records that against the
    `oid` (`services/Profiles.ts`).
 
 Signing out ends Entra's session too, then comes back to the home page.
@@ -142,7 +142,7 @@ are skipped.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Profiles** (`services/Profiles.ts`) — each user's organisation and account type, keyed by
+- **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
   their Entra `oid`. The backend cannot resolve an Entra user yet, so every user is treated
   as one it does not know (`local`): their subscribe requests go to the data store, and
   requests the backend already holds are not listed for them.

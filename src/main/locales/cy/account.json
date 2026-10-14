@@ -1,7 +1,6 @@
 {
   "heading": "Eich cyfrif",
   "signedInAs": "Rydych wedi mewngofnodi fel",
-  "organisation": "Sefydliad",
   "signOutButton": "Allgofnodi",
   "requests": {
     "tabLabel": "Fy ngheisiadau",
@@ -27,7 +26,6 @@
       "PRODUCTION": "Production credentials"
     }
   },
-  "accountType": "Account type",
   "nextSteps": {
     "heading": "What you can do next",
     "groups": [

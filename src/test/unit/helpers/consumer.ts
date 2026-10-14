@@ -11,8 +11,6 @@ export const LOCAL_USER = {
   email: 'ada@example.com',
   firstName: 'Ada',
   lastName: 'Lovelace',
-  orgName: 'Analytical Engines Ltd',
-  role: 'consumer' as const,
 };
 
 export const CATALOGUE = [

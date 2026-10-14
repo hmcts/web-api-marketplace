@@ -67,17 +67,15 @@ describe('Consumer onboarding journey', () => {
         .send({})
         .expect(res => {
           expect(res.status).to.equal(400);
-          expect(res.text).to.contain('Enter your organisation or team');
-          expect(res.text).to.contain('Select whether you are a consumer or a producer');
+          expect(res.text).to.not.contain('Organisation or team');
+          expect(res.text).to.not.contain('I am using the marketplace as a');
           expect(res.text).to.contain('Confirm that you have read and agree to the guidelines');
         });
       await agent
         .post('/account/welcome')
         .type('form')
-        .send({ organisation: 'Analytical Engines Ltd', role: 'consumer', agree: 'yes' })
+        .send({ agree: 'yes' })
         .expect(res => expect(res.headers.location).to.equal('/account/applications'));
-
-      await agent.get('/account').expect(res => expect(res.text).to.contain('Analytical Engines Ltd'));
     });
 
     test('later_sign_ins_should_skip_the_welcome', async () => {
