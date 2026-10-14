@@ -7,14 +7,13 @@ import { claimsFor, signInThroughEntra } from './entra';
 
 /**
  * A supertest agent carrying a session, because both journeys require one. Signed in
- * through the stub Entra tenant and the welcome page rather than by forging a cookie, so
+ * through the stub Entra tenant rather than by forging a cookie, so
  * these tests exercise the same session the guard reads.
  */
 export async function signedInAgent(): Promise<ReturnType<typeof request.agent>> {
   const agent = request.agent(app);
 
   await signInThroughEntra(agent, claimsFor('joe.bloggs@justice.gov.uk', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ agree: 'yes' });
   return agent;
 }
 

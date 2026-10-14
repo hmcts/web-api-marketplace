@@ -23,9 +23,11 @@ describe('Signing in with Entra', () => {
   test('coming_back_with_a_good_code_should_sign_in_as_the_entra_user', async () => {
     const agent = request.agent(app);
 
-    await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res => expect(res.status).to.equal(302));
+    await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
+      expect(res.headers.location).to.equal('/account')
+    );
 
-    await agent.get('/account/welcome').expect(res => {
+    await agent.get('/account').expect(res => {
       expect(res.status).to.equal(200);
       expect(res.text).to.contain('ada@example.com');
     });
