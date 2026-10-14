@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@azure/identity": "4.13.3",
+    "@azure/keyvault-secrets": "4.11.2",
     "@grpc/grpc-js": "^1.14.4",
     "@hmcts/cookie-manager": "1.1.0",
     "@hmcts/info-provider": "1.4.0",
@@ -60,6 +61,7 @@
     "helmet": "8.3.0",
     "i18next": "26.4.3",
     "i18next-http-middleware": "3.9.9",
+    "jose": "6.2.12",
     "lodash": "4.18.1",
     "luxon": "3.7.2",
     "nunjucks": "3.2.4",

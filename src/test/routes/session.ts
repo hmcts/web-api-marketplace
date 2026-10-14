@@ -1,20 +1,23 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/SignIn', () => ({ signIn: jest.fn() }));
 jest.mock('../../main/services/Requests', () => ({
   getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
 }));
 
 import { app } from '../../main/app';
 
-const { signIn } = require('../../main/services/SignIn');
+import { claimsFor, signInThroughEntra } from './helpers/entra';
 
-const user = { email: 'joe@example.com', firstName: 'Joe', lastName: 'Bloggs', orgName: 'HMCTS DTS' };
+/** Signed in through Entra and through the welcome, as a returning user would be. */
+const signedIn = async () => {
+  const agent = request.agent(app);
+  await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
+  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
+  return agent;
+};
 
 describe('Session and the account navigation', () => {
-  beforeEach(() => (signIn as jest.Mock).mockReset());
-
   test('an_anonymous_visitor_should_see_sign_in_in_the_navigation', async () => {
     await request(app)
       .get('/')
@@ -28,10 +31,7 @@ describe('Session and the account navigation', () => {
   });
 
   test('a_signed_in_user_should_see_your_account_in_the_navigation', async () => {
-    (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
-    const agent = request.agent(app);
-
-    await agent.post('/sign-in').send({ email: user.email, password: 'any' }).expect(302);
+    const agent = await signedIn();
 
     await agent.get('/').expect(res => {
       expect(navItem(res.text)).to.equal('/account');
@@ -40,10 +40,7 @@ describe('Session and the account navigation', () => {
   });
 
   test('a_signed_in_user_should_see_their_details_on_the_account_page', async () => {
-    (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
-    const agent = request.agent(app);
-
-    await agent.post('/sign-in').send({ email: user.email, password: 'any' });
+    const agent = await signedIn();
 
     await agent.get('/account').expect(res => {
       expect(res.status).to.equal(200);
@@ -62,30 +59,37 @@ describe('Session and the account navigation', () => {
   });
 
   test('signing_out_should_return_the_navigation_to_sign_in', async () => {
-    (signIn as jest.Mock).mockResolvedValue({ ok: true, user });
-    const agent = request.agent(app);
+    const agent = await signedIn();
 
-    await agent.post('/sign-in').send({ email: user.email, password: 'any' });
     await agent.post('/sign-out').expect(302);
 
     await agent.get('/').expect(res => expect(navItem(res.text)).to.equal('/sign-in'));
   });
 
-  test('a_rejected_sign_in_should_leave_the_visitor_signed_out', async () => {
-    (signIn as jest.Mock).mockResolvedValue({ ok: false });
+  test('a_sign_in_entra_did_not_vouch_for_should_leave_the_visitor_signed_out', async () => {
     const agent = request.agent(app);
+    await agent.get('/sign-in').expect(302);
 
-    await agent.post('/sign-in').send({ email: user.email, password: 'wrong' }).expect(401);
+    await agent.get('/auth/callback?code=forged&state=not-the-one-we-gave').expect(400);
 
     await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
   });
 
-  test('visiting_register_should_return_the_create_account_form', async () => {
+  test('signing_out_should_end_the_entra_session_too', async () => {
+    const agent = await signedIn();
+
+    await agent.post('/sign-out').expect(res => {
+      expect(res.status).to.equal(302);
+      expect(res.headers.location).to.contain('/oauth2/v2.0/logout?post_logout_redirect_uri=');
+    });
+  });
+
+  test('visiting_register_should_go_to_entras_create_account_form', async () => {
     await request(app)
       .get('/register')
       .expect(res => {
-        expect(res.status).to.equal(200);
-        expect(res.text).to.contain('Create a developer account');
+        expect(res.status).to.equal(302);
+        expect(res.headers.location).to.equal('/sign-in?prompt=create');
       });
   });
 });

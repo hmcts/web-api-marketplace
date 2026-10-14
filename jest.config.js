@@ -7,7 +7,8 @@ module.exports = {
     '^.+\\.ts?$': 'ts-jest',
     '^.+\\.js$': 'babel-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!chai|uuid)'],
+  // jose is published as ES modules only, which Jest cannot load untransformed.
+  transformIgnorePatterns: ['/node_modules/(?!chai|uuid|jose)'],
   modulePathIgnorePatterns: [
     '<rootDir>/src/test/unit/mocks',
     '<rootDir>/src/test/unit/helpers',

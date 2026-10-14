@@ -9,6 +9,7 @@ import { CONTENT_PAGES } from '../../main/controllers/ContentController';
 import { MemoryStore, useDataStore } from '../../main/modules/store';
 
 import { Agent, CATALOGUE, createdApplication, newAgent, signedInConsumer } from './helpers/consumer';
+import { stubEntra } from './helpers/entra';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
@@ -118,6 +119,11 @@ async function visit(agent: Agent, url: string, signedOut: boolean): Promise<Vis
   if (res.status === 302 && location && isInternal(location)) {
     const turnedAway = location === '/sign-in' && !signedOut;
     return { next: [location], failure: turnedAway ? `${url} sent a signed-in user to sign in` : undefined };
+  }
+
+  // Sign in leaves the service for Entra's own pages, which are not ours to crawl.
+  if (res.status === 302 && location?.startsWith(stubEntra().authorizeEndpoint)) {
+    return { next: [] };
   }
 
   if (res.status !== 200) {

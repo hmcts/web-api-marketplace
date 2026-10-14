@@ -1,14 +1,9 @@
 {
-  "pageTitle": "Sign in - HMCTS API Marketplace - GOV.UK",
-  "heading": "Sign in",
-  "introHtml": "If you do not already have an account, <a class=\"govuk-link\" href=\"/register\">create a developer account</a>.",
-  "emailLabel": "Email address",
-  "passwordLabel": "Password",
-  "submitButton": "Sign in",
-  "errorSummaryTitle": "There is a problem",
-  "errorMissing": "Enter your email address and password",
-  "errorRejected": "Incorrect email or password",
-  "errorUnavailable": "Nid yw mewngofnodi ar gael ar hyn o bryd oherwydd nid oedd modd cysylltu â’r gwasanaeth. Rhowch gynnig arall arni ymhen ychydig funudau.",
-  "forgottenPassword": "Forgotten your password?",
-  "errorUnverified": "You need to confirm your email address before you can sign in. Send a new confirmation email"
+  "heading": "There is a problem signing you in",
+  "problemCancelled": "You were not signed in. If you meant to sign in, try again.",
+  "problemExpired": "Your sign in timed out or was started somewhere else. Try again from this page.",
+  "problemUnavailable": "Sign in is not available at the moment because the service could not be reached. Try again in a few minutes.",
+  "problemRejected": "We could not confirm who you are, so you have not been signed in. Try again, and contact us if this keeps happening.",
+  "tryAgainButton": "Try signing in again",
+  "helpHtml": "If this keeps happening, <a class=\"govuk-link\" href=\"/help\">contact the API Marketplace team</a>."
 }

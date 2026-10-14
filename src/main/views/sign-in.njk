@@ -1,10 +1,21 @@
-{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% extends "template.njk" %}
 
-{% set pageTitle = "Sign in - HMCTS API Marketplace - GOV.UK" %}
+{#
+  Sign in itself happens on Microsoft Entra's pages. This is what the user sees when they
+  come back from Entra without being signed in, which is one of:
+
+    cancelled    they chose not to sign in, or Entra refused
+    expired      the sign in was not started from this browser, or took too long
+    unavailable  Entra could not be reached to finish signing in
+    rejected     what Entra sent back could not be trusted
+
+  The first two are the user's to retry; the last two are ours, and say so, so nobody goes
+  off to reset a password that was never the problem.
+#}
+
+{% set pageTitle = heading + " - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "account" %}
 {% set breadcrumbs = [{ text: "Home", href: "/" }] %}
 
@@ -13,62 +24,18 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
 
-      {# Rendered server-side, so the form reports errors with JavaScript unavailable. #}
-      {% if serviceError %}
-        {#
-          No href and no field message: the service is down, so there is nothing on the
-          form for the user to go and correct.
-        #}
-        {{ govukErrorSummary({
-          titleText: errorSummaryTitle,
-          errorList: [{ text: serviceError }],
-          attributes: { id: "service-error" }
-        }) }}
-      {% elif unverified %}
-        {{ govukErrorSummary({
-          titleText: errorSummaryTitle,
-          errorList: [{ text: errorUnverified, href: "/verify-email/resend" }],
-          attributes: { id: "unverified-error" }
-        }) }}
-      {% elif error %}
-        {{ govukErrorSummary({
-          titleText: errorSummaryTitle,
-          errorList: [{ text: error, href: "#email" }]
-        }) }}
-      {% endif %}
-
       <h1 class="govuk-heading-xl">{{ heading }}</h1>
 
-      <p class="govuk-body">{{ introHtml | safe }}</p>
-
-      <form method="post" action="/sign-in" novalidate>
-
-        {{ govukInput({
-          label: { text: emailLabel, classes: "govuk-label--m" },
-          id: "email",
-          name: "email",
-          type: "email",
-          value: email,
-          autocomplete: "email",
-          spellcheck: false,
-          errorMessage: { text: error } if error
-        }) }}
-
-        {{ govukInput({
-          label: { text: passwordLabel, classes: "govuk-label--m" },
-          id: "password",
-          name: "password",
-          type: "password",
-          autocomplete: "current-password"
-        }) }}
-
-        {{ govukButton({ text: submitButton, attributes: { id: "sign-in-submit" } }) }}
-
-      </form>
-
-      <p class="govuk-body">
-        <a class="govuk-link" href="/forgotten-password" id="forgotten-password">{{ forgottenPassword }}</a>
+      <p class="govuk-body" id="sign-in-problem">
+        {%- if problem == "cancelled" %}{{ problemCancelled }}
+        {%- elif problem == "expired" %}{{ problemExpired }}
+        {%- elif problem == "rejected" %}{{ problemRejected }}
+        {%- else %}{{ problemUnavailable }}{% endif -%}
       </p>
+
+      {{ govukButton({ text: tryAgainButton, href: "/sign-in", attributes: { id: "sign-in-again" } }) }}
+
+      <p class="govuk-body">{{ helpHtml | safe }}</p>
 
     </div>
   </div>
