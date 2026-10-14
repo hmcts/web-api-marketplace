@@ -33,6 +33,33 @@ yarn test:routes   # supertest route tests
 yarn test:functional  # playwright
 ```
 
+### Smoke tests against the full stack
+
+The `@smoke` Playwright tests run against web, service, Postgres and a mock Entra login from
+[amp-marketplace-docker](https://github.com/hmcts/amp-marketplace-docker). CI runs the same
+tests on every PR to `master`.
+
+```bash
+# 1. Start the stack (skip if it's already up)
+cd ../amp-marketplace-docker
+docker compose up --build -d
+
+# 2. One-off setup in this repo
+cd ../web-api-marketplace
+nvm use 22
+corepack enable
+yarn install --immutable --mode=skip-build
+
+# 3. Run the smoke tests
+TEST_URL=http://localhost:3344 yarn test:smoke --project=chrome
+```
+
+Expect `2 passed`. After the first run, only step 3 is needed, plus `yarn install` again when
+`yarn.lock` changes. Add `--headed` to watch the browser.
+
+Always set `TEST_URL`: without it the tests use `https://localhost:3344`, which is right for
+`yarn start:dev`, but the Docker stack serves plain `http`.
+
 ## Structure
 
 ```
