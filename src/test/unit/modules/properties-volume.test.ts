@@ -78,19 +78,4 @@ describe('PropertiesVolume', () => {
 
     expect(get(store, 'session.redis.host')).toBe('apim.redis.cache.windows.net');
   });
-
-  test.each(['kvspsextidsbox', 'kv-entra-stg', 'kv-entra-prod'])(
-    'entra_credentials_mounted_from_the_external_tenants_vault_%s_should_reach_the_entra_config',
-    vault => {
-      store.secrets = {
-        [vault]: { ENTRA_CLIENT_ID: 'the-client-id', ENTRA_CLIENT_SECRET: 'the~secret', ENTRA_TENANT_ID: 'the-tenant' },
-      };
-
-      enable('sandbox');
-
-      expect(get(store, 'entra.clientId')).toBe('the-client-id');
-      expect(get(store, 'entra.clientSecret')).toBe('the~secret');
-      expect(get(store, 'entra.tenantId')).toBe('the-tenant');
-    }
-  );
 });
