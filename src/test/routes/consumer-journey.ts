@@ -50,35 +50,21 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('signing in', () => {
-    test('the_first_sign_in_should_go_through_the_welcome_and_on_to_applications', async () => {
+    test('the_first_sign_in_should_land_on_the_account_page', async () => {
       const agent = newAgent();
 
       await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
-        expect(res.headers.location).to.equal('/account/welcome')
+        expect(res.headers.location).to.equal('/account')
       );
 
-      await agent.get('/account/welcome').expect(res => {
-        expect(res.text).to.contain('Welcome, Ada');
+      await agent.get('/account').expect(res => {
+        expect(res.status).to.equal(200);
         expect(res.text).to.contain('ada@example.com');
+        expect(res.text).to.not.contain('Organisation');
       });
-      await agent
-        .post('/account/welcome')
-        .type('form')
-        .send({})
-        .expect(res => {
-          expect(res.status).to.equal(400);
-          expect(res.text).to.not.contain('Organisation or team');
-          expect(res.text).to.not.contain('I am using the marketplace as a');
-          expect(res.text).to.contain('Confirm that you have read and agree to the guidelines');
-        });
-      await agent
-        .post('/account/welcome')
-        .type('form')
-        .send({ agree: 'yes' })
-        .expect(res => expect(res.headers.location).to.equal('/account/applications'));
     });
 
-    test('later_sign_ins_should_skip_the_welcome', async () => {
+    test('later_sign_ins_should_land_on_the_account_page_too', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/sign-out').expect(302);
 
@@ -87,7 +73,7 @@ describe('Consumer onboarding journey', () => {
       );
     });
 
-    test('signing_in_should_return_to_the_page_that_asked_for_it', async () => {
+    test('a_sign_in_asked_for_by_another_page_should_still_land_on_the_account_page', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/sign-out');
 
@@ -95,7 +81,7 @@ describe('Consumer onboarding journey', () => {
         .get('/account/production-credentials')
         .expect(res => expect(res.headers.location).to.equal('/sign-in'));
       await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
-        expect(res.headers.location).to.equal('/account/production-credentials')
+        expect(res.headers.location).to.equal('/account')
       );
     });
 

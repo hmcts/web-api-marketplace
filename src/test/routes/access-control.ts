@@ -14,7 +14,6 @@ import { claimsFor, signInThroughEntra } from './helpers/entra';
 const signedIn = async () => {
   const agent = request.agent(app);
   await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ agree: 'yes' });
   return agent;
 };
 

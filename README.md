@@ -127,9 +127,8 @@ reaches this service. The flow is OpenID Connect's authorization code flow:
 3. The code is swapped for an ID token server to server, using the client secret, and the
    token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
    keys, issuer, audience, expiry and `nonce`.
-4. The session starts with the token's `oid`, name and email. The first time, `/account/welcome`
-   asks the user to agree to the guidelines for using HMCTS APIs, and records that against the
-   `oid` (`services/Profiles.ts`).
+4. The session starts with the token's `oid`, name and email, and every sign in lands on
+   `/account`, whichever page asked for it.
 
 Signing out ends Entra's session too, then comes back to the home page.
 

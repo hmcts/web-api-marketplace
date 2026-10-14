@@ -4,9 +4,8 @@ import { Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
-import { takeReturnTo } from '../modules/session';
 import { EntraClaims, exchangeCodeForIdToken, verifiedClaims } from '../services/Entra';
-import { findProfile, toSignedInUser } from '../services/Profiles';
+import { toSignedInUser } from '../services/Profiles';
 
 import { SignInProblem, short, signInProblem } from './SignInController';
 
@@ -73,14 +72,10 @@ export default class AuthCallbackController {
     }
 
     logger.info(`Signed in  oid=${claims.oid}`);
-    await this.startSession(req, res, claims);
+    this.startSession(req, res, claims);
   }
 
-  private async startSession(req: AppRequest, res: Response, claims: EntraClaims): Promise<void> {
-    // Read before regenerating, which starts an empty session.
-    const returnTo = takeReturnTo(req, '/account');
-    const profile = await findProfile(claims.oid);
-
+  private startSession(req: AppRequest, res: Response, claims: EntraClaims): void {
     // A new session id on sign in, so a session id an attacker planted before the user
     // signed in cannot be used afterwards.
     req.session.regenerate(error => {
@@ -91,9 +86,8 @@ export default class AuthCallbackController {
       }
 
       req.session.user = toSignedInUser(claims);
-      // First sign in goes through the welcome page, to agree to the guidelines, then carries on to wherever sign in interrupted.
-      req.session.returnTo = returnTo;
-      req.session.save(() => res.redirect(profile ? takeReturnTo(req, '/account') : '/account/welcome'));
+      // Every sign in lands on the account page, whichever page asked for it.
+      req.session.save(() => res.redirect('/account'));
     });
   }
 
