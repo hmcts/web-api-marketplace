@@ -22,10 +22,11 @@ nodejs:
     # In-cluster address of service-api-marketplace (release apim-marketplace, type java).
     API_URL: http://apim-marketplace-java
     # Sign in is Microsoft Entra External ID. Deployed environments have no Entra defaults:
-    # the app refuses to start unless ENTRA_CLIENT_ID, ENTRA_AUTHORIZE_ENDPOINT and
-    # ENTRA_TOKEN_ENDPOINT are set for the environment's own tenant (per-environment values,
-    # e.g. in cnp-flux-config), and ENTRA_CLIENT_SECRET comes from the apim-{env} key vault
-    # via an aadIdentityName + keyVaults block. Both URIs below must be registered on the app
-    # registration exactly as written, or Entra refuses the sign in (AADSTS50011).
+    # ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET and ENTRA_TENANT_ID are mounted from the tenant's
+    # own key vault (kvspsextidsbox in sbox), where hmcts/external-entra-id writes them. The
+    # keyVaults block and workloadClientID are per environment in cnp-flux-config; without
+    # them the app refuses to start. The endpoints follow from ENTRA_TENANT_ID. Both URIs
+    # below must be registered on the app registration (web-api-marketplace in
+    # external-entra-id) exactly as written, or Entra refuses them.
     ENTRA_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
     ENTRA_POST_LOGOUT_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/
