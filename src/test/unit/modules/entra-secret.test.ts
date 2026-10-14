@@ -2,6 +2,7 @@ import { SecretClient } from '@azure/keyvault-secrets';
 
 import { assertEntraConfigured } from '../../../main/modules/entra/config';
 import { loadEntraClientSecret, secretClientFor, vaultUrlFor } from '../../../main/modules/entra/secret';
+import { withCleanEnv } from '../helpers/env';
 
 /** A key vault holding the given secrets, recording which vault and secret were asked for. */
 const fakeVault = (secrets: Record<string, string>) => {
@@ -21,24 +22,7 @@ const fakeVault = (secrets: Record<string, string>) => {
 const SETTINGS = ['ENTRA_CLIENT_SECRET', 'ENTRA_KEY_VAULT', 'ENTRA_KEY_VAULT_SECRET'];
 
 describe('loadEntraClientSecret', () => {
-  const saved: Record<string, string | undefined> = {};
-
-  beforeEach(() => {
-    SETTINGS.forEach(name => {
-      saved[name] = process.env[name];
-      delete process.env[name];
-    });
-  });
-
-  afterEach(() => {
-    SETTINGS.forEach(name => {
-      if (saved[name] === undefined) {
-        delete process.env[name];
-      } else {
-        process.env[name] = saved[name];
-      }
-    });
-  });
+  withCleanEnv(SETTINGS);
 
   const useVault = () => {
     process.env.ENTRA_KEY_VAULT = 'kvdemo';
