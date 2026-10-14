@@ -3,27 +3,18 @@ import request from 'supertest';
 
 import { app } from '../../../main/app';
 
-const SIGNED_IN_USER = {
-  id: 1,
-  email: 'joe.bloggs@justice.gov.uk',
-  firstName: 'Joe',
-  lastName: 'Bloggs',
-  orgName: 'HMCTS DTS',
-};
+import { claimsFor, signInThroughEntra } from './entra';
 
 /**
- * A supertest agent carrying a session, because both journeys require one.
- *
- * The caller must mock the SignIn service — jest.mock is per test file and cannot be
- * declared here. Signing in through the real form rather than forging a cookie means these
- * tests exercise the same session the guard reads.
+ * A supertest agent carrying a session, because both journeys require one. Signed in
+ * through the stub Entra tenant and the welcome page rather than by forging a cookie, so
+ * these tests exercise the same session the guard reads.
  */
 export async function signedInAgent(): Promise<ReturnType<typeof request.agent>> {
-  const { signIn } = require('../../../main/services/SignIn');
-  (signIn as jest.Mock).mockResolvedValue({ ok: true, user: SIGNED_IN_USER });
-
   const agent = request.agent(app);
-  await agent.post('/sign-in').send({ email: SIGNED_IN_USER.email, password: 'any' });
+
+  await signInThroughEntra(agent, claimsFor('joe.bloggs@justice.gov.uk', 'Joe Bloggs'));
+  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
   return agent;
 }
 

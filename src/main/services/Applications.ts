@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 
 import { dataStore } from '../modules/store';
 
-import { normalise } from './Accounts';
 import { CatalogueApi } from './ApiCatalogue';
 import { issueClientId, issueClientSecret, issueSubscriptionKey, publisherIdFor } from './Credentials';
+import { normalise } from './Profiles';
 import { FieldError } from './answers';
 
 /**

@@ -7,7 +7,8 @@ module.exports = {
     '^.+\\.ts?$': 'ts-jest',
     '^.+\\.js$': 'babel-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!chai|uuid)'],
+  // jose is published as ES modules only, which Jest cannot load untransformed.
+  transformIgnorePatterns: ['/node_modules/(?!chai|uuid|jose)'],
   // The shared journey harness is a helper, not a suite — testRegex would otherwise pick
   // it up and fail it for containing no tests.
   modulePathIgnorePatterns: ['<rootDir>/src/test/routes/helpers'],

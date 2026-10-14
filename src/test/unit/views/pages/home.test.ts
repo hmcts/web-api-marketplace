@@ -27,7 +27,7 @@ describe('Home page', () => {
     const html = env.render('home.njk', i18n);
 
     expect(html).toContain(i18n.signInButton);
-    expect(html).toContain('href="/register"');
+    expect(html).toContain('href="/sign-in?prompt=create"');
     expect(html).not.toContain(i18n.signedInHeading);
   });
 

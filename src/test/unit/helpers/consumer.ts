@@ -3,10 +3,11 @@ import { SessionData } from 'express-session';
 import { AppRequest } from '../../../main/interfaces/AppRequest';
 import { mockRequest } from '../mocks/mockRequest';
 
-/** An account registered through this service, as the session holds it once signed in. */
+/** A user signed in through Entra, as the session holds them once through the welcome. */
 export const LOCAL_USER = {
   id: 0,
   local: true,
+  oid: '11111111-2222-3333-4444-555555555555',
   email: 'ada@example.com',
   firstName: 'Ada',
   lastName: 'Lovelace',

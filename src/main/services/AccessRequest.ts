@@ -18,7 +18,7 @@ export interface Requester {
   lastName: string;
   email: string;
   orgName: string;
-  /** An account registered here, which the backend has never heard of — see services/Accounts. */
+  /** A user the backend has never heard of — see services/Profiles. */
   local?: boolean;
 }
 

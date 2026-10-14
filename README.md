@@ -20,11 +20,52 @@ remains the reference for the module and testing patterns used here.
 ```bash
 yarn install
 yarn build
+export ENTRA_CLIENT_SECRET=...   # from the Entra app registration
 yarn start:dev
 ```
 
 Then <https://localhost:3344>. The development server uses a self-signed certificate,
 so expect a browser warning.
+
+Or let the server read the secret from Key Vault as it starts, with `DefaultAzureCredential`
+(`modules/entra/secret.ts`) and your `az login` session. The value stays in the process;
+nothing is written to a file:
+
+```bash
+az login   # once; you must be a reader of the secret
+export ENTRA_KEY_VAULT=kvspsextidsbox
+export ENTRA_KEY_VAULT_SECRET=entra-app-web-api-marketplace-secret
+yarn start:dev
+```
+
+`config/development.json` signs in as `web-api-marketplace` (`8d56b09c-…`), the app
+registration hmcts/external-entra-id manages in the sandbox tenant and whose secret that is.
+The client ID and the secret must belong to the same app registration, or Entra answers
+`AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
+
+The server refuses to start without `ENTRA_CLIENT_SECRET`. Export it; do not put it in a
+file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
+`config/development.json`, loaded only when `NODE_ENV` is `development`). Deployed
+environments run as `production` and have no defaults: they refuse to start until every
+setting is given for their own tenant, so none can sign users in against the sandbox by
+accident. The settings:
+`ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_TENANT_ID` (or `ENTRA_AUTHORIZE_ENDPOINT` and
+`ENTRA_TOKEN_ENDPOINT`), `ENTRA_DISCOVERY_ENDPOINT`, `ENTRA_REDIRECT_URI` and
+`ENTRA_POST_LOGOUT_REDIRECT_URI`. The tenant ID alone gives both endpoints, on the tenant's own
+host `https://<tenant-id>.ciamlogin.com/<tenant-id>/`.
+
+An environment with no tenant yet sets `ENTRA_ENABLED=false` instead. The server then starts
+with none of these, and sign in says it is unavailable. Only the exact value `false` switches
+it off, so an environment that has just forgotten its settings still refuses to start.
+
+`https://localhost:3344/auth/callback` and `https://localhost:3344/` must both be registered
+as redirect URIs on the app registration: the first for signing in, the second for coming
+back after signing out. They are managed in hmcts/external-entra-id
+(`tenants/sbox/config/apps.yaml`, `web-api-marketplace`), which removes any added in the portal.
+Only the first is registered there so far. On an address that is not registered, Entra
+refuses with `AADSTS50011` before showing its form. To run elsewhere, register that
+address's two URIs and set `PORT`, `ENTRA_REDIRECT_URI` and `ENTRA_POST_LOGOUT_REDIRECT_URI`
+to match.
 
 ```bash
 yarn lint          # stylelint + eslint + prettier
@@ -42,8 +83,8 @@ src/main/
   controllers/           awilix-express decorated routes, loaded by convention
   interfaces/            AppRequest — express Request plus i18next typing
   locales/{en,cy}/       one JSON file per page
-  modules/               appinsights, awilix, helmet, i18next, logging,
-                         nunjucks, properties-volume
+  modules/               appinsights, awilix, entra, helmet, i18next, logging,
+                         nunjucks, properties-volume, session, store
   views/                 nunjucks templates
 ```
 
@@ -62,9 +103,9 @@ The consumer onboarding journey, end to end:
 
 | Step                                         | Path                                                     |
 | -------------------------------------------- | -------------------------------------------------------- |
-| Create a developer account, confirm email    | `/register`, `/register/check-email`, `/verify-email`    |
-| Sign in, forgotten password                  | `/sign-in`, `/forgotten-password`, `/reset-password`     |
-| First sign in: profile and guidelines        | `/account/welcome`                                       |
+| Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
+| Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
+| First sign in: organisation, guidelines      | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -73,21 +114,45 @@ The consumer onboarding journey, end to end:
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
 
+### Signing in
+
+Developer accounts belong to Microsoft Entra External ID. Its pages handle signing in,
+creating an account, confirming the email address and resetting a password, so no password
+reaches this service. The flow is OpenID Connect's authorization code flow:
+
+1. `/sign-in` (`SignInController`) puts a random `state` and `nonce` in the session and
+   redirects to Entra. `?prompt=create` opens Entra on its create-account form.
+2. Entra sends the browser back to `/auth/callback` (`AuthCallbackController`) with a
+   single-use code. The `state` must match the session's.
+3. The code is swapped for an ID token server to server, using the client secret, and the
+   token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
+   keys, issuer, audience, expiry and `nonce`.
+4. The session starts with the token's `oid`, name and email. The first time, `/account/welcome`
+   asks for the organisation and account type Entra does not hold, and keeps them against the
+   `oid` (`services/Profiles.ts`).
+
+Signing out ends Entra's session too, then comes back to the home page.
+
+The tests sign in against a stub tenant (`src/test/stubs/entra.ts`) that issues really
+signed tokens, so the same requests and checks run as in production. Only Entra's own pages
+are skipped.
+
 ### Stand-ins until service-api-marketplace has the endpoints
 
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Accounts registered here** (`services/Accounts.ts`) — the backend can look a user up but
-  cannot create one, verify an address or reset a password. Passwords are scrypt-hashed.
-  Accounts the backend already knows still sign in against it.
+- **Profiles** (`services/Profiles.ts`) — each user's organisation and account type, keyed by
+  their Entra `oid`. The backend cannot resolve an Entra user yet, so every user is treated
+  as one it does not know (`local`): their subscribe requests go to the data store, and
+  requests the backend already holds are not listed for them.
 - **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
   client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
   are **not registered with either**, and every page that shows them says so. Secrets are
   shown once and only their first three characters are kept.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here
   and listed under My requests alongside the backend's own. So are subscribe
-  requests from accounts registered here, which the backend would refuse.
+  requests from users the backend does not know, which it would refuse.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.
@@ -104,6 +169,19 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
   the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
   and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
+- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`):
+  `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
+  where hmcts/external-entra-id writes them, and read with the pod's workload identity
+  (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`). `modules/properties-volume` maps them into
+  the Entra config.
+- **Entra in AAT and demo** is switched off (`ENTRA_ENABLED=false` in cnp-flux-config's
+  `aat.yaml` and `demo.yaml`, and in `values.aat.template.yaml` for the pipeline's AAT deploy),
+  so sign in there says it is unavailable. Switching it on needs a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and
+  `kv-entra-prod`), the app registered there, and the same `keyVaults` and `workloadClientID`.
+- **Redirect URIs still to register** on `web-api-marketplace` in external-entra-id: each
+  environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`).
+  Previews have sign in switched off, since each has its own address and Entra takes no
+  wildcard redirect URIs.
 - **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
   language toggle works, but the Welsh content is not translated. Decide whether this service
   needs Welsh at all before commissioning translation.

@@ -49,5 +49,14 @@
   },
   "notify": {
     "showEmailsOnPage": true
+  },
+  "entra": {
+    "clientId": "",
+    "clientSecret": "",
+    "tenantId": "",
+    "authorizeEndpoint": "",
+    "tokenEndpoint": "",
+    "redirectUri": "",
+    "postLogoutRedirectUri": ""
   }
 }

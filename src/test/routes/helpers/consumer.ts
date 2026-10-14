@@ -5,6 +5,8 @@ import request from 'supertest';
 
 import { app } from '../../../main/app';
 
+import { claimsFor, signInThroughEntra } from './entra';
+
 let server: Server | undefined;
 
 /**
@@ -45,46 +47,20 @@ export const CATALOGUE = [
   { name: 'api-cp-crime-defendant-details', title: 'Defendant Details', description: 'Defendant details for a case.' },
 ];
 
-export const PASSWORD = 'correct horse battery';
-
 export type Agent = ReturnType<typeof request.agent>;
 
-/** The link in the email preview shown on the page after an email is "sent". */
-export function emailLink(html: string): string {
-  const href = /href="([^"]+)" id="email-preview-link"/.exec(html)?.[1];
-  expect(href, 'the page should preview the email with its link').to.be.a('string');
-  return (href as string).replaceAll('&amp;', '&');
-}
-
-/** Registers and confirms an account through the real journey, returning a fresh agent. */
-export async function registeredAccount(email: string): Promise<Agent> {
+/** Signs in through Entra as this address for the first time, and gets through the welcome. */
+export async function signedInConsumer(email: string): Promise<Agent> {
   const agent = newAgent();
 
+  await signInThroughEntra(agent, claimsFor(email)).then(res =>
+    expect(res.headers.location, 'a first sign in should go to the welcome').to.equal('/account/welcome')
+  );
   await agent
-    .post('/register')
+    .post('/account/welcome')
     .type('form')
-    .send({
-      'first-name': 'Ada',
-      'last-name': 'Lovelace',
-      email,
-      organisation: 'Analytical Engines Ltd',
-      role: 'consumer',
-      password: PASSWORD,
-      'password-confirm': PASSWORD,
-    })
+    .send({ organisation: 'Analytical Engines Ltd', role: 'consumer', agree: 'yes' })
     .expect(302);
-
-  const checkEmail = await agent.get('/register/check-email').expect(200);
-  await agent.get(emailLink(checkEmail.text)).expect(200);
-  return agent;
-}
-
-/** Registers, confirms, signs in and gets through the welcome page. */
-export async function signedInConsumer(email: string): Promise<Agent> {
-  const agent = await registeredAccount(email);
-
-  await agent.post('/sign-in').type('form').send({ email, password: PASSWORD }).expect(302);
-  await agent.post('/account/welcome').type('form').send({ agree: 'yes' }).expect(302);
   return agent;
 }
 

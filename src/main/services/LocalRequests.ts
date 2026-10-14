@@ -1,12 +1,12 @@
 import { dataStore } from '../modules/store';
 
-import { normalise } from './Accounts';
+import { normalise } from './Profiles';
 import { SummaryRow, newReference } from './answers';
 
 /**
  * Requests this service stores itself, because service-api-marketplace has nowhere to put
  * them yet: production credentials requests, requests for a new API, and the access and
- * publication requests of accounts registered here (the backend refuses a user id it has
+ * publication requests of users the backend does not know (it refuses a user id it has
  * never seen). They are listed under My requests alongside the backend's own.
  */
 export type LocalRequestType = 'SUBSCRIPTION' | 'PUBLISH' | 'NEW_API' | 'PRODUCTION';
