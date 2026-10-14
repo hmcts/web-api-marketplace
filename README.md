@@ -62,8 +62,7 @@ The consumer onboarding journey, end to end:
 
 | Step                                         | Path                                                     |
 | -------------------------------------------- | -------------------------------------------------------- |
-| Create a developer account, confirm email    | `/register`, `/register/check-email`, `/verify-email`    |
-| Sign in, forgotten password                  | `/sign-in`, `/forgotten-password`, `/reset-password`     |
+| Sign in, create an account                   | none yet — Microsoft Entra sign in is to come            |
 | First sign in: profile and guidelines        | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
@@ -78,9 +77,7 @@ build on any that do not work.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Accounts registered here** (`services/Accounts.ts`) — the backend can look a user up but
-  cannot create one, verify an address or reset a password. Passwords are scrypt-hashed.
-  Accounts the backend already knows still sign in against it.
+- **Onboarding** (`services/Accounts.ts`) — whether a user has been through the welcome page.
 - **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
   client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
   are **not registered with either**, and every page that shows them says so. Secrets are

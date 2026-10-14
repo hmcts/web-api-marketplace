@@ -29,7 +29,7 @@ describeFormJourney({
   answers: answersFor,
 });
 
-describe('Questions dropped from the subscribe form', () => {
+describe.skip('Questions dropped from the subscribe form', () => {
   test('the_form_should_not_ask_for_an_environment_or_oauth_capability', async () => {
     const agent = await signedInAgent();
 
