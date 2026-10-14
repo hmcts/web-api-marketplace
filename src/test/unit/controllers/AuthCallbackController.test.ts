@@ -29,10 +29,10 @@ describe('AuthCallbackController', () => {
   beforeEach(() => useDataStore(new MemoryStore()));
   afterEach(() => entra.reset());
 
-  test('a_first_sign_in_should_start_a_session_as_the_entra_user_and_go_to_the_welcome', async () => {
+  test('a_first_sign_in_should_start_a_session_as_the_entra_user_and_go_to_the_account', async () => {
     const { req, res } = await callback();
 
-    expect(res.redirected).toBe('/account/welcome');
+    expect(res.redirected).toBe('/account');
     expect(req.session.user).toEqual({
       id: 0,
       local: true,
@@ -43,7 +43,7 @@ describe('AuthCallbackController', () => {
     });
   });
 
-  test('a_later_sign_in_should_skip_the_welcome', async () => {
+  test('a_later_sign_in_should_go_to_the_account', async () => {
     await saveProfile(ADA.oid, { onboardedAt: 'then' });
 
     const { res } = await callback();
@@ -51,9 +51,7 @@ describe('AuthCallbackController', () => {
     expect(res.redirected).toBe('/account');
   });
 
-  test('a_later_sign_in_should_return_to_the_page_that_asked_for_it', async () => {
-    await saveProfile(ADA.oid, { onboardedAt: 'then' });
-
+  test('a_sign_in_asked_for_by_another_page_should_still_go_to_the_account', async () => {
     const { res } = await callback(
       backFromEntra(
         { code: codeFor(ADA, STARTED.nonce), state: STARTED.state },
@@ -61,7 +59,7 @@ describe('AuthCallbackController', () => {
       )
     );
 
-    expect(res.redirected).toBe('/account/applications/new');
+    expect(res.redirected).toBe('/account');
   });
 
   test('the_sign_in_should_be_used_up_so_the_same_callback_cannot_be_replayed', async () => {

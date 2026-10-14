@@ -49,14 +49,13 @@ export const CATALOGUE = [
 
 export type Agent = ReturnType<typeof request.agent>;
 
-/** Signs in through Entra as this address for the first time, and gets through the welcome. */
+/** Signs in through Entra as this address, landing on the account page. */
 export async function signedInConsumer(email: string): Promise<Agent> {
   const agent = newAgent();
 
   await signInThroughEntra(agent, claimsFor(email)).then(res =>
-    expect(res.headers.location, 'a first sign in should go to the welcome').to.equal('/account/welcome')
+    expect(res.headers.location, 'sign in should land on the account page').to.equal('/account')
   );
-  await agent.post('/account/welcome').type('form').send({ agree: 'yes' }).expect(302);
   return agent;
 }
 

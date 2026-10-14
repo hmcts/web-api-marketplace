@@ -9,11 +9,10 @@ import { app } from '../../main/app';
 
 import { claimsFor, signInThroughEntra } from './helpers/entra';
 
-/** Signed in through Entra and through the welcome, as a returning user would be. */
+/** Signed in through Entra. */
 const signedIn = async () => {
   const agent = request.agent(app);
   await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ agree: 'yes' });
   return agent;
 };
 
@@ -46,6 +45,7 @@ describe('Session and the account navigation', () => {
       expect(res.status).to.equal(200);
       expect(res.text).to.contain('Joe Bloggs');
       expect(res.text).to.contain('joe@example.com');
+      expect(res.text).to.not.contain('Organisation');
     });
   });
 
