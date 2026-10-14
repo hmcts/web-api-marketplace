@@ -1,8 +1,6 @@
 {% extends "template.njk" %}
 
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
-{% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "macros/errors.njk" import errorSummary %}
@@ -19,7 +17,7 @@
 
     <h1 class="govuk-heading-xl">Welcome{% if profile.firstName %}, {{ profile.firstName }}{% endif %}</h1>
 
-    <p class="govuk-body-l">Before you create an application, tell us about yourself and read how HMCTS APIs may be used.</p>
+    <p class="govuk-body-l">Before you create an application, read how HMCTS APIs may be used.</p>
 
     <h2 class="govuk-heading-m">Your account</h2>
 
@@ -30,29 +28,7 @@
       ]
     }) }}
 
-    <p class="govuk-body">These come from the account you signed in with. To change them, sign in and edit your profile there.</p>
-
     <form method="post" action="/account/welcome" novalidate>
-
-      {{ govukInput({
-        label: { text: "Organisation or team", classes: "govuk-label--m" },
-        hint: { text: "For example, HMCTS DTS or Ministry of Justice Digital." },
-        id: "organisation",
-        name: "organisation",
-        value: answers.organisation,
-        autocomplete: "organization",
-        errorMessage: { text: errorFor.organisation } if errorFor.organisation
-      }) }}
-
-      {{ govukRadios({
-        name: "role",
-        fieldset: {
-          legend: { text: "I am using the marketplace as a", classes: "govuk-fieldset__legend--m" }
-        },
-        items: roles,
-        value: answers.role,
-        errorMessage: { text: errorFor.role } if errorFor.role
-      }) }}
 
       <h2 class="govuk-heading-m">Guidelines for using our APIs</h2>
 

@@ -56,11 +56,7 @@ export async function signedInConsumer(email: string): Promise<Agent> {
   await signInThroughEntra(agent, claimsFor(email)).then(res =>
     expect(res.headers.location, 'a first sign in should go to the welcome').to.equal('/account/welcome')
   );
-  await agent
-    .post('/account/welcome')
-    .type('form')
-    .send({ organisation: 'Analytical Engines Ltd', role: 'consumer', agree: 'yes' })
-    .expect(302);
+  await agent.post('/account/welcome').type('form').send({ agree: 'yes' }).expect(302);
   return agent;
 }
 

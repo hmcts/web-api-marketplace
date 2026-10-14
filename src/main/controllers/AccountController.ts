@@ -37,7 +37,7 @@ export default class AccountController {
     res.render('account', {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
       user,
-      myRequests: requests.map(request => this.forDisplay(request, req.lng)),
+      myRequests: requests.map(request => this.forDisplay(request)),
       couldNotLoad: !result.ok,
       deleted: notice === 'deleted',
       deleteFailed: notice === 'deleteFailed',
@@ -86,18 +86,18 @@ export default class AccountController {
     return deleteRequest(user.id, type, reference);
   }
 
-  private forDisplay(request: RequestSummary & { href?: string }, language: string | undefined) {
-    return { ...request, submittedOn: this.formatDate(request.submittedAt, language) };
+  private forDisplay(request: RequestSummary & { href?: string }) {
+    return { ...request, submittedOn: this.formatDate(request.submittedAt) };
   }
 
-  private formatDate(submittedAt: string, language: string | undefined): string {
+  private formatDate(submittedAt: string): string {
     const date = new Date(submittedAt);
 
     if (Number.isNaN(date.getTime())) {
       return submittedAt;
     }
 
-    return new Intl.DateTimeFormat(language === 'cy' ? 'cy-GB' : 'en-GB', {
+    return new Intl.DateTimeFormat('en-GB', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',

@@ -90,9 +90,8 @@ export default class AuthCallbackController {
         return;
       }
 
-      req.session.user = toSignedInUser(claims, profile);
-      // First sign in goes through the welcome page, for the organisation and account type
-      // Entra does not hold, then carries on to wherever sign in interrupted.
+      req.session.user = toSignedInUser(claims);
+      // First sign in goes through the welcome page, to agree to the guidelines, then carries on to wherever sign in interrupted.
       req.session.returnTo = returnTo;
       req.session.save(() => res.redirect(profile ? takeReturnTo(req, '/account') : '/account/welcome'));
     });

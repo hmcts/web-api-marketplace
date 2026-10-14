@@ -1,7 +1,6 @@
 {
   "heading": "Your account",
   "signedInAs": "You are signed in as",
-  "organisation": "Organisation",
   "signOutButton": "Sign out",
   "requests": {
     "tabLabel": "My requests",
@@ -27,7 +26,6 @@
       "PRODUCTION": "Production credentials"
     }
   },
-  "accountType": "Account type",
   "nextSteps": {
     "heading": "What you can do next",
     "groups": [

@@ -57,7 +57,6 @@ describe('ProductionCredentialsController', () => {
     expect(res.view).toBe('production-credentials/form');
     expect(res.data?.answers).toMatchObject({
       application: applicationId,
-      organisation: LOCAL_USER.orgName,
       'security-contact': LOCAL_USER.email,
     });
     expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('Sandbox – 1 API');
