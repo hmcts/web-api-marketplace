@@ -17,8 +17,6 @@ declare module 'express-session' {
     returnTo?: string;
     /** The last email "sent", for the page that follows to preview — see services/Notify. */
     outbox?: Email;
-    /** The address a "check your email" page is about, whether or not anything was sent. */
-    emailSentTo?: string;
     /** A one-off banner for the next page rendered, then cleared. */
     notice?: { success: boolean; title: string; text: string };
     /** Answers collected so far by the multi-page journeys, until they are submitted. */

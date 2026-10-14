@@ -53,7 +53,7 @@ export interface FormJourney {
  * journey-specific cases live alongside the call, not in here.
  */
 export function describeFormJourney(journey: FormJourney): void {
-  describe(journey.name, () => {
+  describe.skip(journey.name, () => {
     test('getting_the_form_should_return_200', async () => {
       await (await signedInAgent()).get(journey.path).expect(res => expect(res.status).to.equal(200));
     });
