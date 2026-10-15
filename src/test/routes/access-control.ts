@@ -79,7 +79,7 @@ describe('Access control on the form journeys', () => {
 
   test('the_publish_guidance_pages_should_still_be_reachable', async () => {
     await request(app)
-      .get('/documentation/publish-an-api')
+      .get('/documentation/producer-guidance')
       .expect(res => expect(res.status).to.equal(200));
     await request(app)
       .get('/documentation/data-governance')
