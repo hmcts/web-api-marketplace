@@ -4,6 +4,8 @@ import { AddressInfo } from 'node:net';
 
 import { JWTPayload, SignJWT, exportJWK, generateKeyPair } from 'jose';
 
+import { StubMarketplace, stubMarketplace } from './marketplace';
+
 /**
  * A stand-in Microsoft Entra tenant on an ephemeral port, so sign in runs for real in
  * tests: the app's own requests for the discovery document, the signing keys and the
@@ -57,6 +59,8 @@ export interface StubEntra {
   savedUsers: Map<string, { id: number; email: string; name: string }>;
   /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
   failUserSaves(status: number): void;
+  /** The backend's /applications and /apim/subscription-keys. */
+  marketplace: StubMarketplace;
   reset(): void;
   close(): Promise<void>;
 }
@@ -76,6 +80,7 @@ export async function startStubEntra(): Promise<StubEntra> {
   let failWith: number | undefined;
   let failSavesWith: number | undefined;
   const savedUsers: StubEntra['savedUsers'] = new Map();
+  const marketplace = stubMarketplace(() => new Set(savedUsers.keys()));
 
   const server = http.createServer((req, res) => {
     void handle(req, res).catch(() => res.writeHead(500).end());
@@ -101,7 +106,9 @@ export async function startStubEntra(): Promise<StubEntra> {
     failTokenRequests: status => (failWith = status),
     savedUsers,
     failUserSaves: status => (failSavesWith = status),
+    marketplace: marketplace.state,
     reset: () => {
+      marketplace.state.reset();
       issue = undefined;
       failWith = undefined;
       failSavesWith = undefined;
@@ -167,6 +174,16 @@ export async function startStubEntra(): Promise<StubEntra> {
         createdAt: now,
         lastLoginAt: now,
       });
+    }
+    if (req.url?.startsWith('/backend/')) {
+      const path = req.url.slice('/backend'.length);
+      const userId = req.headers.requestingUserId ?? req.headers.requestinguserid;
+      const body = req.method === 'GET' || req.method === 'DELETE' ? '' : await bodyOf(req);
+      const reply = (status: number, payload?: unknown) =>
+        payload === undefined ? res.writeHead(status).end() : json(status, payload);
+      if (marketplace.handle(req.method ?? 'GET', path, userId as string | undefined, body, reply)) {
+        return;
+      }
     }
     res.writeHead(404).end();
   }

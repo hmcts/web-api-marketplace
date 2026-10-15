@@ -17,19 +17,17 @@
   <div class="govuk-grid-column-two-thirds">
     <p class="govuk-body">
       An application holds the credentials your software uses to call our APIs: a client ID and secret,
-      and a subscription key for each API you add to it. You need a separate application for each environment.
+      and a subscription key for each API you add to it.
     </p>
     {{ govukButton({ text: "Add new application", href: "/account/applications/new", attributes: { id: "add-application" } }) }}
   </div>
 </div>
 
-{% if count == 0 %}
+{% if applications.length == 0 %}
   <p class="govuk-body" id="applications-empty">You have no applications yet.</p>
-{% endif %}
-
-{% for group in groups %}
+{% else %}
   {% set rows = [] %}
-  {% for application in group.applications %}
+  {% for application in applications %}
     {% set rows = (rows.push([
       { html: '<a class="govuk-link" href="/account/applications/' + application.id + '">' + (application.name | escape) + '</a>' },
       { text: application.apis.length + (" API" if application.apis.length == 1 else " APIs") },
@@ -37,12 +35,13 @@
     ]), rows) %}
   {% endfor %}
   {{ govukTable({
-    caption: group.name,
+    caption: "Your applications",
     captionClasses: "govuk-table__caption--m",
     head: [{ text: "Application" }, { text: "APIs" }, { text: "Client ID" }],
-    rows: rows
+    rows: rows,
+    attributes: { id: "applications" }
   }) }}
-{% endfor %}
+{% endif %}
 
 <h2 class="govuk-heading-m">Going live</h2>
 <p class="govuk-body">
