@@ -5,11 +5,7 @@ export interface SignedInUser {
   /** The user's Entra object id: the stable key for everything we hold about them. */
   oid?: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  /**
-   * Set for a user the backend does not know. Their submissions go to the data store,
-   * since the backend would reject a user id it has never seen — see services/Profiles.
-   */
+  name: string;
+  /** Set while the backend has no requests: submissions go to the data store. */
   local?: boolean;
 }

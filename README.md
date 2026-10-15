@@ -120,15 +120,21 @@ Developer accounts belong to Microsoft Entra External ID. Its pages handle signi
 creating an account, confirming the email address and resetting a password, so no password
 reaches this service. The flow is OpenID Connect's authorization code flow:
 
-1. `/sign-in` (`SignInController`) puts a random `state` and `nonce` in the session and
-   redirects to Entra. `?prompt=create` opens Entra on its create-account form.
+1. `/sign-in` (`SignInController`) puts a random `state`, `nonce` and PKCE code verifier in
+   the session and redirects to Entra with the verifier's SHA-256 as the `code_challenge`.
+   `?prompt=create` opens Entra on its create-account form.
 2. Entra sends the browser back to `/auth/callback` (`AuthCallbackController`) with a
    single-use code. The `state` must match the session's.
-3. The code is swapped for an ID token server to server, using the client secret, and the
+3. The code is swapped for an ID token server to server, using the client secret and the
+   PKCE verifier, so a code intercepted on its way back is no use on its own, and the
    token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
    keys, issuer, audience, expiry and `nonce`.
-4. The session starts with the token's `oid`, name and email, and every sign in lands on
-   `/account`, whichever page asked for it.
+4. The token's `oid`, email and name (Entra holds a single display name, not first and last)
+   are posted to service-api-marketplace's `POST /session` (`services/EntraUsers.ts`). The
+   backend creates the user the first time and brings them up to date on every later sign in. If it cannot be reached or refuses, sign in says it is
+   unavailable and no session starts.
+5. The session starts as the backend's user, with the token's `oid`, name and email, and every
+   sign in lands on `/account`, whichever page asked for it.
 
 Signing out ends Entra's session too, then comes back to the home page.
 
@@ -142,16 +148,15 @@ These are deliberate, and each is confined to one service so it can be swapped f
 call without touching the journeys:
 
 - **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
-  their Entra `oid`. The backend cannot resolve an Entra user yet, so every user is treated
-  as one it does not know (`local`): their subscribe requests go to the data store, and
-  requests the backend already holds are not listed for them.
+  their Entra `oid`. The backend holds users but not yet requests, so every user is still
+  `local`: their subscribe requests go to the data store.
 - **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
   client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
   are **not registered with either**, and every page that shows them says so. Secrets are
   shown once and only their first three characters are kept.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here
-  and listed under My requests alongside the backend's own. So are subscribe
-  requests from users the backend does not know, which it would refuse.
+  and listed under My requests. So are subscribe requests, until the backend has
+  somewhere to put them.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.

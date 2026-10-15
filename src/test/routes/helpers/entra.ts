@@ -45,6 +45,7 @@ export async function signInThroughEntra(agent: Agent, claims: StubClaims): Prom
   const sentTo = new URL(started.headers.location);
   const state = sentTo.searchParams.get('state') as string;
   const nonce = sentTo.searchParams.get('nonce') as string;
+  const challenge = sentTo.searchParams.get('code_challenge') as string;
 
-  return agent.get(`/auth/callback?code=${codeFor(claims, nonce)}&state=${state}`);
+  return agent.get(`/auth/callback?code=${codeFor(claims, nonce, challenge)}&state=${state}`);
 }

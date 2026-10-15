@@ -4,7 +4,7 @@ import { env } from '../helpers/nunjucksEnv';
 
 const i18n = require('../../../../main/locales/en/account.json');
 
-const user = { id: 1, firstName: 'Joe', lastName: 'Bloggs', email: 'joe@example.com' };
+const user = { id: 1, name: 'Joe Bloggs', email: 'joe@example.com' };
 
 describe('Account page', () => {
   test('rendering_the_page_should_show_both_tabs', () => {
