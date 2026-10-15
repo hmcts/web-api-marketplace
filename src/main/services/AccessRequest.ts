@@ -14,8 +14,7 @@ export type { Choice, FieldError, SummaryRow };
 export interface Requester {
   /** What the backend attributes the stored request to. */
   id: number;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   /** A user the backend has never heard of — see services/Profiles. */
   local?: boolean;
@@ -109,7 +108,7 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
  */
 export function summaryRows(answers: AccessRequestAnswers, apiTitle: string, requester: Requester): SummaryRow[] {
   return [
-    { key: 'Name', value: `${requester.firstName} ${requester.lastName}` },
+    { key: 'Name', value: requester.name },
     { key: 'Email', value: requester.email },
     { key: 'API', value: apiTitle || answers['api-name'] },
     { key: 'Expected call volume', value: labelFor(CALL_VOLUMES, answers['call-volume']) },

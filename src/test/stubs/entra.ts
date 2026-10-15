@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { AddressInfo } from 'node:net';
 
@@ -23,8 +24,6 @@ export interface StubClaims {
   name?: string;
   email?: string;
   emails?: string[];
-  given_name?: string;
-  family_name?: string;
 }
 
 export const ADA: StubClaims = {
@@ -54,13 +53,17 @@ export interface StubEntra {
   answerTokenRequestsWith(issue: (claims: StubClaims, nonce: string) => Promise<string> | string): void;
   /** Makes the token endpoint fail, as an unreachable or unhappy tenant would. */
   failTokenRequests(status: number): void;
+  /** Every user saved through the backend's POST /session, by oid. */
+  savedUsers: Map<string, { id: number; email: string; name: string }>;
+  /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
+  failUserSaves(status: number): void;
   reset(): void;
   close(): Promise<void>;
 }
 
-/** The code a test brings back to /auth/callback, standing for this person signing in. */
-export function codeFor(claims: StubClaims, nonce: string): string {
-  return Buffer.from(JSON.stringify({ claims, nonce })).toString('base64url');
+/** The code a test brings back to /auth/callback; with a challenge, its verifier is required. */
+export function codeFor(claims: StubClaims, nonce: string, codeChallenge?: string): string {
+  return Buffer.from(JSON.stringify({ claims, nonce, codeChallenge })).toString('base64url');
 }
 
 /**
@@ -71,6 +74,8 @@ export async function startStubEntra(): Promise<StubEntra> {
   const keyPair = await generateKeyPair('RS256');
   let issue: ((claims: StubClaims, nonce: string) => Promise<string> | string) | undefined;
   let failWith: number | undefined;
+  let failSavesWith: number | undefined;
+  const savedUsers: StubEntra['savedUsers'] = new Map();
 
   const server = http.createServer((req, res) => {
     void handle(req, res).catch(() => res.writeHead(500).end());
@@ -94,15 +99,19 @@ export async function startStubEntra(): Promise<StubEntra> {
         .sign(overrides.key ?? keyPair.privateKey),
     answerTokenRequestsWith: answer => (issue = answer),
     failTokenRequests: status => (failWith = status),
+    savedUsers,
+    failUserSaves: status => (failSavesWith = status),
     reset: () => {
       issue = undefined;
       failWith = undefined;
+      failSavesWith = undefined;
     },
     close: () =>
       new Promise<void>(resolve => {
         // fetch keeps its connections alive, and close() alone would wait for them.
         server.closeAllConnections();
         server.close(() => resolve());
+        restoreApiUrl();
       }),
   };
 
@@ -128,12 +137,36 @@ export async function startStubEntra(): Promise<StubEntra> {
         return json(failWith, { error: 'temporarily_unavailable', error_description: 'Stub told to fail' });
       }
       const form = new URLSearchParams(await bodyOf(req));
-      const { claims, nonce } = JSON.parse(Buffer.from(form.get('code') ?? '', 'base64url').toString() || '{}');
+      const { claims, nonce, codeChallenge } = JSON.parse(
+        Buffer.from(form.get('code') ?? '', 'base64url').toString() || '{}'
+      );
       if (!claims) {
         return json(400, { error: 'invalid_grant', error_description: 'Unknown code' });
       }
+      const verifier = form.get('code_verifier') ?? '';
+      if (codeChallenge && createHash('sha256').update(verifier).digest('base64url') !== codeChallenge) {
+        return json(400, { error: 'invalid_grant', error_description: 'The code_verifier does not match' });
+      }
       const idToken = issue ? await issue(claims, nonce) : await stub.idToken(claims, nonce);
       return json(200, { id_token: idToken, expires_in: 3600 });
+    }
+    if (req.url === '/backend/session' && req.method === 'POST') {
+      if (failSavesWith) {
+        return json(failSavesWith, { message: 'Stub told to fail' });
+      }
+      const { objectId, email, name } = JSON.parse(await bodyOf(req));
+      const user = { id: savedUsers.get(objectId)?.id ?? savedUsers.size + 1, email, name };
+      savedUsers.set(objectId, user);
+      const now = new Date().toISOString();
+      const userReference = `user${String(user.id).padStart(3, '0')}`;
+      return json(200, {
+        ...user,
+        userReference,
+        entraObjectId: objectId,
+        status: 'ACTIVE',
+        createdAt: now,
+        lastLoginAt: now,
+      });
     }
     res.writeHead(404).end();
   }
@@ -144,6 +177,17 @@ export async function startStubEntra(): Promise<StubEntra> {
   process.env.ENTRA_TOKEN_ENDPOINT = `${base}/oauth2/v2.0/token`;
   process.env.ENTRA_REDIRECT_URI = 'http://localhost/auth/callback';
   process.env.ENTRA_POST_LOGOUT_REDIRECT_URI = 'http://localhost/';
+
+  // The stub also stands in for the backend's user endpoint, which reads API_URL on each call.
+  const savedApiUrl = process.env.API_URL;
+  process.env.API_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/backend`;
+  function restoreApiUrl(): void {
+    if (savedApiUrl === undefined) {
+      delete process.env.API_URL;
+    } else {
+      process.env.API_URL = savedApiUrl;
+    }
+  }
 
   return stub;
 }

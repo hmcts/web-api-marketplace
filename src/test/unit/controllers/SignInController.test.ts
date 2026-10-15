@@ -1,4 +1,5 @@
 import SignInController from '../../../main/controllers/SignInController';
+import { pkceChallenge } from '../../../main/services/Entra';
 import { anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -27,6 +28,20 @@ describe('SignInController', () => {
     expect(sentTo.searchParams.has('prompt')).toBe(false);
   });
 
+  test('signing_in_should_send_the_pkce_challenge_and_keep_its_verifier_in_the_session', () => {
+    const res = mockResponse();
+    const req = anonymous();
+
+    new SignInController().get(req, res);
+
+    const sentTo = new URL(res.redirected as string);
+    const verifier = req.session.entraSignIn?.codeVerifier as string;
+    expect(verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(sentTo.searchParams.get('code_challenge')).toBe(pkceChallenge(verifier));
+    expect(sentTo.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(sentTo.toString()).not.toContain(verifier);
+  });
+
   test('each_sign_in_should_get_its_own_state_and_nonce', () => {
     const first = anonymous();
     const second = anonymous();
@@ -36,6 +51,7 @@ describe('SignInController', () => {
 
     expect(first.session.entraSignIn?.state).not.toBe(second.session.entraSignIn?.state);
     expect(first.session.entraSignIn?.nonce).not.toBe(second.session.entraSignIn?.nonce);
+    expect(first.session.entraSignIn?.codeVerifier).not.toBe(second.session.entraSignIn?.codeVerifier);
   });
 
   test('create_should_open_entra_on_its_create_account_form', () => {
