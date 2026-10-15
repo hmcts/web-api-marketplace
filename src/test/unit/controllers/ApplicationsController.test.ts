@@ -1,6 +1,5 @@
 import ApplicationsController from '../../../main/controllers/ApplicationsController';
-import { MemoryStore, useDataStore } from '../../../main/modules/store';
-import { createApplication, getApplication } from '../../../main/services/Applications';
+import { Application, BackendError } from '../../../main/services/Applications';
 import { CATALOGUE, LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -9,20 +8,50 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
   getCatalogueApis: jest.fn(),
 }));
 
-const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+jest.mock('../../../main/services/Applications', () => ({
+  ...jest.requireActual('../../../main/services/Applications'),
+  listApplications: jest.fn(),
+  getApplication: jest.fn(),
+  createApplication: jest.fn(),
+  grantAccess: jest.fn(),
+  setApis: jest.fn(),
+  subscriptionKey: jest.fn(),
+  deleteApplication: jest.fn(),
+}));
 
-const DRAFT = { environment: 'sandbox', name: 'Tracker', description: '', apis: ['api-one'] };
+const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+const Applications = require('../../../main/services/Applications');
+
+const OWNER = { oid: LOCAL_USER.oid };
+const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
+const APPLICATION: Application = {
+  id: 'client-1',
+  clientId: 'client-1',
+  name: 'Case Viewer',
+  secretHint: 'Uc6',
+  secretExpiresAt: '2028-10-15T12:00:00',
+  createdAt: '2026-10-15T12:00:00',
+  apis: [
+    {
+      apiName: 'api-one',
+      apiTitle: 'API one',
+      publisherId: 'one',
+      subscriptionName: 'amp-temp-1',
+      subscribedAt: '2026-10-15T12:00:00',
+    },
+  ],
+  accessGranted: false,
+};
 
 const controller = () => new ApplicationsController();
-
-async function existing() {
-  return (await createApplication(LOCAL_USER.email, DRAFT, CATALOGUE)).application;
-}
+const withAccept = (req: ReturnType<typeof asUser>, type: 'json' | 'html') =>
+  Object.assign(req, { accepts: jest.fn(() => type) });
 
 describe('ApplicationsController', () => {
   beforeEach(() => {
-    useDataStore(new MemoryStore());
+    jest.clearAllMocks();
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    Applications.getApplication.mockResolvedValue(APPLICATION);
   });
 
   describe('signed out', () => {
@@ -38,6 +67,7 @@ describe('ApplicationsController', () => {
         res => controller().checkAnswers(anonymous(), res),
         res => controller().create(anonymous(), res),
         res => controller().detail(anonymous({ params: { id: 'x' } }), res, next),
+        res => controller().access(anonymous({ params: { id: 'x' } }), res, next),
       ];
 
       for (const call of calls) {
@@ -46,86 +76,88 @@ describe('ApplicationsController', () => {
         expect(res.redirected).toBe('/sign-in');
       }
       expect(next).not.toHaveBeenCalled();
+      expect(Applications.listApplications).not.toHaveBeenCalled();
     });
   });
 
   describe('listing', () => {
-    test('applications_should_be_grouped_by_environment_with_a_one_off_notice', async () => {
-      await existing();
+    test('the_callers_applications_should_be_listed_with_a_one_off_notice', async () => {
+      Applications.listApplications.mockResolvedValue([APPLICATION]);
       const res = mockResponse();
       const notice = { success: true, title: 'Success', text: 'Done' };
+      const req = asUser({ session: { notice } });
 
-      await controller().list(asUser({ session: { notice } }), res);
+      await controller().list(req, res);
 
+      expect(Applications.listApplications).toHaveBeenCalledWith(OWNER);
       expect(res.view).toBe('applications/index');
-      expect(res.data?.count).toBe(1);
-      expect(res.data?.notice).toEqual(notice);
-      expect((res.data?.groups as { name: string }[]).map(group => group.name)).toEqual(['Sandbox']);
+      expect(res.data).toEqual({ notice, applications: [APPLICATION] });
+      expect(req.session.notice).toBeUndefined();
+    });
+
+    test('a_backend_that_cannot_be_reached_should_say_so', async () => {
+      Applications.listApplications.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+
+      await controller().list(asUser(), res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.view).toBe('applications/unavailable');
+    });
+
+    test('a_user_the_backend_does_not_know_should_be_signed_out_and_sent_to_sign_in', async () => {
+      Applications.listApplications.mockRejectedValue(new BackendError('Sign in again.', 404));
+      const res = mockResponse();
+      const req = asUser();
+
+      await controller().list(req, res);
+
+      expect(res.redirected).toBe('/sign-in');
+      expect(req.session.user).toBeUndefined();
     });
   });
 
   describe('creating', () => {
     test('the_intro_should_clear_any_earlier_answers', () => {
       const req = asUser({ session: { applicationDraft: DRAFT } });
-      const res = mockResponse();
 
-      controller().intro(req, res);
+      controller().intro(req, mockResponse());
 
-      expect(res.view).toBe('applications/new/index');
       expect(req.session.applicationDraft).toBeUndefined();
     });
 
-    test('the_details_form_should_show_the_draft', () => {
+    test('a_name_that_breaks_the_rules_should_be_shown_again_with_the_error', () => {
       const res = mockResponse();
 
-      controller().details(asUser({ session: { applicationDraft: { name: 'Tracker' } } }), res);
-
-      expect(res.view).toBe('applications/new/details');
-      expect(res.data?.draft).toEqual({ name: 'Tracker' });
-    });
-
-    test('details_with_errors_should_be_shown_again', async () => {
-      const res = mockResponse();
-
-      await controller().saveDetails(asUser({ body: {} }), res);
+      controller().saveDetails(asUser({ body: { name: 'Reports' } }), res);
 
       expect(res.statusCode).toBe(400);
-      expect(Object.keys(res.data?.errorFor as object)).toEqual(['name']);
+      expect(res.view).toBe('applications/new/details');
+      expect(res.data?.errorFor).toEqual({ name: 'Application name must be 8 to 50 letters, numbers or spaces' });
     });
 
-    test('valid_details_should_go_on_to_choosing_apis_in_the_sandbox', async () => {
-      // An environment posted with the form is ignored: every application created here
-      // is a sandbox one.
-      const req = asUser({ body: { environment: 'aat', name: 'Tracker', description: 'Tracks cases' } });
+    test('a_valid_name_should_go_on_to_choosing_apis', () => {
       const res = mockResponse();
+      const req = asUser({ body: { name: 'Case Viewer' } });
 
-      await controller().saveDetails(req, res);
+      controller().saveDetails(req, res);
 
+      expect(req.session.applicationDraft).toEqual({ name: 'Case Viewer' });
       expect(res.redirected).toBe('/account/applications/new/apis');
-      expect(req.session.applicationDraft).toEqual({
-        environment: 'sandbox',
-        name: 'Tracker',
-        description: 'Tracks cases',
-      });
     });
 
-    test('changing_details_once_apis_are_chosen_should_return_to_check_answers', async () => {
-      const req = asUser({ body: { name: 'Tracker 2' }, session: { applicationDraft: DRAFT } });
+    test('changing_the_name_once_apis_are_chosen_should_return_to_check_answers', () => {
       const res = mockResponse();
 
-      await controller().saveDetails(req, res);
+      controller().saveDetails(asUser({ body: { name: 'Case Viewer 2' }, session: { applicationDraft: DRAFT } }), res);
 
       expect(res.redirected).toBe('/account/applications/new/check-answers');
     });
 
-    test('choosing_apis_without_details_should_go_back_to_details', async () => {
-      for (const call of [
-        (res: ReturnType<typeof mockResponse>) => controller().chooseApis(asUser(), res),
-        (res: ReturnType<typeof mockResponse>) => controller().saveApis(asUser(), res),
-        (res: ReturnType<typeof mockResponse>) => controller().checkAnswers(asUser(), res),
-      ]) {
+    test('choosing_apis_without_a_name_should_go_back_to_details', async () => {
+      for (const action of ['chooseApis', 'saveApis'] as const) {
         const res = mockResponse();
-        await call(res);
+        await controller()[action](asUser(), res);
         expect(res.redirected).toBe('/account/applications/new/details');
       }
     });
@@ -135,65 +167,54 @@ describe('ApplicationsController', () => {
 
       await controller().chooseApis(asUser({ session: { applicationDraft: DRAFT } }), res);
 
-      expect(res.view).toBe('applications/new/apis');
       expect(res.data?.apiItems).toEqual([
         { value: 'api-one', text: 'API one', hint: { text: 'The first API.' }, checked: true },
         { value: 'api-two', text: 'API two', hint: undefined, checked: false },
       ]);
-      expect(res.data?.catalogueUnavailable).toBe(false);
     });
 
-    test('no_apis_chosen_should_be_refused', async () => {
+    test('no_apis_chosen_should_be_refused_and_chosen_apis_should_go_on', async () => {
+      const refused = mockResponse();
+      await controller().saveApis(asUser({ session: { applicationDraft: { name: 'Case Viewer' } } }), refused);
+      expect(refused.statusCode).toBe(400);
+
       const res = mockResponse();
-
-      await controller().saveApis(asUser({ body: {}, session: { applicationDraft: { name: 'Tracker' } } }), res);
-
-      expect(res.statusCode).toBe(400);
-      expect(res.data?.errorFor).toEqual({ apis: 'Select at least one API' });
-    });
-
-    test('chosen_apis_should_go_on_to_check_answers', async () => {
-      const req = asUser({
-        body: { apis: ['api-one', 'api-two'] },
-        session: { applicationDraft: { name: 'Tracker' } },
-      });
-      const res = mockResponse();
-
+      const req = asUser({ body: { apis: ['api-two'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
       await controller().saveApis(req, res);
-
+      expect(req.session.applicationDraft?.apis).toEqual(['api-two']);
       expect(res.redirected).toBe('/account/applications/new/check-answers');
-      expect(req.session.applicationDraft?.apis).toEqual(['api-one', 'api-two']);
     });
 
-    test('check_answers_without_apis_should_go_back_to_choosing_them', async () => {
-      const res = mockResponse();
-
-      await controller().checkAnswers(asUser({ session: { applicationDraft: { name: 'Tracker' } } }), res);
-
-      expect(res.redirected).toBe('/account/applications/new/apis');
-    });
-
-    test('check_answers_should_list_the_answers_with_api_titles', async () => {
+    test('check_answers_should_list_the_name_and_api_titles', async () => {
       const res = mockResponse();
 
       await controller().checkAnswers(asUser({ session: { applicationDraft: DRAFT } }), res);
 
       expect(res.data?.rows).toEqual([
-        { key: 'Application name', value: 'Tracker', href: '/account/applications/new/details' },
-        { key: 'Description', value: 'None', href: '/account/applications/new/details' },
+        { key: 'Application name', value: 'Case Viewer', href: '/account/applications/new/details' },
         { key: 'APIs', value: 'API one', href: '/account/applications/new/apis' },
       ]);
     });
 
-    test('creating_should_show_the_credentials_once_and_clear_the_draft', async () => {
-      const req = asUser({ session: { applicationDraft: DRAFT } });
+    test('check_answers_without_apis_should_go_back_to_choosing_them', async () => {
       const res = mockResponse();
+
+      await controller().checkAnswers(asUser({ session: { applicationDraft: { name: 'Case Viewer' } } }), res);
+
+      expect(res.redirected).toBe('/account/applications/new/apis');
+    });
+
+    test('creating_should_show_the_secret_and_keys_once_with_access_still_to_set_up', async () => {
+      const created = { application: APPLICATION, clientSecret: 'Uc6Q~secret', keys: [], failedApis: [] };
+      Applications.createApplication.mockResolvedValue(created);
+      const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
 
       await controller().create(req, res);
 
+      expect(Applications.createApplication).toHaveBeenCalledWith(OWNER, DRAFT, CATALOGUE);
       expect(res.view).toBe('applications/new/confirmation');
-      expect(res.data?.clientSecret).toMatch(/^.{3}8Q~/);
-      expect(res.data?.simulated).toBe(true);
+      expect(res.data).toEqual({ ...created, accessAttempts: 8, accessRetrySeconds: 15 });
       expect(req.session.applicationDraft).toBeUndefined();
     });
 
@@ -203,147 +224,202 @@ describe('ApplicationsController', () => {
       await controller().create(asUser(), res);
 
       expect(res.redirected).toBe('/account/applications');
+      expect(Applications.createApplication).not.toHaveBeenCalled();
     });
 
-    test('creating_a_name_taken_since_should_go_back_to_details', async () => {
-      await existing();
+    test.each([
+      [409, 'Taken', 'You already have an application called Case Viewer'],
+      [400, 'Use letters, digits and spaces only.', 'Use letters, digits and spaces only.'],
+    ])('a_%i_from_the_backend_should_go_back_to_the_name', async (status, message, shown) => {
+      Applications.createApplication.mockRejectedValue(new BackendError(message, status));
       const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
 
-      await controller().create(asUser({ session: { applicationDraft: DRAFT } }), res);
+      await controller().create(req, res);
 
-      expect(res.redirected).toBe('/account/applications/new/details');
+      expect(res.statusCode).toBe(400);
+      expect(res.view).toBe('applications/new/details');
+      expect(res.data?.errorFor).toEqual({ name: shown });
+      expect(req.session.applicationDraft).toEqual(DRAFT);
+    });
+
+    test('an_outage_while_creating_should_say_so_and_keep_the_answers', async () => {
+      Applications.createApplication.mockRejectedValue(new BackendError('Entra unreachable', 502));
+      const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
+
+      await controller().create(req, res);
+
+      expect(res.statusCode).toBe(503);
+      expect(req.session.applicationDraft).toEqual(DRAFT);
     });
   });
 
   describe('one application', () => {
-    const params = (id: string, extra: Record<string, string> = {}) => ({ params: { id, ...extra } });
+    const forId = (parts: Parameters<typeof asUser>[0] = {}) =>
+      asUser({ ...parts, params: { id: 'client-1', ...parts.params } });
 
-    test('an_unknown_id_should_be_handed_on_as_not_found', async () => {
+    test('an_application_that_is_not_the_callers_should_be_handed_on_as_not_found', async () => {
+      Applications.getApplication.mockResolvedValue(undefined);
       const next = jest.fn();
       const res = mockResponse();
 
-      await controller().detail(asUser(params('not-mine')), res, next);
+      await controller().detail(forId(), res, next);
 
       expect(next).toHaveBeenCalled();
       expect(res.view).toBeUndefined();
     });
 
-    test('the_detail_page_should_show_the_masked_secret', async () => {
-      const application = await existing();
+    test('the_detail_page_should_show_the_masked_secret_and_the_access_settings', async () => {
       const res = mockResponse();
 
-      await controller().detail(asUser(params(application.id)), res, jest.fn());
+      await controller().detail(forId(), res, jest.fn());
 
+      expect(Applications.getApplication).toHaveBeenCalledWith(OWNER, 'client-1');
       expect(res.view).toBe('applications/detail');
-      expect(res.data).toMatchObject({ environment: 'Sandbox', maskedSecret: `${application.secretHint}****` });
+      expect(res.data).toMatchObject({ maskedSecret: 'Uc6****', accessAttempts: 8, accessRetrySeconds: 15 });
+    });
+
+    test.each([[{ state: 'granted' }], [{ state: 'pending' }], [{ state: 'failed', message: 'Graph refused.' }]])(
+      'an_access_check_from_the_page_should_answer_%j_as_json',
+      async result => {
+        Applications.grantAccess.mockResolvedValue(result);
+        const res = mockResponse();
+
+        await controller().access(withAccept(forId(), 'json'), res, jest.fn());
+
+        expect(Applications.grantAccess).toHaveBeenCalledWith(OWNER, APPLICATION);
+        expect(res.body).toEqual(result);
+      }
+    );
+
+    test('an_access_check_that_cannot_reach_the_backend_should_answer_502_as_json', async () => {
+      Applications.grantAccess.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+
+      await controller().access(withAccept(forId(), 'json'), res, jest.fn());
+
+      expect(res.statusCode).toBe(502);
+      expect(res.body).toMatchObject({ state: 'failed' });
+    });
+
+    test.each([
+      [{ state: 'granted' }, true, 'Case Viewer can now call the APIs it is subscribed to.'],
+      [{ state: 'pending' }, false, 'Access is still being set up. Try again in a minute.'],
+      [{ state: 'failed', message: 'Graph refused.' }, false, 'Access could not be set up: Graph refused.'],
+    ])('an_access_check_without_javascript_should_come_back_with_%j', async (result, success, text) => {
+      Applications.grantAccess.mockResolvedValue(result);
+      const res = mockResponse();
+      const req = withAccept(forId(), 'html');
+
+      await controller().access(req, res, jest.fn());
+
+      expect(res.redirected).toBe('/account/applications/client-1');
+      expect(req.session.notice).toMatchObject({ success, text });
     });
 
     test('the_apis_form_should_tick_the_current_apis', async () => {
-      const application = await existing();
       const res = mockResponse();
 
-      await controller().editApis(asUser(params(application.id)), res, jest.fn());
+      await controller().editApis(forId(), res, jest.fn());
 
-      expect(res.view).toBe('applications/apis');
       expect((res.data?.apiItems as { checked: boolean }[]).map(item => item.checked)).toEqual([true, false]);
     });
 
     test('saving_no_apis_should_be_refused', async () => {
-      const application = await existing();
       const res = mockResponse();
 
-      await controller().saveEditedApis(asUser({ ...params(application.id), body: {} }), res, jest.fn());
+      await controller().saveEditedApis(forId(), res, jest.fn());
 
       expect(res.statusCode).toBe(400);
+      expect(Applications.setApis).not.toHaveBeenCalled();
     });
 
-    test('saving_changed_apis_should_say_what_changed', async () => {
-      const application = await existing();
-      const req = asUser({ ...params(application.id), body: { apis: 'api-two' } });
+    test.each([
+      [{ added: ['api-two'], removed: ['api-one'], failed: [] }, true, 'APIs updated: 1 added, 1 removed.'],
+      [{ added: [], removed: [], failed: [] }, true, 'No changes were made to the APIs.'],
+      [{ added: [], removed: [], failed: ['API two'] }, false, 'Some APIs could not be changed: API two.'],
+    ])('saving_apis_should_say_what_happened_%#', async (changes, success, text) => {
+      Applications.setApis.mockResolvedValue(changes);
       const res = mockResponse();
+      const req = forId({ body: { apis: ['api-two'] } });
 
       await controller().saveEditedApis(req, res, jest.fn());
 
-      expect(res.redirected).toBe(`/account/applications/${application.id}`);
-      expect(req.session.notice?.text).toContain('1 added, 1 removed');
+      expect(Applications.setApis).toHaveBeenCalledWith(OWNER, APPLICATION, ['api-two'], CATALOGUE);
+      expect(req.session.notice?.success).toBe(success);
+      expect(req.session.notice?.text).toContain(text);
+      expect(res.redirected).toBe('/account/applications/client-1');
     });
 
-    test('saving_the_same_apis_should_say_nothing_changed', async () => {
-      const application = await existing();
-      const req = asUser({ ...params(application.id), body: { apis: 'api-one' } });
-
-      await controller().saveEditedApis(req, mockResponse(), jest.fn());
-
-      expect(req.session.notice?.text).toBe('No changes were made to the APIs.');
-    });
-
-    test('an_api_should_show_its_key_and_an_unsubscribed_one_should_be_not_found', async () => {
-      const application = await existing();
+    test('an_api_should_show_its_key_read_from_apim', async () => {
+      Applications.subscriptionKey.mockResolvedValue('c5212ea6');
       const res = mockResponse();
+
+      await controller().api(forId({ params: { id: 'client-1', api: 'api-one' } }), res, jest.fn());
+
+      expect(res.view).toBe('applications/api');
+      expect(res.data).toMatchObject({ subscriptionKey: 'c5212ea6', subscription: APPLICATION.apis[0] });
+    });
+
+    test('an_api_whose_key_cannot_be_read_should_still_show_the_page', async () => {
+      Applications.subscriptionKey.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+
+      await controller().api(forId({ params: { id: 'client-1', api: 'api-one' } }), res, jest.fn());
+
+      expect(res.view).toBe('applications/api');
+      expect(res.data?.subscriptionKey).toBeUndefined();
+    });
+
+    test('an_api_the_application_is_not_subscribed_to_should_be_not_found', async () => {
       const next = jest.fn();
 
-      await controller().api(asUser(params(application.id, { api: 'api-one' })), res, next);
-      expect(res.view).toBe('applications/api');
-      expect(res.data?.subscription).toMatchObject({ apiName: 'api-one', publisherId: 'one' });
+      await controller().api(forId({ params: { id: 'client-1', api: 'api-two' } }), mockResponse(), next);
 
-      await controller().api(asUser(params(application.id, { api: 'api-two' })), mockResponse(), next);
-      expect(next).toHaveBeenCalledTimes(1);
-    });
-
-    test('regenerating_should_confirm_first_then_show_the_new_secret_once', async () => {
-      const application = await existing();
-      const confirm = mockResponse();
-      const done = mockResponse();
-
-      await controller().confirmRegenerate(asUser(params(application.id)), confirm, jest.fn());
-      await controller().regenerate(asUser(params(application.id)), done, jest.fn());
-
-      expect(confirm.view).toBe('applications/client-secret');
-      expect(done.view).toBe('applications/client-secret-new');
-      expect((await getApplication(LOCAL_USER.email, application.id))?.secretHint).toBe(
-        (done.data?.clientSecret as string).slice(0, 3)
-      );
+      expect(next).toHaveBeenCalled();
     });
 
     test('deleting_should_need_the_confirmation', async () => {
-      const application = await existing();
-      const confirm = mockResponse();
-      const unconfirmed = mockResponse();
+      const res = mockResponse();
 
-      await controller().confirmDelete(asUser(params(application.id)), confirm, jest.fn());
-      await controller().remove(asUser({ ...params(application.id), body: {} }), unconfirmed, jest.fn());
+      await controller().remove(forId(), res, jest.fn());
 
-      expect(confirm.view).toBe('applications/delete');
-      expect(unconfirmed.redirected).toBe(`/account/applications/${application.id}`);
-      expect(await getApplication(LOCAL_USER.email, application.id)).toBeDefined();
+      expect(res.redirected).toBe('/account/applications/client-1');
+      expect(Applications.deleteApplication).not.toHaveBeenCalled();
     });
 
     test('a_confirmed_delete_should_remove_it_and_say_so', async () => {
-      const application = await existing();
-      const req = asUser({ ...params(application.id), body: { confirm: 'yes' } });
       const res = mockResponse();
+      const req = forId({ body: { confirm: 'yes' } });
 
       await controller().remove(req, res, jest.fn());
 
+      expect(Applications.deleteApplication).toHaveBeenCalledWith(OWNER, APPLICATION);
+      expect(req.session.notice?.text).toContain('Case Viewer has been deleted');
       expect(res.redirected).toBe('/account/applications');
-      expect(req.session.notice?.text).toContain('Tracker has been deleted');
-      expect(await getApplication(LOCAL_USER.email, application.id)).toBeUndefined();
     });
 
-    test('every_action_on_an_unknown_id_should_be_not_found', async () => {
-      const next = jest.fn();
-      const req = () =>
-        asUser({ ...params('not-mine', { api: 'api-one' }), body: { confirm: 'yes', apis: 'api-one' } });
+    test('a_delete_the_backend_cannot_complete_should_say_so', async () => {
+      Applications.deleteApplication.mockRejectedValue(new BackendError('down', 502));
+      const res = mockResponse();
 
-      await controller().editApis(req(), mockResponse(), next);
-      await controller().saveEditedApis(req(), mockResponse(), next);
-      await controller().api(req(), mockResponse(), next);
-      await controller().confirmRegenerate(req(), mockResponse(), next);
-      await controller().regenerate(req(), mockResponse(), next);
-      await controller().confirmDelete(req(), mockResponse(), next);
-      await controller().remove(req(), mockResponse(), next);
+      await controller().remove(forId({ body: { confirm: 'yes' } }), res, jest.fn());
 
-      expect(next).toHaveBeenCalledTimes(7);
+      expect(res.statusCode).toBe(503);
+    });
+
+    test('every_action_on_an_application_that_is_not_the_callers_should_be_not_found', async () => {
+      Applications.getApplication.mockResolvedValue(undefined);
+      const actions = ['detail', 'access', 'editApis', 'saveEditedApis', 'api', 'confirmDelete', 'remove'] as const;
+
+      for (const action of actions) {
+        const next = jest.fn();
+        await controller()[action](forId(), mockResponse(), next);
+        expect(next).toHaveBeenCalled();
+      }
+      expect(Applications.deleteApplication).not.toHaveBeenCalled();
+      expect(Applications.grantAccess).not.toHaveBeenCalled();
     });
   });
 });
