@@ -127,7 +127,7 @@ export default class ProductionCredentialsController {
         to: user.email,
         subject: `We have received your production credentials request ${request.reference}`,
         paragraphs: [
-          `Dear ${user.firstName},`,
+          `Dear ${user.name},`,
           `We have received your request for production credentials. Your reference is ${request.reference}.`,
           'The marketplace team will review it and email you with the outcome, or to ask for more information.',
         ],

@@ -8,8 +8,7 @@ const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
 const REQUESTER = {
   id: 1,
-  firstName: 'Joe',
-  lastName: 'Bloggs',
+  name: 'Joe Bloggs',
   email: 'joe.bloggs@justice.gov.uk',
 };
 

@@ -9,8 +9,7 @@ export const LOCAL_USER = {
   local: true,
   oid: '11111111-2222-3333-4444-555555555555',
   email: 'ada@example.com',
-  firstName: 'Ada',
-  lastName: 'Lovelace',
+  name: 'Ada Lovelace',
 };
 
 export const CATALOGUE = [

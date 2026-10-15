@@ -6,7 +6,7 @@ import { Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
-import { authorizeUrl, isEntraPrompt } from '../services/Entra';
+import { authorizeUrl, isEntraPrompt, newPkce } from '../services/Entra';
 
 const logger = Logger.getLogger('sign-in');
 
@@ -38,11 +38,12 @@ export default class SignInController {
     const state = crypto.randomBytes(16).toString('hex');
     // Entra copies the nonce into the ID token, which ties that token to this sign in.
     const nonce = crypto.randomBytes(16).toString('hex');
+    const pkce = newPkce();
     const prompt = isEntraPrompt(req.query.prompt) ? req.query.prompt : undefined;
 
-    req.session.entraSignIn = { state, nonce };
+    req.session.entraSignIn = { state, nonce, codeVerifier: pkce.verifier };
     logger.info(`Redirecting to Entra  state=${short(state)}  prompt=${prompt ?? 'none'}`);
-    req.session.save(() => res.redirect(authorizeUrl(state, nonce, prompt)));
+    req.session.save(() => res.redirect(authorizeUrl(state, nonce, pkce.challenge, prompt)));
   }
 }
 
