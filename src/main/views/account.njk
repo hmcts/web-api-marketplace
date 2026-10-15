@@ -20,7 +20,7 @@
       {% set accountPanel %}
         {{ govukSummaryList({
           rows: [
-            { key: { text: "Name" },       value: { text: user.firstName + " " + user.lastName } },
+            { key: { text: "Name" },       value: { text: user.name } },
             { key: { text: "Email" },      value: { text: user.email } }
           ]
         }) }}

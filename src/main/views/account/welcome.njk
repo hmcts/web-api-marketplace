@@ -15,7 +15,7 @@
 
     {{ errorSummary(errors) }}
 
-    <h1 class="govuk-heading-xl">Welcome{% if profile.firstName %}, {{ profile.firstName }}{% endif %}</h1>
+    <h1 class="govuk-heading-xl">Welcome{% if profile.name %}, {{ profile.name }}{% endif %}</h1>
 
     <p class="govuk-body-l">Before you create an application, read how HMCTS APIs may be used.</p>
 
@@ -23,7 +23,7 @@
 
     {{ govukSummaryList({
       rows: [
-        { key: { text: "Name" }, value: { text: profile.firstName + " " + profile.lastName } },
+        { key: { text: "Name" }, value: { text: profile.name } },
         { key: { text: "Email address" }, value: { text: profile.email } }
       ]
     }) }}

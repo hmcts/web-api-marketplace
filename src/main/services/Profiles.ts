@@ -27,21 +27,13 @@ export async function saveProfile(oid: string, profile: Profile): Promise<void> 
   await dataStore().set(profileKey(oid), profile);
 }
 
-/**
- * The session's user, from Entra's claims.
- *
- * `local`, with an id of 0, until the backend can resolve an Entra user: their submissions
- * go to the data store, since the backend would reject a user id it has never seen.
- */
-export function toSignedInUser(claims: EntraClaims): SignedInUser {
-  const [first = '', ...rest] = (claims.name ?? '').trim().split(/\s+/);
-
+/** The session's user, with the backend's id. Still `local`: the backend has no requests yet. */
+export function toSignedInUser(claims: EntraClaims, id: number): SignedInUser {
   return {
-    id: 0,
+    id,
     local: true,
     oid: claims.oid,
     email: normalise(claims.email ?? ''),
-    firstName: claims.givenName || first,
-    lastName: claims.familyName || rest.join(' '),
+    name: (claims.name ?? '').trim(),
   };
 }

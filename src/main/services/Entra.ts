@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { JWTVerifyGetKey, createRemoteJWKSet, jwtVerify } from 'jose';
 
 import { entraConfig } from '../modules/entra/config';
@@ -7,9 +9,9 @@ import { entraConfig } from '../modules/entra/config';
  *
  * The browser carries a single-use authorization code, never
  * a token; this service swaps the code for an ID token server to server, with the client
- * secret; and nothing in that token is believed until its signature and claims have been
- * checked. Entra hosts the sign-in, create-account and password-reset pages, so no
- * password ever reaches this service.
+ * secret and PKCE verifier; and nothing in that token is believed until its signature and
+ * claims have been checked. Entra hosts the sign-in, create-account and password-reset pages,
+ * so no password ever reaches this service.
  */
 
 /** Who Entra says signed in. `oid` is the one to key our records on: it never changes. */
@@ -17,8 +19,6 @@ export interface EntraClaims {
   oid: string;
   email?: string;
   name?: string;
-  givenName?: string;
-  familyName?: string;
 }
 
 /**
@@ -31,11 +31,26 @@ export function isEntraPrompt(value: unknown): value is EntraPrompt {
   return value === 'login' || value === 'create';
 }
 
+/** PKCE (RFC 7636): the verifier stays in the session, only its SHA-256 goes to Entra. */
+export interface Pkce {
+  verifier: string;
+  challenge: string;
+}
+
+export function newPkce(): Pkce {
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  return { verifier, challenge: pkceChallenge(verifier) };
+}
+
+export function pkceChallenge(verifier: string): string {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
 /**
  * The address to send the browser to. response_type=code is the whole security design:
  * the browser carries a single-use authorization code, never a token.
  */
-export function authorizeUrl(state: string, nonce: string, prompt?: EntraPrompt): string {
+export function authorizeUrl(state: string, nonce: string, codeChallenge: string, prompt?: EntraPrompt): string {
   const url = new URL(entraConfig.authorizeEndpoint);
   url.searchParams.set('client_id', entraConfig.clientId);
   url.searchParams.set('response_type', 'code');
@@ -44,14 +59,16 @@ export function authorizeUrl(state: string, nonce: string, prompt?: EntraPrompt)
   url.searchParams.set('scope', entraConfig.scope);
   url.searchParams.set('state', state);
   url.searchParams.set('nonce', nonce);
+  url.searchParams.set('code_challenge', codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
   if (prompt) {
     url.searchParams.set('prompt', prompt);
   }
   return url.toString();
 }
 
-/** The back channel: this service to Microsoft, over TLS, with the client secret. No browser involved. */
-export async function exchangeCodeForIdToken(code: string): Promise<string> {
+/** The back channel: this service to Microsoft, with the client secret and PKCE verifier. */
+export async function exchangeCodeForIdToken(code: string, codeVerifier: string): Promise<string> {
   const response = await fetch(entraConfig.tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -59,6 +76,7 @@ export async function exchangeCodeForIdToken(code: string): Promise<string> {
       client_id: entraConfig.clientId,
       client_secret: entraConfig.clientSecret ?? '',
       code,
+      code_verifier: codeVerifier,
       redirect_uri: entraConfig.redirectUri,
       grant_type: 'authorization_code',
       scope: entraConfig.scope,
@@ -67,7 +85,7 @@ export async function exchangeCodeForIdToken(code: string): Promise<string> {
   const body = (await response.json()) as { id_token?: string; error?: string; error_description?: string };
 
   if (!response.ok || !body.id_token) {
-    // Entra's error code and description, never the request: that carried the secret.
+    // Entra's error code and description, never the request: that carried the secret and verifier.
     throw new Error(`${response.status} ${body.error ?? 'no id_token'}: ${body.error_description ?? ''}`.trim());
   }
   return body.id_token;
@@ -112,8 +130,6 @@ export async function verifiedClaims(idToken: string, expectedNonce: string | un
     // External ID returns an array in some configurations.
     email: (payload.email as string | undefined) || emails?.[0],
     name: payload.name as string | undefined,
-    givenName: payload.given_name as string | undefined,
-    familyName: payload.family_name as string | undefined,
   };
 }
 

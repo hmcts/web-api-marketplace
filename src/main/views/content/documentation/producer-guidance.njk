@@ -1,6 +1,6 @@
 {% extends "template.njk" %}
 
-{% set pageTitle = "Publish an API - HMCTS API Marketplace - GOV.UK" %}
+{% set pageTitle = "Producer guidance - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "documentation" %}
 {% set breadcrumbs = [
   { text: "Home", href: "/" },
@@ -12,11 +12,11 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-xl">Publish an API</h1>
+    <h1 class="govuk-heading-xl">Producer guidance</h1>
 
     <p class="govuk-body-l">
-      List your team&rsquo;s API in the marketplace so other teams can find it, understand what it
-      does, and request access.
+      How to list your team&rsquo;s API in the marketplace so other teams can find it, understand what
+      it does, and request access &mdash; and what you are responsible for once it is live.
     </p>
 
     <p class="govuk-body">
@@ -25,18 +25,12 @@
       a consistent access request process.
     </p>
 
-    <h2 class="govuk-heading-m">In this section</h2>
-
-    <ul class="govuk-list">
-      <li>
-        <a class="govuk-link" href="/documentation/producer-standards">API producer standards</a>
-        &mdash; what your API must meet before it can be listed
-      </li>
-    </ul>
-
     <h2 class="govuk-heading-m">What you will need</h2>
 
-    <p class="govuk-body">Before your API can be listed, you will need:</p>
+    <p class="govuk-body">
+      Your API must meet the <a class="govuk-link" href="/documentation/producer-standards">producer
+      standards</a> before it can be listed. You will need:
+    </p>
 
     <ul class="govuk-list govuk-list--bullet">
       <li>a published OpenAPI specification, reachable at a stable URL</li>
@@ -46,9 +40,10 @@
       <li>a DPIA in place that covers the data being shared as part of the API</li>
     </ul>
 
-    <h2 class="govuk-heading-m">Onboarding process</h2>
+    <h2 class="govuk-heading-m" id="getting-listed">How to get your API listed</h2>
 
     <ol class="govuk-list govuk-list--number">
+      <li>Check your API meets the <a class="govuk-link" href="/documentation/producer-standards">producer standards</a>: the technical requirements, eligibility criteria and specification quality.</li>
       <li>Make sure your API repository is <strong>public on GitHub</strong> under the HMCTS organisation.</li>
       <li>Add the <code>publish-api-docs.yml</code> workflow to <code>.github/workflows/</code> and raise a pull request.</li>
       <li>Once merged, trigger the workflow manually or cut a GitHub release &mdash; the version is stamped from the release tag.</li>
