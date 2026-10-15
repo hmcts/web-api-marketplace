@@ -37,5 +37,8 @@
       "__name": "NOTIFY_SHOW_EMAILS_ON_PAGE",
       "__format": "json"
     }
+  },
+  "applications": {
+    "role": "APPLICATIONS_ROLE"
   }
 }

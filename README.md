@@ -177,10 +177,12 @@ call without touching the journeys:
 - **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
   their Entra `oid`. The backend holds users but not yet requests, so every user is still
   `local`: their subscribe requests go to the data store.
-- **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
-  client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
-  are **not registered with either**, and every page that shows them says so. Secrets are
-  shown once and only their first three characters are kept.
+- **Applications** (`services/Applications.ts`) — registered for real through the backend's
+  `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
+  `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
+  not yet record which subscription keys belong to an application or whether its role
+  (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
+  client ID, and subscription keys are given temporary `amp-temp-…` names.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here
   and listed under My requests. So are subscribe requests, until the backend has
   somewhere to put them.
