@@ -1,6 +1,6 @@
 {% extends "template.njk" %}
 
-{% set pageTitle = "API producer standards - HMCTS API Marketplace - GOV.UK" %}
+{% set pageTitle = "Producer standards - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "documentation" %}
 {% set breadcrumbs = [
   { text: "Home", href: "/" },
@@ -16,7 +16,7 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-xl">API producer standards</h1>
+    <h1 class="govuk-heading-xl">Producer standards</h1>
 
     <p class="govuk-body-l">
       Standards and requirements for listing an API on the HMCTS API Marketplace.
@@ -29,12 +29,12 @@
       <li><a class="govuk-link" href="#eligibility">Eligibility criteria</a></li>
       <li><a class="govuk-link" href="#specification-quality">Specification quality</a></li>
       <li><a class="govuk-link" href="#data-governance">Data governance</a></li>
-      <li><a class="govuk-link" href="#producer-onboarding">Producer onboarding, step by step</a></li>
     </ol>
 
     <p class="govuk-body">
       These standards are based on the HMCTS RESTful API Standards and the AMP Catalogue onboarding
-      process. If you have questions, contact the marketplace team at <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
+      process. For the steps to get your API listed, read the
+      <a class="govuk-link" href="/documentation/producer-guidance">producer guidance</a>. If you have questions, contact the marketplace team at <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
     </p>
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
@@ -217,59 +217,6 @@
              accountability is set out in the Data Governance Standards, which are being moved into
              this service."
     }) }}
-
-    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-
-    <h2 class="govuk-heading-l" id="producer-onboarding">5. Producer onboarding, step by step</h2>
-
-    <p class="govuk-body">
-      If your team owns an HMCTS API and wants it listed on the marketplace, follow these steps.
-    </p>
-
-    <h3 class="govuk-heading-m">Step 1: Check your API meets the producer standards</h3>
-
-    <p class="govuk-body">
-      Your API must have a valid OpenAPI 3.x specification hosted at the standard path in a public
-      GitHub repository under the HMCTS organisation. It must pass Spectral linting with no errors.
-      Check it against the <a class="govuk-link" href="#technical-requirements">technical requirements</a>,
-      <a class="govuk-link" href="#eligibility">eligibility criteria</a> and
-      <a class="govuk-link" href="#specification-quality">specification quality</a> standards above.
-    </p>
-
-    <h3 class="govuk-heading-m">Step 2: Set up the GitHub Actions workflow</h3>
-
-    <p class="govuk-body">
-      Add the standard <code>publish-api-docs.yml</code> workflow to your repository. This triggers the
-      shared <code>amp-catalog</code> workflow and stamps the version from your GitHub release tag
-      automatically.
-    </p>
-
-    <h3 class="govuk-heading-m">Step 3: Confirm documentation is publicly accessible</h3>
-
-    <p class="govuk-body">
-      Verify your Swagger UI documentation site is live at
-      <code>https://hmcts.github.io/&lt;repo-name&gt;/</code> before you contact the team.
-    </p>
-
-    <h3 class="govuk-heading-m">Step 4: Contact the API Marketplace team</h3>
-
-    <p class="govuk-body">
-      Email the API Marketplace team at
-      <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>
-      to get your API published on the marketplace.
-    </p>
-
-    <p class="govuk-body">
-      The marketplace team will review your API. Once approved, your API appears in the catalogue
-      and stays in sync with your OpenAPI specification.
-    </p>
-
-    <h3 class="govuk-heading-m">Step 5: Manage incoming access requests</h3>
-
-    <p class="govuk-body">
-      Once live, consumers can submit access requests. You are responsible for reviewing them,
-      notifying consumers of breaking changes, and keeping your specification up to date.
-    </p>
 
   </div>
 </div>
