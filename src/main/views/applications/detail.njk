@@ -50,14 +50,14 @@
       {% for api in application.apis %}
         {% set rows = (rows.push([
           { text: api.apiTitle },
-          { text: api.publisherId, classes: "apim-reference" },
+          { text: "30288840-e345-4543-99ee-f9253d789339/.default", classes: "apim-reference" },
           { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
         ]), rows) %}
       {% endfor %}
       {{ govukTable({
         caption: "APIs added to this application",
         captionClasses: "govuk-visually-hidden",
-        head: [{ text: "API" }, { text: "Publisher ID" }, { html: '<span class="govuk-visually-hidden">Action</span>' }],
+        head: [{ text: "API" }, { text: "Scope" }, { html: '<span class="govuk-visually-hidden">Action</span>' }],
         rows: rows,
         attributes: { id: "application-apis" }
       }) }}
