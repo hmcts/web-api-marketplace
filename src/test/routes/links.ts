@@ -34,7 +34,8 @@ describe('Links', () => {
 
     // The migrated guidance pages and the legal pages must all be reachable from the
     // home page by following links, not merely exist.
-    for (const path of [...Object.keys(CONTENT_PAGES), '/api-catalogue', '/cookies', '/accessibility-statement']) {
+    const linkable = Object.keys(CONTENT_PAGES).filter(path => !UNLINKED_FOR_NOW.includes(path));
+    for (const path of [...linkable, '/api-catalogue', '/cookies', '/accessibility-statement']) {
       expect(visited, `${path} should be linked from somewhere`).to.include(path);
     }
   });
@@ -60,6 +61,24 @@ describe('Links', () => {
     expect(visited.some(path => path.startsWith('/account/production-credentials/PCR-'))).to.equal(true);
   });
 });
+
+/**
+ * Pages that still exist but are deliberately not linked from anywhere for now: the
+ * Architecture, Technical reference, Context and examples and A to Z sections were taken
+ * off the Documentation page until they are brought back. Remove each path from here when
+ * a link to it returns, so the crawl checks it again.
+ */
+const UNLINKED_FOR_NOW = [
+  '/documentation/architecture',
+  '/documentation/architecture-principles',
+  '/documentation/our-capabilities',
+  '/documentation/our-api-technologies',
+  '/documentation/glossary',
+  '/documentation/technology-introduction',
+  '/documentation/building-software',
+  '/documentation/case-studies',
+  '/documentation/resources',
+];
 
 /** Pages a crawler must not follow: signing out ends the signed-in crawl. */
 const SKIP = new Set(['/sign-out']);
