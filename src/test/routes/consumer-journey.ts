@@ -50,37 +50,21 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('signing in', () => {
-    test('the_first_sign_in_should_go_through_the_welcome_and_on_to_applications', async () => {
+    test('the_first_sign_in_should_land_on_the_account_page', async () => {
       const agent = newAgent();
 
       await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
-        expect(res.headers.location).to.equal('/account/welcome')
+        expect(res.headers.location).to.equal('/account')
       );
 
-      await agent.get('/account/welcome').expect(res => {
-        expect(res.text).to.contain('Welcome, Ada');
+      await agent.get('/account').expect(res => {
+        expect(res.status).to.equal(200);
         expect(res.text).to.contain('ada@example.com');
+        expect(res.text).to.not.contain('Organisation');
       });
-      await agent
-        .post('/account/welcome')
-        .type('form')
-        .send({})
-        .expect(res => {
-          expect(res.status).to.equal(400);
-          expect(res.text).to.contain('Enter your organisation or team');
-          expect(res.text).to.contain('Select whether you are a consumer or a producer');
-          expect(res.text).to.contain('Confirm that you have read and agree to the guidelines');
-        });
-      await agent
-        .post('/account/welcome')
-        .type('form')
-        .send({ organisation: 'Analytical Engines Ltd', role: 'consumer', agree: 'yes' })
-        .expect(res => expect(res.headers.location).to.equal('/account/applications'));
-
-      await agent.get('/account').expect(res => expect(res.text).to.contain('Analytical Engines Ltd'));
     });
 
-    test('later_sign_ins_should_skip_the_welcome', async () => {
+    test('later_sign_ins_should_land_on_the_account_page_too', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/sign-out').expect(302);
 
@@ -89,7 +73,7 @@ describe('Consumer onboarding journey', () => {
       );
     });
 
-    test('signing_in_should_return_to_the_page_that_asked_for_it', async () => {
+    test('a_sign_in_asked_for_by_another_page_should_still_land_on_the_account_page', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/sign-out');
 
@@ -97,7 +81,7 @@ describe('Consumer onboarding journey', () => {
         .get('/account/production-credentials')
         .expect(res => expect(res.headers.location).to.equal('/sign-in'));
       await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
-        expect(res.headers.location).to.equal('/account/production-credentials')
+        expect(res.headers.location).to.equal('/account')
       );
     });
 
@@ -116,6 +100,8 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('applications', () => {
+    afterEach(() => stubEntra().reset());
+
     test('creating_an_application_should_show_the_secret_once_and_mask_it_afterwards', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
@@ -131,9 +117,13 @@ describe('Consumer onboarding journey', () => {
           expect(res.status).to.equal(400);
           expect(res.text).to.contain('Enter an application name');
         });
-      await agent
-        .get('/account/applications/new/details')
-        .expect(res => expect(res.text).to.not.contain('Select your environment'));
+      for (const name of ['Reports', 'Case-tracker']) {
+        await agent
+          .post('/account/applications/new/details')
+          .type('form')
+          .send({ name })
+          .expect(res => expect(res.text).to.contain('Application name must be 8 to 50 letters, numbers or spaces'));
+      }
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker' });
       await agent
         .post('/account/applications/new/apis')
@@ -156,41 +146,110 @@ describe('Consumer onboarding journey', () => {
 
       expect(created.text).to.contain('Application created');
       expect(created.text).to.contain('You will not be able to see it again');
-      // Entra's shape: 40 characters, "8Q~" from the fourth.
       expect(secret).to.match(/^.{3}8Q~.{34}$/);
       expect(created.text.match(/Subscription key: <span class="apim-credential">[0-9a-f]{32}</g)).to.have.length(2);
+      expect(created.text).to.contain('These credentials will not work yet');
+      expect(created.text).to.contain(`data-access-url="/account/applications/${id}/access"`);
+
+      const subscriptions = [...stubEntra().marketplace.subscriptions.entries()];
+      expect(subscriptions.map(([name]) => name).every(name => /^amp-user\d{3}-temp-[0-9a-f]{8}$/.test(name))).to.equal(
+        true
+      );
+      expect(subscriptions.map(([, subscription]) => subscription.productId)).to.deep.equal([
+        'cp-crime-hearing',
+        'cp-crime-defendant-details',
+      ]);
 
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        expect(res.text).to.contain('crime-hearing');
+        expect(res.text).to.contain('cp-crime-hearing');
       });
 
-      // The draft is gone, so a resubmitted form cannot create a second application.
       await agent.post('/account/applications/new/check-answers').expect(302);
-      await agent.get('/account/applications').expect(res => expect(res.text.match(/Case tracker/g)).to.have.length(1));
+      await agent
+        .get('/account/applications')
+        .expect(res => expect(res.text.match(/>Case tracker</g)).to.have.length(1));
     });
 
-    test('the_same_name_cannot_be_used_twice', async () => {
+    test('the_same_name_twice_should_be_refused_by_the_backend', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await createdApplication(agent, 'Case tracker');
 
-      await agent
-        .post('/account/applications/new/details')
-        .type('form')
-        .send({ name: 'case tracker' })
-        .expect(res => expect(res.text).to.contain('You already have an application with this name'));
-      await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker 2' }).expect(302);
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'case tracker' }).expect(302);
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/check-answers').expect(res => {
+        expect(res.status).to.equal(400);
+        expect(res.text).to.contain('You already have an application called case tracker');
+      });
+      expect(stubEntra().marketplace.applications.size).to.equal(1);
     });
 
-    test('viewing_an_api_should_show_its_publisher_id_and_subscription_key', async () => {
+    test('access_should_be_retried_until_entra_can_assign_the_role', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
+      stubEntra().marketplace.roleNotAssignableFor(1);
+
+      const check = () => agent.post(`/account/applications/${id}/access`).set('Accept', 'application/json');
+      await check().expect(res => expect(res.body).to.deep.equal({ state: 'pending' }));
+      await check().expect(res => expect(res.body).to.deep.equal({ state: 'granted' }));
+
+      expect(stubEntra().marketplace.applications.get(id)?.roles).to.deep.equal(['app.read']);
+      await agent.get(`/account/applications/${id}`).expect(res => {
+        expect(res.text).to.contain('id="access-granted"');
+        expect(res.text).to.not.contain('These credentials will not work yet');
+      });
+    });
+
+    test('access_that_graph_refuses_should_say_why_and_stop', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      const id = await createdApplication(agent);
+      stubEntra().marketplace.refuseRoles(500);
+
+      await agent
+        .post(`/account/applications/${id}/access`)
+        .set('Accept', 'application/json')
+        .expect(res => {
+          expect(res.body.state).to.equal('failed');
+          expect(res.body.message).to.contain('AppRoleAssignment.ReadWrite.All');
+        });
+    });
+
+    test('checking_access_without_javascript_should_come_back_to_the_application_with_the_outcome', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      const id = await createdApplication(agent);
+
+      await agent
+        .post(`/account/applications/${id}/access`)
+        .type('form')
+        .expect(res => expect(res.headers.location).to.equal(`/account/applications/${id}`));
+      await agent.get(`/account/applications/${id}`).expect(res => {
+        expect(res.text).to.contain('Case tracker can now call the APIs it is subscribed to.');
+      });
+    });
+
+    test('an_api_that_cannot_be_subscribed_should_not_lose_the_secret', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      stubEntra().marketplace.failSubscriptions(502);
+
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker' });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/check-answers').expect(res => {
+        expect(res.status).to.equal(200);
+        expect(res.text).to.match(/id="client-secret"[^>]*>.{3}8Q~/);
+        expect(res.text).to.contain('These APIs could not be added just now: CP Crime Hearing API');
+      });
+    });
+
+    test('viewing_an_api_should_show_its_publisher_id_and_the_key_from_apim', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      const id = await createdApplication(agent);
+      const [subscription] = [...stubEntra().marketplace.subscriptions.values()];
 
       await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].name}`).expect(res => {
         expect(res.status).to.equal(200);
         expect(res.text).to.match(/id="publisher-id">cp-crime-hearing</);
-        expect(res.text).to.match(/id="subscription-key">[0-9a-f]{32}</);
+        expect(res.text).to.contain(`id="subscription-key">${subscription.primaryKey}<`);
       });
       await agent.get(`/account/applications/${id}/apis/api-not-subscribed`).expect(404);
     });
@@ -198,6 +257,7 @@ describe('Consumer onboarding journey', () => {
     test('adding_and_removing_apis_should_say_what_changed', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
+      const [original] = [...stubEntra().marketplace.subscriptions.keys()];
 
       await agent
         .post(`/account/applications/${id}/apis`)
@@ -210,22 +270,19 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain('Defendant Details');
         expect(res.text).to.not.contain('CP Crime Hearing API');
       });
+      expect(stubEntra().marketplace.subscriptions.has(original), 'the removed key is revoked').to.equal(false);
+      expect(stubEntra().marketplace.subscriptions.size).to.equal(1);
     });
 
-    test('regenerating_the_secret_should_show_a_new_one_once', async () => {
+    test('the_regenerate_secret_page_should_be_gone', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
 
-      await agent.get(`/account/applications/${id}/client-secret`).expect(res => {
-        expect(res.text).to.contain('The current secret will stop working straight away');
-      });
-      await agent.post(`/account/applications/${id}/client-secret`).expect(res => {
-        expect(res.text).to.contain('Client secret regenerated');
-        expect(res.text).to.match(/id="client-secret"[^>]*>.{3}8Q~/);
-      });
+      await agent.get(`/account/applications/${id}`).expect(res => expect(res.text).to.not.contain('Regenerate'));
+      await agent.get(`/account/applications/${id}/client-secret`).expect(404);
     });
 
-    test('deleting_should_remove_the_application', async () => {
+    test('deleting_should_remove_the_application_and_its_keys', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
 
@@ -240,6 +297,7 @@ describe('Consumer onboarding journey', () => {
         .get('/account/applications')
         .expect(res => expect(res.text).to.contain('Case tracker has been deleted'));
       await agent.get(`/account/applications/${id}`).expect(404);
+      expect(stubEntra().marketplace.subscriptions.size).to.equal(0);
     });
 
     test('one_user_should_not_be_able_to_see_another_users_application', async () => {
@@ -248,10 +306,19 @@ describe('Consumer onboarding journey', () => {
       const stranger = await signedInConsumer('charles@example.com');
 
       expect((await stranger.get(`/account/applications/${id}`)).status).to.equal(404);
+      expect((await stranger.post(`/account/applications/${id}/access`).type('form')).status).to.equal(404);
       expect(
         (await stranger.post(`/account/applications/${id}/delete`).type('form').send({ confirm: 'yes' })).status
       ).to.equal(404);
       expect((await owner.get(`/account/applications/${id}`)).status, 'the owner still has it').to.equal(200);
+    });
+
+    test('a_user_the_backend_no_longer_knows_should_be_asked_to_sign_in_again', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      stubEntra().savedUsers.delete(claimsFor('ada@example.com').oid);
+
+      await agent.get('/account/applications').expect(res => expect(res.headers.location).to.equal('/sign-in'));
+      await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
     });
   });
 
@@ -300,7 +367,7 @@ describe('Consumer onboarding journey', () => {
         .expect(res => expect(res.headers.location).to.equal('/account/production-credentials/check-answers'));
 
       await agent.get('/account/production-credentials/check-answers').expect(res => {
-        expect(res.text).to.contain('Case tracker (Sandbox)');
+        expect(res.text).to.contain('Case tracker');
         expect(res.text).to.contain('1 April');
       });
 

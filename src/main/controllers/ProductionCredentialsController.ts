@@ -5,7 +5,7 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
 import { CALL_VOLUMES } from '../services/AccessRequest';
-import { Application, environmentName, listApplications } from '../services/Applications';
+import { Application, listApplications, ownerOf } from '../services/Applications';
 import { addLocalRequest, getLocalRequest, statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import { SignedInUser } from '../services/SignIn';
@@ -53,7 +53,6 @@ export default class ProductionCredentialsController {
     const user = req.session.user as SignedInUser;
     const preselected = typeof req.query.application === 'string' ? req.query.application : undefined;
     const answers: Answers = {
-      organisation: user.orgName,
       'security-contact': user.email,
       ...req.session.productionDraft,
       ...(preselected ? { application: preselected } : {}),
@@ -69,7 +68,7 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await listApplications(user.email);
+    const applications = await this.applications(user);
     const answers = this.toAnswers(req.body as Record<string, unknown>);
     const errors = this.validate(answers, applications);
 
@@ -97,7 +96,7 @@ export default class ProductionCredentialsController {
 
     const user = req.session.user as SignedInUser;
     res.render('production-credentials/check-answers', {
-      rows: this.summaryRows(draft, await listApplications(user.email)),
+      rows: this.summaryRows(draft, await this.applications(user)),
     });
   }
 
@@ -109,7 +108,7 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await listApplications(user.email);
+    const applications = await this.applications(user);
     const draft = req.session.productionDraft;
 
     // Checked again: the application chosen may have been deleted since in another tab.
@@ -128,7 +127,7 @@ export default class ProductionCredentialsController {
         to: user.email,
         subject: `We have received your production credentials request ${request.reference}`,
         paragraphs: [
-          `Dear ${user.firstName},`,
+          `Dear ${user.name},`,
           `We have received your request for production credentials. Your reference is ${request.reference}.`,
           'The marketplace team will review it and email you with the outcome, or to ask for more information.',
         ],
@@ -235,6 +234,15 @@ export default class ProductionCredentialsController {
     return date.getUTCDate() === day && date.getUTCMonth() === month - 1 ? date : undefined;
   }
 
+  private async applications(user: SignedInUser): Promise<Application[]> {
+    try {
+      return await listApplications(ownerOf(user));
+    } catch (error) {
+      logger.error(`Could not list the applications for the form: ${(error as Error).message}`);
+      return [];
+    }
+  }
+
   private summaryRows(answers: Answers, applications: Application[]): SummaryRow[] {
     const application = applications.find(candidate => candidate.id === answers.application);
     const goLive = this.goLiveDate(answers);
@@ -244,7 +252,7 @@ export default class ProductionCredentialsController {
     return [
       {
         key: 'Application',
-        value: application ? `${application.name} (${environmentName(application.environment)})` : '',
+        value: application?.name ?? '',
       },
       { key: 'APIs', value: application?.apis.map(api => api.apiTitle).join(', ') || 'None' },
       { key: 'Organisation', value: String(answers.organisation ?? '') },
@@ -274,7 +282,7 @@ export default class ProductionCredentialsController {
     errors: FieldError[],
     applications?: Application[]
   ): Promise<Record<string, unknown>> {
-    const owned = applications ?? (await listApplications(user.email));
+    const owned = applications ?? (await this.applications(user));
 
     return {
       answers,
@@ -284,7 +292,7 @@ export default class ProductionCredentialsController {
         value: application.id,
         text: application.name,
         hint: {
-          text: `${environmentName(application.environment)} – ${application.apis.length} ${application.apis.length === 1 ? 'API' : 'APIs'}`,
+          text: `${application.apis.length} ${application.apis.length === 1 ? 'API' : 'APIs'}`,
         },
       })),
       callVolumes: CALL_VOLUMES,

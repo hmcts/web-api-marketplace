@@ -2,40 +2,34 @@ import { GET, POST, route } from 'awilix-express';
 import { NextFunction, Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
+import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
 import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
 import {
-  APPLICATION_NAME_MAX_LENGTH,
+  ACCESS_ATTEMPTS,
+  ACCESS_RETRY_SECONDS,
   Application,
   ApplicationDraft,
-  ENVIRONMENTS,
-  SELF_SERVICE_ENVIRONMENT,
+  BackendError,
+  Owner,
   createApplication,
   deleteApplication,
-  environmentName,
   getApplication,
+  grantAccess,
   listApplications,
-  regenerateSecret,
+  maskSecret,
+  ownerOf,
   setApis,
+  subscriptionKey,
   validateApis,
-  validateDetails,
+  validateName,
 } from '../services/Applications';
-import { credentialsAreSimulated, maskSecret } from '../services/Credentials';
 import { SignedInUser } from '../services/SignIn';
 import { FieldError, toAnswerList, toAnswerText } from '../services/answers';
 
-/**
- * Manage applications: create one, choose its APIs, see and rotate its credentials, and
- * delete it.
- *
- * The create journey holds its answers in the session between pages, rather than posting
- * them on as hidden fields like the request forms do: it is four pages with "change"
- * links back into the middle, and the session is in Redis, so it survives a refresh and
- * any replica can serve the next page.
- *
- * A client secret is shown exactly once — on the page that follows creating or
- * regenerating it — and never stored, matching how Entra ID treats secrets.
- */
+const logger = Logger.getLogger('applications');
+
+/** The client secret exists only in the response to creating the application, so it is shown on that page alone. */
 @route('/account/applications')
 export default class ApplicationsController {
   @GET()
@@ -44,19 +38,17 @@ export default class ApplicationsController {
       return;
     }
 
-    const applications = await listApplications(this.owner(req));
-    res.render('applications/index', {
-      notice: takeNotice(req),
-      groups: ENVIRONMENTS.map(environment => ({
-        name: environment.text,
-        applications: applications.filter(application => application.environment === environment.value),
-      })).filter(group => group.applications.length),
-      count: applications.length,
-    });
+    let applications: Application[];
+    try {
+      applications = await listApplications(this.owner(req));
+    } catch (error) {
+      this.backendFailed(req, res, error);
+      return;
+    }
+    res.render('applications/index', { notice: takeNotice(req), applications });
   }
 
-  // ------------------------------------------------------------- create an application
-  // Registered before /:id, so "new" is never taken for an application id.
+  // Registered before /:id, so "new" is never taken for a client ID.
 
   @route('/new')
   @GET()
@@ -64,7 +56,6 @@ export default class ApplicationsController {
     if (!requireSignIn(req, res)) {
       return;
     }
-    // Starting again from the beginning starts with nothing filled in.
     delete req.session.applicationDraft;
     res.render('applications/new/index');
   }
@@ -80,19 +71,16 @@ export default class ApplicationsController {
 
   @route('/new/details')
   @POST()
-  public async saveDetails(req: AppRequest, res: Response): Promise<void> {
+  public saveDetails(req: AppRequest, res: Response): void {
     if (!requireSignIn(req, res)) {
       return;
     }
 
-    const body = (req.body ?? {}) as Record<string, unknown>;
     const draft: ApplicationDraft = {
       ...req.session.applicationDraft,
-      environment: SELF_SERVICE_ENVIRONMENT,
-      name: toAnswerText(body, 'name'),
-      description: toAnswerText(body, 'description'),
+      name: toAnswerText((req.body ?? {}) as Record<string, unknown>, 'name'),
     };
-    const errors = await validateDetails(this.owner(req), draft);
+    const errors = validateName(draft.name);
 
     if (errors.length) {
       res.status(400).render('applications/new/details', this.detailsData(draft, errors));
@@ -170,34 +158,28 @@ export default class ApplicationsController {
 
     const draft = req.session.applicationDraft;
     const catalogue = await getCatalogueApis();
-
-    // Validated again: the name may have been taken in another tab since, and the
-    // catalogue may have changed underneath the APIs chosen.
-    const errors = draft
-      ? [...(await validateDetails(this.owner(req), draft)), ...validateApis(draft.apis ?? [], catalogue)]
-      : [];
+    const errors = draft ? [...validateName(draft.name), ...validateApis(draft.apis ?? [], catalogue)] : [];
 
     if (!draft?.name || errors.length) {
       res.redirect(draft?.name ? '/account/applications/new/details' : '/account/applications');
       return;
     }
 
-    const { application, clientSecret } = await createApplication(
-      this.owner(req),
-      draft as Required<ApplicationDraft>,
-      catalogue
-    );
+    let created;
+    try {
+      created = await createApplication(this.owner(req), draft as Required<ApplicationDraft>, catalogue);
+    } catch (error) {
+      if (error instanceof BackendError && (error.status === 400 || error.status === 409)) {
+        const message = error.status === 409 ? `You already have an application called ${draft.name}` : error.message;
+        res.status(400).render('applications/new/details', this.detailsData(draft, [{ name: 'name', text: message }]));
+        return;
+      }
+      this.backendFailed(req, res, error);
+      return;
+    }
 
-    // Cleared before the page renders, so going back and resubmitting cannot create the
-    // application a second time.
     delete req.session.applicationDraft;
-    req.session.save(() =>
-      res.render('applications/new/confirmation', {
-        application,
-        clientSecret,
-        simulated: credentialsAreSimulated,
-      })
-    );
+    req.session.save(() => res.render('applications/new/confirmation', { ...created, ...this.accessData() }));
   }
 
   // --------------------------------------------------------------- one application
@@ -212,11 +194,48 @@ export default class ApplicationsController {
 
     res.render('applications/detail', {
       application,
-      environment: environmentName(application.environment),
       maskedSecret: maskSecret(application.secretHint),
       notice: takeNotice(req),
-      simulated: credentialsAreSimulated,
+      ...this.accessData(),
     });
+  }
+
+  @route('/:id/access')
+  @POST()
+  public async access(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    const application = await this.find(req, res, next);
+    if (!application) {
+      return;
+    }
+
+    let result;
+    try {
+      result = await grantAccess(this.owner(req), application);
+    } catch (error) {
+      if (req.accepts(['html', 'json']) === 'json') {
+        logger.error(`Could not grant access to ${application.clientId}: ${(error as Error).message}`);
+        res.status(502).json({ state: 'failed', message: 'The service could not be reached. Try again later.' });
+        return;
+      }
+      this.backendFailed(req, res, error);
+      return;
+    }
+
+    if (req.accepts(['html', 'json']) === 'json') {
+      res.json(result);
+      return;
+    }
+    req.session.notice = {
+      success: result.state === 'granted',
+      title: result.state === 'granted' ? 'Success' : 'Important',
+      text:
+        result.state === 'granted'
+          ? `${application.name} can now call the APIs it is subscribed to.`
+          : result.state === 'pending'
+            ? 'Access is still being set up. Try again in a minute.'
+            : `Access could not be set up: ${result.message}`,
+    };
+    req.session.save(() => res.redirect(`/account/applications/${application.id}`));
   }
 
   @route('/:id/apis')
@@ -255,18 +274,23 @@ export default class ApplicationsController {
       return;
     }
 
-    const changes = await setApis(this.owner(req), application.id, selected, catalogue);
-    const added = changes?.added.length ?? 0;
-    const removed = changes?.removed.length ?? 0;
+    const changes = await setApis(this.owner(req), application, selected, catalogue);
+    const { added, removed, failed } = changes;
 
-    req.session.notice = {
-      success: true,
-      title: 'Success',
-      text:
-        added || removed
-          ? `APIs updated: ${added} added, ${removed} removed. Each API added has its own new subscription key.`
-          : 'No changes were made to the APIs.',
-    };
+    req.session.notice = failed.length
+      ? {
+          success: false,
+          title: 'Important',
+          text: `Some APIs could not be changed: ${failed.join(', ')}. Try again in a few minutes.`,
+        }
+      : {
+          success: true,
+          title: 'Success',
+          text:
+            added.length || removed.length
+              ? `APIs updated: ${added.length} added, ${removed.length} removed. Each API added has its own new subscription key.`
+              : 'No changes were made to the APIs.',
+        };
     req.session.save(() => res.redirect(`/account/applications/${application.id}`));
   }
 
@@ -284,33 +308,13 @@ export default class ApplicationsController {
       return;
     }
 
-    res.render('applications/api', { application, subscription, simulated: credentialsAreSimulated });
-  }
-
-  @route('/:id/client-secret')
-  @GET()
-  public async confirmRegenerate(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
-    if (!application) {
-      return;
+    let key: string | undefined;
+    try {
+      key = await subscriptionKey(this.owner(req), subscription);
+    } catch (error) {
+      logger.error(`Could not read the key for ${subscription.subscriptionName}: ${(error as Error).message}`);
     }
-    res.render('applications/client-secret', { application, maskedSecret: maskSecret(application.secretHint) });
-  }
-
-  @route('/:id/client-secret')
-  @POST()
-  public async regenerate(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    const application = await this.find(req, res, next);
-    if (!application) {
-      return;
-    }
-
-    const clientSecret = await regenerateSecret(this.owner(req), application.id);
-    res.render('applications/client-secret-new', {
-      application,
-      clientSecret,
-      simulated: credentialsAreSimulated,
-    });
+    res.render('applications/api', { application, subscription, subscriptionKey: key });
   }
 
   @route('/:id/delete')
@@ -336,7 +340,12 @@ export default class ApplicationsController {
       return;
     }
 
-    await deleteApplication(this.owner(req), application.id);
+    try {
+      await deleteApplication(this.owner(req), application);
+    } catch (error) {
+      this.backendFailed(req, res, error);
+      return;
+    }
     req.session.notice = {
       success: true,
       title: 'Success',
@@ -347,25 +356,38 @@ export default class ApplicationsController {
 
   // ---------------------------------------------------------------------- helpers
 
-  private owner(req: AppRequest): string {
-    return (req.session.user as SignedInUser).email;
+  private owner(req: AppRequest): Owner {
+    return ownerOf(req.session.user as SignedInUser);
   }
 
-  /**
-   * Looks the application up in the signed-in user's own list. An id that is not one of
-   * theirs is "not found" — the same answer as an id that does not exist — so the page
-   * gives away nothing about other people's applications.
-   */
   private async find(req: AppRequest, res: Response, next: NextFunction): Promise<Application | undefined> {
     if (!requireSignIn(req, res)) {
       return undefined;
     }
 
-    const application = await getApplication(this.owner(req), String(req.params.id));
-    if (!application) {
-      next();
+    try {
+      const application = await getApplication(this.owner(req), String(req.params.id));
+      if (!application) {
+        next();
+      }
+      return application;
+    } catch (error) {
+      this.backendFailed(req, res, error);
+      return undefined;
     }
-    return application;
+  }
+
+  private backendFailed(req: AppRequest, res: Response, error: unknown): void {
+    if (error instanceof BackendError && error.signInAgain) {
+      req.session.destroy(() => res.redirect('/sign-in'));
+      return;
+    }
+    logger.error(`Applications backend call failed: ${(error as Error).message}`);
+    res.status(503).render('applications/unavailable');
+  }
+
+  private accessData(): Record<string, unknown> {
+    return { accessAttempts: ACCESS_ATTEMPTS, accessRetrySeconds: ACCESS_RETRY_SECONDS };
   }
 
   private selectedApis(req: AppRequest): string[] {
@@ -373,12 +395,7 @@ export default class ApplicationsController {
   }
 
   private detailsData(draft: ApplicationDraft, errors: FieldError[]): Record<string, unknown> {
-    return {
-      draft,
-      errors,
-      errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      nameMaxLength: APPLICATION_NAME_MAX_LENGTH,
-    };
+    return { draft, errors, errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])) };
   }
 
   private async apisData(
@@ -408,7 +425,6 @@ export default class ApplicationsController {
     return {
       rows: [
         { key: 'Application name', value: draft.name, href: '/account/applications/new/details' },
-        { key: 'Description', value: draft.description || 'None', href: '/account/applications/new/details' },
         { key: 'APIs', value: titles.join(', '), href: '/account/applications/new/apis' },
       ],
     };

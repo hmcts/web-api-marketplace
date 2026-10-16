@@ -1,11 +1,14 @@
 import AuthCallbackController from '../../../main/controllers/AuthCallbackController';
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
+import { newPkce } from '../../../main/services/Entra';
 import { saveProfile } from '../../../main/services/Profiles';
 import { ADA, StubEntra, codeFor, startStubEntra } from '../../stubs/entra';
 import { anonymous } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
-const STARTED = { state: 'the-state', nonce: 'the-nonce' };
+const PKCE = newPkce();
+const STARTED = { state: 'the-state', nonce: 'the-nonce', codeVerifier: PKCE.verifier };
+const CODE = codeFor(ADA, STARTED.nonce, PKCE.challenge);
 
 let entra: StubEntra;
 
@@ -19,7 +22,7 @@ afterAll(() => entra.close());
 const backFromEntra = (query: Record<string, string>, session: Record<string, unknown> = { entraSignIn: STARTED }) =>
   anonymous({ query, session });
 
-const callback = async (req = backFromEntra({ code: codeFor(ADA, STARTED.nonce), state: STARTED.state })) => {
+const callback = async (req = backFromEntra({ code: CODE, state: STARTED.state })) => {
   const res = mockResponse();
   await new AuthCallbackController().get(req, res);
   return { req, res };
@@ -29,42 +32,68 @@ describe('AuthCallbackController', () => {
   beforeEach(() => useDataStore(new MemoryStore()));
   afterEach(() => entra.reset());
 
-  test('a_first_sign_in_should_start_a_session_as_the_entra_user_and_go_to_the_welcome', async () => {
-    const { req, res } = await callback();
-
-    expect(res.redirected).toBe('/account/welcome');
-    expect(req.session.user).toEqual({
-      id: 0,
-      local: true,
-      oid: ADA.oid,
-      email: 'ada@example.com',
-      firstName: 'Ada',
-      lastName: 'Lovelace',
-      orgName: '',
-      role: undefined,
-    });
-  });
-
-  test('a_later_sign_in_should_bring_the_profile_and_skip_the_welcome', async () => {
-    await saveProfile(ADA.oid, { orgName: 'Analytical Engines Ltd', role: 'producer', onboardedAt: 'then' });
-
+  test('a_first_sign_in_should_start_a_session_as_the_entra_user_and_go_to_the_account', async () => {
     const { req, res } = await callback();
 
     expect(res.redirected).toBe('/account');
-    expect(req.session.user).toMatchObject({ orgName: 'Analytical Engines Ltd', role: 'producer' });
+    expect(req.session.user).toEqual({
+      id: entra.savedUsers.get(ADA.oid)?.id,
+      userReference: `user${String(entra.savedUsers.get(ADA.oid)?.id).padStart(3, '0')}`,
+      local: true,
+      oid: ADA.oid,
+      email: 'ada@example.com',
+      name: 'Ada Lovelace',
+    });
   });
 
-  test('a_later_sign_in_should_return_to_the_page_that_asked_for_it', async () => {
-    await saveProfile(ADA.oid, { orgName: 'Analytical Engines Ltd', role: 'consumer', onboardedAt: 'then' });
+  test('a_later_sign_in_should_go_to_the_account', async () => {
+    await saveProfile(ADA.oid, { onboardedAt: 'then' });
 
+    const { res } = await callback();
+
+    expect(res.redirected).toBe('/account');
+  });
+
+  test('a_sign_in_asked_for_by_another_page_should_still_go_to_the_account', async () => {
     const { res } = await callback(
       backFromEntra(
-        { code: codeFor(ADA, STARTED.nonce), state: STARTED.state },
+        { code: CODE, state: STARTED.state },
         { entraSignIn: STARTED, returnTo: '/account/applications/new' }
       )
     );
 
-    expect(res.redirected).toBe('/account/applications/new');
+    expect(res.redirected).toBe('/account');
+  });
+
+  test('the_user_should_be_saved_in_the_backend_with_the_tokens_email_and_names', async () => {
+    await callback();
+
+    expect(entra.savedUsers.get(ADA.oid)).toMatchObject({
+      email: 'ada@example.com',
+      name: 'Ada Lovelace',
+    });
+  });
+
+  test('a_backend_that_cannot_save_the_user_should_leave_nobody_signed_in', async () => {
+    entra.failUserSaves(409);
+
+    const { req, res } = await callback();
+
+    expect(res.statusCode).toBe(503);
+    expect(res.data?.problem).toBe('unavailable');
+    expect(req.session.user).toBeUndefined();
+  });
+
+  test('a_code_brought_back_to_a_session_with_another_verifier_should_not_sign_anyone_in', async () => {
+    const { req, res } = await callback(
+      backFromEntra(
+        { code: CODE, state: STARTED.state },
+        { entraSignIn: { ...STARTED, codeVerifier: newPkce().verifier } }
+      )
+    );
+
+    expect(res.statusCode).toBe(502);
+    expect(req.session.user).toBeUndefined();
   });
 
   test('the_sign_in_should_be_used_up_so_the_same_callback_cannot_be_replayed', async () => {

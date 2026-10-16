@@ -6,6 +6,8 @@ import {
   exchangeCodeForIdToken,
   isEntraPrompt,
   logoutUrl,
+  newPkce,
+  pkceChallenge,
   verifiedClaims,
 } from '../../../main/services/Entra';
 import { ADA, CLIENT_ID, StubEntra, TokenOverrides, codeFor, startStubEntra } from '../../stubs/entra';
@@ -23,7 +25,7 @@ afterEach(() => entra.reset());
 describe('Entra', () => {
   describe('authorizeUrl', () => {
     test('the_browser_should_be_sent_for_a_code_and_never_a_token', () => {
-      const sentTo = new URL(authorizeUrl('the-state', 'the-nonce'));
+      const sentTo = new URL(authorizeUrl('the-state', 'the-nonce', 'the-challenge'));
 
       expect(sentTo.origin + sentTo.pathname).toBe(entra.authorizeEndpoint);
       expect(sentTo.searchParams.get('response_type')).toBe('code');
@@ -34,8 +36,17 @@ describe('Entra', () => {
       expect(sentTo.searchParams.has('prompt')).toBe(false);
     });
 
+    test('the_pkce_challenge_should_go_to_entra_as_s256_and_the_verifier_should_not', () => {
+      const pkce = newPkce();
+      const sentTo = new URL(authorizeUrl('s', 'n', pkce.challenge));
+
+      expect(sentTo.searchParams.get('code_challenge')).toBe(pkce.challenge);
+      expect(sentTo.searchParams.get('code_challenge_method')).toBe('S256');
+      expect(sentTo.toString()).not.toContain(pkce.verifier);
+    });
+
     test('create_should_open_entra_on_its_create_account_form', () => {
-      expect(new URL(authorizeUrl('s', 'n', 'create')).searchParams.get('prompt')).toBe('create');
+      expect(new URL(authorizeUrl('s', 'n', 'c', 'create')).searchParams.get('prompt')).toBe('create');
     });
 
     test('only_the_prompts_we_use_should_be_passed_on', () => {
@@ -46,16 +57,48 @@ describe('Entra', () => {
     });
   });
 
+  describe('pkce', () => {
+    test('the_verifier_should_be_43_url_safe_characters_and_the_challenge_its_sha256', () => {
+      const pkce = newPkce();
+
+      expect(pkce.verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(pkce.challenge).toBe(pkceChallenge(pkce.verifier));
+    });
+
+    test('the_challenge_should_match_the_rfc_7636_example', () => {
+      expect(pkceChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk')).toBe(
+        'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'
+      );
+    });
+
+    test('each_sign_in_should_get_its_own_verifier', () => {
+      expect(newPkce().verifier).not.toBe(newPkce().verifier);
+    });
+  });
+
   describe('signing in', () => {
+    test('a_code_exchanged_with_its_verifier_should_be_answered_with_a_token', async () => {
+      const pkce = newPkce();
+
+      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier)).resolves.toMatch(/\./);
+    });
+
+    test('a_code_exchanged_with_the_wrong_verifier_should_be_refused', async () => {
+      const pkce = newPkce();
+
+      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), newPkce().verifier)).rejects.toThrow(
+        /400 invalid_grant/
+      );
+    });
+
     test('a_good_token_should_yield_the_oid_name_and_email', async () => {
-      const idToken = await exchangeCodeForIdToken(codeFor(ADA, 'n1'));
+      const pkce = newPkce();
+      const idToken = await exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier);
 
       await expect(verifiedClaims(idToken, 'n1')).resolves.toEqual({
         oid: ADA.oid,
         name: 'Ada Lovelace',
         email: 'ada@example.com',
-        givenName: undefined,
-        familyName: undefined,
       });
     });
 
@@ -68,7 +111,7 @@ describe('Entra', () => {
     test('a_failed_token_exchange_should_throw_with_entras_reason', async () => {
       entra.failTokenRequests(503);
 
-      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1'))).rejects.toThrow(/503 temporarily_unavailable/);
+      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1'), 'v')).rejects.toThrow(/503 temporarily_unavailable/);
     });
   });
 

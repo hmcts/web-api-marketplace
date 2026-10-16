@@ -52,7 +52,6 @@ describe('Links', () => {
       `/account/applications/${id}`,
       `/account/applications/${id}/apis`,
       `/account/applications/${id}/apis/${CATALOGUE[0].name}`,
-      `/account/applications/${id}/client-secret`,
       `/account/applications/${id}/delete`,
       '/account/production-credentials',
     ]) {

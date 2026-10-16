@@ -1,9 +1,29 @@
 import ProductionCredentialsController from '../../../main/controllers/ProductionCredentialsController';
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
-import { createApplication } from '../../../main/services/Applications';
+import { BackendError } from '../../../main/services/Applications';
 import * as LocalRequests from '../../../main/services/LocalRequests';
-import { CATALOGUE, LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
+import { LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
+
+jest.mock('../../../main/services/Applications', () => ({
+  ...jest.requireActual('../../../main/services/Applications'),
+  listApplications: jest.fn(),
+}));
+
+const { listApplications } = require('../../../main/services/Applications');
+
+const APPLICATION = {
+  id: 'client-1',
+  clientId: 'client-1',
+  name: 'Tracker',
+  secretHint: 'Uc6',
+  secretExpiresAt: '',
+  createdAt: '',
+  apis: [
+    { apiName: 'api-one', apiTitle: 'API one', publisherId: 'one', subscriptionName: 'amp-temp-1', subscribedAt: '' },
+  ],
+  accessGranted: true,
+};
 
 const controller = () => new ProductionCredentialsController();
 
@@ -27,15 +47,10 @@ function answers(applicationId: string, change: Record<string, unknown> = {}) {
 describe('ProductionCredentialsController', () => {
   let applicationId: string;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     useDataStore(new MemoryStore());
-    applicationId = (
-      await createApplication(
-        LOCAL_USER.email,
-        { environment: 'sandbox', name: 'Tracker', description: '', apis: ['api-one'] },
-        CATALOGUE
-      )
-    ).application.id;
+    (listApplications as jest.Mock).mockReset().mockResolvedValue([APPLICATION]);
+    applicationId = APPLICATION.id;
   });
 
   test('a_signed_out_visitor_should_be_sent_to_sign_in', async () => {
@@ -57,10 +72,25 @@ describe('ProductionCredentialsController', () => {
     expect(res.view).toBe('production-credentials/form');
     expect(res.data?.answers).toMatchObject({
       application: applicationId,
-      organisation: LOCAL_USER.orgName,
       'security-contact': LOCAL_USER.email,
     });
-    expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('Sandbox – 1 API');
+    expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('1 API');
+  });
+
+  test('the_applications_should_be_read_from_the_backend_as_the_signed_in_user', async () => {
+    await controller().form(asUser(), mockResponse());
+
+    expect(listApplications).toHaveBeenCalledWith({ oid: LOCAL_USER.oid, userReference: 'user001' });
+  });
+
+  test('applications_that_cannot_be_read_should_leave_none_to_choose_rather_than_fail', async () => {
+    (listApplications as jest.Mock).mockRejectedValue(new BackendError('down'));
+    const res = mockResponse();
+
+    await controller().form(asUser(), res);
+
+    expect(res.view).toBe('production-credentials/form');
+    expect(res.data?.applicationItems).toEqual([]);
   });
 
   test('an_empty_form_should_report_every_problem_in_order', async () => {
@@ -109,7 +139,7 @@ describe('ProductionCredentialsController', () => {
     expect(checked.view).toBe('production-credentials/check-answers');
     expect(checked.data?.rows).toEqual(
       expect.arrayContaining([
-        { key: 'Application', value: 'Tracker (Sandbox)' },
+        { key: 'Application', value: 'Tracker' },
         { key: 'APIs', value: 'API one' },
         { key: 'Data Sharing Agreement', value: 'Yes, it is in place' },
       ])

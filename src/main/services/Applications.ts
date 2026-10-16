@@ -1,103 +1,131 @@
 import crypto from 'node:crypto';
 
+import axios, { AxiosRequestConfig } from 'axios';
+import config from 'config';
+
+import { Logger } from '../modules/logging';
 import { dataStore } from '../modules/store';
 
 import { CatalogueApi } from './ApiCatalogue';
-import { issueClientId, issueClientSecret, issueSubscriptionKey, publisherIdFor } from './Credentials';
-import { normalise } from './Profiles';
+import { SignedInUser } from './SignIn';
 import { FieldError } from './answers';
 
-/**
- * A consumer's applications: one Entra client ID and secret each, and an APIM
- * subscription key per API the application is subscribed to.
- *
- * Held in the data store until service-api-marketplace has application endpoints. Every
- * read is through the owner's own list, so one user can never open, change or delete
- * another's application by guessing its id — the ownership check is the lookup itself.
- */
+/** Which subscriptions belong to an application, and whether its role is granted, are not held by the backend yet. */
 
-/**
- * Environments an application can be created in from here. Production is not one of them:
- * production credentials are issued by hand after a request is reviewed — see
- * ProductionCredentialsController.
- */
-export const ENVIRONMENTS = [
-  { value: 'sandbox', text: 'Sandbox', hint: { text: 'Mock data. For trying the APIs out.' } },
-  { value: 'preview', text: 'Preview', hint: { text: 'For testing against early releases.' } },
-  { value: 'aat', text: 'Integration test (AAT)', hint: { text: 'For end-to-end testing before go-live.' } },
-];
+const logger = Logger.getLogger('applications');
 
-/**
- * The environment every application created here is in. The user is not asked: the
- * self-service journey only issues sandbox credentials, and anything beyond the sandbox
- * goes through a production credentials request.
- */
-export const SELF_SERVICE_ENVIRONMENT = 'sandbox';
+export const APPLICATION_ROLE: string = config.get('applications.role');
+const PRODUCT_IDS: Record<string, string> = config.get('applications.products');
+export const ACCESS_ATTEMPTS = 8;
+export const ACCESS_RETRY_SECONDS = 15;
 
-export const APPLICATION_NAME_MAX_LENGTH = 100;
-export const DESCRIPTION_MAX_LENGTH = 500;
+const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
+const SUBSCRIPTION_NAME_ATTEMPTS = 3;
 
 export interface ApiSubscription {
   apiName: string;
   apiTitle: string;
   publisherId: string;
-  subscriptionKey: string;
+  subscriptionName: string;
   subscribedAt: string;
 }
 
 export interface Application {
   id: string;
-  name: string;
-  description: string;
-  environment: string;
   clientId: string;
+  name: string;
   secretHint: string;
-  secretCreatedAt: string;
   secretExpiresAt: string;
-  apis: ApiSubscription[];
   createdAt: string;
+  apis: ApiSubscription[];
+  accessGranted: boolean;
 }
 
-/** What the "add new application" journey collects before anything is created. */
 export interface ApplicationDraft {
-  environment?: string;
   name?: string;
-  description?: string;
   apis?: string[];
 }
 
-const key = (ownerEmail: string) => `applications:${normalise(ownerEmail)}`;
-
-export async function listApplications(ownerEmail: string): Promise<Application[]> {
-  return (await dataStore().get<Application[]>(key(ownerEmail))) ?? [];
+export interface Owner {
+  oid: string;
+  userReference: string;
 }
 
-export async function getApplication(ownerEmail: string, id: string): Promise<Application | undefined> {
-  return (await listApplications(ownerEmail)).find(application => application.id === id);
+/** Sessions started before the backend returned userReference carry only the id it is formatted from. */
+export function ownerOf(user: SignedInUser): Owner {
+  return { oid: user.oid ?? '', userReference: user.userReference ?? `user${String(user.id).padStart(3, '0')}` };
 }
 
-export async function validateDetails(ownerEmail: string, draft: ApplicationDraft): Promise<FieldError[]> {
-  const errors: FieldError[] = [];
-
-  const name = draft.name ?? '';
-  if (!name) {
-    errors.push({ name: 'name', text: 'Enter an application name' });
-  } else if (name.length > APPLICATION_NAME_MAX_LENGTH) {
-    errors.push({ name: 'name', text: `Application name must be ${APPLICATION_NAME_MAX_LENGTH} characters or fewer` });
-  } else if (
-    (await listApplications(ownerEmail)).some(
-      application =>
-        application.environment === draft.environment && application.name.toLowerCase() === name.toLowerCase()
-    )
+export class BackendError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number
   ) {
-    errors.push({ name: 'name', text: 'You already have an application with this name' });
+    super(message);
   }
 
-  if ((draft.description ?? '').length > DESCRIPTION_MAX_LENGTH) {
-    errors.push({ name: 'description', text: `Description must be ${DESCRIPTION_MAX_LENGTH} characters or fewer` });
+  get signInAgain(): boolean {
+    return this.status === 404 && /sign in again/i.test(this.message);
   }
+}
 
-  return errors;
+interface BackendApplication {
+  clientId: string;
+  name: string;
+  secretHint?: string;
+  secretExpiresAt?: string;
+  createdAt?: string;
+  clientSecret?: string;
+}
+
+interface Links {
+  apis: ApiSubscription[];
+  accessGranted: boolean;
+}
+
+const linksKey = (clientId: string) => `application:${clientId}`;
+
+/** The APIM product an API is published under, where it is not the API name without its prefix. */
+export function publisherIdFor(apiName: string): string {
+  return PRODUCT_IDS[apiName] ?? apiName.replace(/^api-/, '');
+}
+
+export function maskSecret(hint: string): string {
+  return `${hint}****`;
+}
+
+/** The backend accepts only names under the caller's own amp-userNNN- prefix. */
+export function temporarySubscriptionName(owner: Owner): string {
+  return `amp-${owner.userReference}-temp-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+export async function listApplications(owner: Owner): Promise<Application[]> {
+  const found = await call<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
+  return Promise.all(found.map(withLinks));
+}
+
+export async function getApplication(owner: Owner, clientId: string): Promise<Application | undefined> {
+  try {
+    return await withLinks(
+      await call<BackendApplication>(owner, { method: 'GET', url: `/applications/${encodeURIComponent(clientId)}` })
+    );
+  } catch (error) {
+    if (error instanceof BackendError && error.status === 404 && !error.signInAgain) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+export function validateName(name: string | undefined): FieldError[] {
+  const value = (name ?? '').trim();
+  if (!value) {
+    return [{ name: 'name', text: 'Enter an application name' }];
+  }
+  if (!NAME_PATTERN.test(value)) {
+    return [{ name: 'name', text: 'Application name must be 8 to 50 letters, numbers or spaces' }];
+  }
+  return [];
 }
 
 export function validateApis(selected: string[], catalogue: CatalogueApi[]): FieldError[] {
@@ -107,117 +135,226 @@ export function validateApis(selected: string[], catalogue: CatalogueApi[]): Fie
   return [];
 }
 
+export interface IssuedKey {
+  apiName: string;
+  apiTitle: string;
+  publisherId: string;
+  subscriptionKey: string;
+}
+
 export interface CreatedApplication {
   application: Application;
-  /** The only time the secret exists outside Entra. Show it, then let it go. */
   clientSecret: string;
+  keys: IssuedKey[];
+  failedApis: string[];
 }
 
 export async function createApplication(
-  ownerEmail: string,
+  owner: Owner,
   draft: Required<ApplicationDraft>,
   catalogue: CatalogueApi[]
 ): Promise<CreatedApplication> {
-  const secret = issueClientSecret();
-  const now = new Date().toISOString();
-  const application: Application = {
-    id: crypto.randomUUID(),
-    name: draft.name,
-    description: draft.description,
-    environment: draft.environment,
-    clientId: issueClientId(),
-    secretHint: secret.hint,
-    secretCreatedAt: secret.createdAt,
-    secretExpiresAt: secret.expiresAt,
-    apis: draft.apis.map(name => subscribe(name, catalogue, now)),
-    createdAt: now,
-  };
+  const created = await call<BackendApplication>(
+    owner,
+    { method: 'POST', url: '/applications', data: { name: draft.name.trim() } },
+    30000
+  );
 
-  await save(ownerEmail, [...(await listApplications(ownerEmail)), application]);
-  return { application, clientSecret: secret.value };
+  const keys: IssuedKey[] = [];
+  const failedApis: string[] = [];
+  const apis: ApiSubscription[] = [];
+  for (const apiName of draft.apis) {
+    try {
+      const { subscription, key } = await subscribe(owner, created.name, apiName, catalogue);
+      apis.push(subscription);
+      keys.push({
+        apiName,
+        apiTitle: subscription.apiTitle,
+        publisherId: subscription.publisherId,
+        subscriptionKey: key,
+      });
+    } catch (error) {
+      logger.error(`Could not subscribe ${created.clientId} to ${apiName}: ${(error as Error).message}`);
+      failedApis.push(titleOf(apiName, catalogue));
+    }
+  }
+
+  await saveLinks(created.clientId, { apis, accessGranted: false });
+  return {
+    application: toApplication(created, { apis, accessGranted: false }),
+    clientSecret: created.clientSecret ?? '',
+    keys,
+    failedApis,
+  };
+}
+
+export type AccessResult = { state: 'granted' } | { state: 'pending' } | { state: 'failed'; message: string };
+
+/** One attempt. A service principal seconds old is not assignable yet, so 404 means "try again". */
+export async function grantAccess(owner: Owner, application: Application): Promise<AccessResult> {
+  if (application.accessGranted) {
+    return { state: 'granted' };
+  }
+  try {
+    await call(owner, {
+      method: 'POST',
+      url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
+      data: { role: APPLICATION_ROLE },
+    });
+  } catch (error) {
+    if (error instanceof BackendError && error.status === 404 && !error.signInAgain) {
+      return { state: 'pending' };
+    }
+    if (error instanceof BackendError && error.status !== undefined && !error.signInAgain) {
+      return { state: 'failed', message: error.message };
+    }
+    throw error;
+  }
+  await saveLinks(application.clientId, { apis: application.apis, accessGranted: true });
+  return { state: 'granted' };
 }
 
 export interface ApiChanges {
   added: string[];
   removed: string[];
+  failed: string[];
 }
 
-/**
- * Makes the application's subscriptions exactly the APIs selected. An API kept keeps its
- * key; one added gets a new key; one removed loses its key, so it stops working.
- */
 export async function setApis(
-  ownerEmail: string,
-  id: string,
+  owner: Owner,
+  application: Application,
   selected: string[],
   catalogue: CatalogueApi[]
-): Promise<ApiChanges | undefined> {
-  const applications = await listApplications(ownerEmail);
-  const application = applications.find(candidate => candidate.id === id);
-
-  if (!application) {
-    return undefined;
-  }
-
+): Promise<ApiChanges> {
   const current = application.apis.map(api => api.apiName);
-  const added = selected.filter(name => !current.includes(name));
-  const removed = current.filter(name => !selected.includes(name));
-  const now = new Date().toISOString();
+  const changes: ApiChanges = { added: [], removed: [], failed: [] };
+  let apis = [...application.apis];
 
-  application.apis = [
-    ...application.apis.filter(api => selected.includes(api.apiName)),
-    ...added.map(name => subscribe(name, catalogue, now)),
-  ];
-
-  await save(ownerEmail, applications);
-  return { added, removed };
-}
-
-/** Replaces the secret. The old one stops working at once, as it does in Entra. */
-export async function regenerateSecret(ownerEmail: string, id: string): Promise<string | undefined> {
-  const applications = await listApplications(ownerEmail);
-  const application = applications.find(candidate => candidate.id === id);
-
-  if (!application) {
-    return undefined;
+  for (const subscription of application.apis.filter(api => !selected.includes(api.apiName))) {
+    try {
+      await revoke(owner, subscription.subscriptionName);
+      apis = apis.filter(api => api !== subscription);
+      changes.removed.push(subscription.apiName);
+    } catch (error) {
+      logger.error(`Could not revoke ${subscription.subscriptionName}: ${(error as Error).message}`);
+      changes.failed.push(subscription.apiTitle);
+    }
+  }
+  for (const apiName of selected.filter(name => !current.includes(name))) {
+    try {
+      apis.push((await subscribe(owner, application.name, apiName, catalogue)).subscription);
+      changes.added.push(apiName);
+    } catch (error) {
+      logger.error(`Could not subscribe ${application.clientId} to ${apiName}: ${(error as Error).message}`);
+      changes.failed.push(titleOf(apiName, catalogue));
+    }
   }
 
-  const secret = issueClientSecret();
-  application.secretHint = secret.hint;
-  application.secretCreatedAt = secret.createdAt;
-  application.secretExpiresAt = secret.expiresAt;
-
-  await save(ownerEmail, applications);
-  return secret.value;
+  await saveLinks(application.clientId, { apis, accessGranted: application.accessGranted });
+  return changes;
 }
 
-export async function deleteApplication(ownerEmail: string, id: string): Promise<Application | undefined> {
-  const applications = await listApplications(ownerEmail);
-  const application = applications.find(candidate => candidate.id === id);
+export async function subscriptionKey(owner: Owner, subscription: ApiSubscription): Promise<string> {
+  const values = await call<{ primaryKey?: string }>(owner, {
+    method: 'GET',
+    url: `/apim/subscription-keys/${encodeURIComponent(subscription.subscriptionName)}/values`,
+  });
+  return values.primaryKey ?? '';
+}
 
-  if (application) {
-    await save(
-      ownerEmail,
-      applications.filter(candidate => candidate.id !== id)
-    );
+/** Its subscriptions first: once the registration has gone nothing would lead back to them. */
+export async function deleteApplication(owner: Owner, application: Application): Promise<void> {
+  for (const subscription of application.apis) {
+    await revoke(owner, subscription.subscriptionName);
   }
-  return application;
+  await call(owner, { method: 'DELETE', url: `/applications/${encodeURIComponent(application.clientId)}` });
+  await dataStore().delete(linksKey(application.clientId));
 }
 
-export function environmentName(value: string): string {
-  return ENVIRONMENTS.find(environment => environment.value === value)?.text ?? value;
+async function subscribe(
+  owner: Owner,
+  displayName: string,
+  apiName: string,
+  catalogue: CatalogueApi[]
+): Promise<{ subscription: ApiSubscription; key: string }> {
+  const publisherId = publisherIdFor(apiName);
+  for (let attempt = 1; ; attempt++) {
+    const name = temporarySubscriptionName(owner);
+    try {
+      const created = await call<{ primaryKey?: string }>(owner, {
+        method: 'POST',
+        url: '/apim/subscription-keys',
+        data: { name, productId: publisherId, displayName },
+      });
+      return {
+        subscription: {
+          apiName,
+          apiTitle: titleOf(apiName, catalogue),
+          publisherId,
+          subscriptionName: name,
+          subscribedAt: new Date().toISOString(),
+        },
+        key: created.primaryKey ?? '',
+      };
+    } catch (error) {
+      if (!(error instanceof BackendError && error.status === 409) || attempt === SUBSCRIPTION_NAME_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
 }
 
-function subscribe(apiName: string, catalogue: CatalogueApi[], at: string): ApiSubscription {
+async function revoke(owner: Owner, subscriptionName: string): Promise<void> {
+  try {
+    await call(owner, { method: 'DELETE', url: `/apim/subscription-keys/${encodeURIComponent(subscriptionName)}` });
+  } catch (error) {
+    if (!(error instanceof BackendError && error.status === 404)) {
+      throw error;
+    }
+  }
+}
+
+async function call<T = unknown>(owner: Owner, request: AxiosRequestConfig, timeout = 10000): Promise<T> {
+  const baseURL = process.env.API_URL || config.get<string>('backend.url');
+  try {
+    const response = await axios.request<T>({
+      ...request,
+      baseURL,
+      timeout,
+      headers: { requestingUserId: owner.oid },
+    });
+    return response.data;
+  } catch (error) {
+    const response = (error as { response?: { status?: number; data?: { error?: string } } }).response;
+    if (response?.status) {
+      throw new BackendError(response.data?.error || `The backend answered ${response.status}`, response.status);
+    }
+    throw new BackendError(`Could not reach the backend: ${(error as Error).message}`);
+  }
+}
+
+async function withLinks(found: BackendApplication): Promise<Application> {
+  const links = (await dataStore().get<Links>(linksKey(found.clientId))) ?? { apis: [], accessGranted: false };
+  return toApplication(found, links);
+}
+
+function toApplication(found: BackendApplication, links: Links): Application {
   return {
-    apiName,
-    apiTitle: catalogue.find(api => api.name === apiName)?.title ?? apiName,
-    publisherId: publisherIdFor(apiName),
-    subscriptionKey: issueSubscriptionKey(),
-    subscribedAt: at,
+    id: found.clientId,
+    clientId: found.clientId,
+    name: found.name,
+    secretHint: found.secretHint ?? '',
+    secretExpiresAt: found.secretExpiresAt ?? '',
+    createdAt: found.createdAt ?? '',
+    apis: links.apis,
+    accessGranted: links.accessGranted,
   };
 }
 
-async function save(ownerEmail: string, applications: Application[]): Promise<void> {
-  await dataStore().set(key(ownerEmail), applications);
+async function saveLinks(clientId: string, links: Links): Promise<void> {
+  await dataStore().set(linksKey(clientId), links);
+}
+
+function titleOf(apiName: string, catalogue: CatalogueApi[]): string {
+  return catalogue.find(api => api.name === apiName)?.title ?? apiName;
 }

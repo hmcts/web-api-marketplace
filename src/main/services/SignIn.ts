@@ -2,16 +2,12 @@
 export interface SignedInUser {
   /** The backend's own user id, which every request it stores is attributed to. */
   id: number;
+  /** The backend's reference for them, such as user001, which their APIM names start with. */
+  userReference?: string;
   /** The user's Entra object id: the stable key for everything we hold about them. */
   oid?: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  orgName: string;
-  /**
-   * Set for a user the backend does not know. Their submissions go to the data store,
-   * since the backend would reject a user id it has never seen — see services/Profiles.
-   */
+  name: string;
+  /** Set while the backend has no requests: submissions go to the data store. */
   local?: boolean;
-  role?: 'consumer' | 'producer';
 }

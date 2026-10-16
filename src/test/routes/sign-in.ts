@@ -23,9 +23,11 @@ describe('Signing in with Entra', () => {
   test('coming_back_with_a_good_code_should_sign_in_as_the_entra_user', async () => {
     const agent = request.agent(app);
 
-    await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res => expect(res.status).to.equal(302));
+    await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res =>
+      expect(res.headers.location).to.equal('/account')
+    );
 
-    await agent.get('/account/welcome').expect(res => {
+    await agent.get('/account').expect(res => {
       expect(res.status).to.equal(200);
       expect(res.text).to.contain('ada@example.com');
     });
@@ -35,12 +37,27 @@ describe('Signing in with Entra', () => {
     const agent = request.agent(app);
     const started = await agent.get('/sign-in').expect(302);
     const sentTo = new URL(started.headers.location);
-    const callback = `/auth/callback?code=${codeFor(claimsFor('ada@example.com'), sentTo.searchParams.get('nonce') as string)}&state=${sentTo.searchParams.get('state')}`;
+    const code = codeFor(
+      claimsFor('ada@example.com'),
+      sentTo.searchParams.get('nonce') as string,
+      sentTo.searchParams.get('code_challenge') as string
+    );
+    const callback = `/auth/callback?code=${code}&state=${sentTo.searchParams.get('state')}`;
 
     await agent.get(callback).expect(302);
     await request(app)
       .get(callback)
       .expect(res => expect(res.status).to.equal(400));
+  });
+
+  test('a_code_without_the_pkce_challenge_this_browser_sent_should_not_sign_anyone_in', async () => {
+    const agent = request.agent(app);
+    const started = await agent.get('/sign-in').expect(302);
+    const sentTo = new URL(started.headers.location);
+    const code = codeFor(claimsFor('ada@example.com'), sentTo.searchParams.get('nonce') as string, 'another-challenge');
+
+    await agent.get(`/auth/callback?code=${code}&state=${sentTo.searchParams.get('state')}`).expect(502);
+    await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
   });
 
   test('entra_being_unreachable_should_be_reported_as_an_outage_not_a_wrong_password', async () => {
@@ -59,6 +76,45 @@ describe('Signing in with Entra', () => {
     await signInThroughEntra(agent, claimsFor('ada@example.com')).then(res => {
       expect(res.status).to.equal(401);
       expect(res.text).to.contain('We could not confirm who you are');
+    });
+    await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
+  });
+});
+
+describe('Saving the signed-in user in the backend', () => {
+  afterEach(() => {
+    stubEntra().reset();
+    stubEntra().savedUsers.clear();
+  });
+
+  test('signing_in_should_save_the_user_by_oid_with_the_tokens_email_and_names', async () => {
+    const claims = claimsFor('Grace@Example.com', 'Grace Hopper');
+
+    await signInThroughEntra(request.agent(app), claims).then(res => expect(res.status).to.equal(302));
+
+    expect(stubEntra().savedUsers.get(claims.oid)).to.deep.include({
+      email: 'grace@example.com',
+      name: 'Grace Hopper',
+    });
+  });
+
+  test('signing_in_again_should_keep_the_same_backend_account', async () => {
+    const claims = claimsFor('grace@example.com');
+
+    await signInThroughEntra(request.agent(app), claims);
+    const first = stubEntra().savedUsers.get(claims.oid)?.id;
+    await signInThroughEntra(request.agent(app), claims);
+
+    expect(stubEntra().savedUsers.get(claims.oid)?.id).to.equal(first);
+  });
+
+  test('a_backend_that_cannot_save_the_user_should_leave_nobody_signed_in', async () => {
+    stubEntra().failUserSaves(500);
+    const agent = request.agent(app);
+
+    await signInThroughEntra(agent, claimsFor('grace@example.com')).then(res => {
+      expect(res.status).to.equal(503);
+      expect(res.text).to.contain('Sign in is not available at the moment');
     });
     await agent.get('/account').expect(res => expect(res.headers.location).to.equal('/sign-in'));
   });

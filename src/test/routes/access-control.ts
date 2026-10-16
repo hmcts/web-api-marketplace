@@ -14,7 +14,6 @@ import { claimsFor, signInThroughEntra } from './helpers/entra';
 const signedIn = async () => {
   const agent = request.agent(app);
   await signInThroughEntra(agent, claimsFor('joe@example.com', 'Joe Bloggs'));
-  await agent.post('/account/welcome').send({ organisation: 'HMCTS DTS', role: 'consumer', agree: 'yes' });
   return agent;
 };
 
@@ -80,7 +79,7 @@ describe('Access control on the form journeys', () => {
 
   test('the_publish_guidance_pages_should_still_be_reachable', async () => {
     await request(app)
-      .get('/documentation/publish-an-api')
+      .get('/documentation/producer-guidance')
       .expect(res => expect(res.status).to.equal(200));
     await request(app)
       .get('/documentation/data-governance')

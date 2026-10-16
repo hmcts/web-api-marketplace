@@ -3,6 +3,7 @@
 {% from "govuk/components/panel/macro.njk" import govukPanel %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageTitle = "Application created - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "applications" %}
@@ -17,8 +18,6 @@
       html: "Application name<br><strong id=\"created-name\">" + (application.name | escape) + "</strong>"
     }) }}
 
-    {% include "components/simulated-credentials.njk" %}
-
     <h2 class="govuk-heading-m">Authorisation details</h2>
 
     {{ govukSummaryList({
@@ -27,17 +26,28 @@
 
     {% include "applications/secret-once.njk" %}
 
+    {% include "applications/access.njk" %}
+
     <h2 class="govuk-heading-m">Subscription keys</h2>
     <p class="govuk-body">Send the subscription key for an API in the <code>Ocp-Apim-Subscription-Key</code> header with every call to it.</p>
 
     {% set keyRows = [] %}
-    {% for api in application.apis %}
+    {% for key in keys %}
       {% set keyRows = (keyRows.push({
-        key: { text: api.apiTitle },
-        value: { html: 'Publisher ID: <span class="apim-credential">' + api.publisherId + '</span><br>Subscription key: <span class="apim-credential">' + api.subscriptionKey + '</span>' }
+        key: { text: key.apiTitle },
+        value: { html: 'Publisher ID: <span class="apim-credential">' + key.publisherId + '</span><br>Subscription key: <span class="apim-credential">' + key.subscriptionKey + '</span>' }
       }), keyRows) %}
     {% endfor %}
     {{ govukSummaryList({ rows: keyRows, attributes: { id: "subscription-keys" } }) }}
+
+    {% if failedApis.length %}
+      <div id="subscriptions-failed">
+        {{ govukWarningText({
+          text: "These APIs could not be added just now: " + failedApis | join(", ") + ". Add them from the application page.",
+          iconFallbackText: "Warning"
+        }) }}
+      </div>
+    {% endif %}
 
     {{ govukButton({ text: "View application", href: "/account/applications/" + application.id, attributes: { id: "view-application" } }) }}
     <p class="govuk-body"><a class="govuk-link" href="/account/applications">Back to your applications</a></p>

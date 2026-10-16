@@ -17,8 +17,6 @@
     <span class="govuk-caption-l">{{ application.name }}</span>
     <h1 class="govuk-heading-xl">{{ subscription.apiTitle }}</h1>
 
-    {% include "components/simulated-credentials.njk" %}
-
     {{ govukSummaryList({
       rows: [
         { key: { text: "API" }, value: { html: '<a class="govuk-link" href="/api-catalogue/' + subscription.apiName + '">' + (subscription.apiTitle | escape) + '</a>' } },
@@ -27,11 +25,15 @@
       ]
     }) }}
 
-    {% set keyHtml %}
-      <p class="govuk-body apim-credential govuk-!-font-weight-bold" id="subscription-key">{{ subscription.subscriptionKey }}</p>
-      <p class="govuk-body">Send it in the <code>Ocp-Apim-Subscription-Key</code> header with every call to this API. Keep it secret.</p>
-    {% endset %}
-    {{ govukDetails({ summaryText: "Show subscription key", html: keyHtml, attributes: { id: "show-subscription-key" } }) }}
+    {% if subscriptionKey %}
+      {% set keyHtml %}
+        <p class="govuk-body apim-credential govuk-!-font-weight-bold" id="subscription-key">{{ subscriptionKey }}</p>
+        <p class="govuk-body">Send it in the <code>Ocp-Apim-Subscription-Key</code> header with every call to this API. Keep it secret.</p>
+      {% endset %}
+      {{ govukDetails({ summaryText: "Show subscription key", html: keyHtml, attributes: { id: "show-subscription-key" } }) }}
+    {% else %}
+      <p class="govuk-body" id="subscription-key-unavailable">The subscription key could not be loaded just now. Try again in a few minutes.</p>
+    {% endif %}
 
     <p class="govuk-body"><a class="govuk-link" href="/account/applications/{{ application.id }}">Back to {{ application.name }}</a></p>
   </div>

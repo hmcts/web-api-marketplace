@@ -14,10 +14,8 @@ export type { Choice, FieldError, SummaryRow };
 export interface Requester {
   /** What the backend attributes the stored request to. */
   id: number;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  orgName: string;
   /** A user the backend has never heard of — see services/Profiles. */
   local?: boolean;
 }
@@ -56,8 +54,7 @@ export const CALL_VOLUMES: Choice[] = [
 ];
 
 /**
- * What the form asks for. The requester is not in here: their name, organisation and
- * email come from the signed-in session, so they cannot be posted and cannot be edited
+ * What the form asks for. The requester is not in here: their name and email come from the signed-in session, so they cannot be posted and cannot be edited
  * into someone else's.
  */
 export interface AccessRequestAnswers {
@@ -111,8 +108,7 @@ export function validate(answers: AccessRequestAnswers, apiNames: string[]): Fie
  */
 export function summaryRows(answers: AccessRequestAnswers, apiTitle: string, requester: Requester): SummaryRow[] {
   return [
-    { key: 'Name', value: `${requester.firstName} ${requester.lastName}` },
-    { key: 'Organisation', value: requester.orgName },
+    { key: 'Name', value: requester.name },
     { key: 'Email', value: requester.email },
     { key: 'API', value: apiTitle || answers['api-name'] },
     { key: 'Expected call volume', value: labelFor(CALL_VOLUMES, answers['call-volume']) },

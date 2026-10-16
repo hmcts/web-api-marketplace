@@ -19,8 +19,9 @@ declare module 'express-session' {
      * The sign in this browser started and has not yet come back from Entra. `state`
      * proves the callback belongs to it (the CSRF check); `nonce` is what Entra must
      * copy into the ID token, so a token from another sign in cannot be replayed here.
+     * `codeVerifier` is the PKCE verifier for the code exchange.
      */
-    entraSignIn?: { state: string; nonce: string };
+    entraSignIn?: { state: string; nonce: string; codeVerifier: string };
     /** The last email "sent", for the page that follows to preview — see services/Notify. */
     outbox?: Email;
     /** A one-off banner for the next page rendered, then cleared. */

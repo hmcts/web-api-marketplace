@@ -139,10 +139,8 @@ export default class SubscribeController {
     const user = req.session.user as SignedInUser;
     return {
       id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      name: user.name,
       email: user.email,
-      orgName: user.orgName,
       local: user.local,
     };
   }

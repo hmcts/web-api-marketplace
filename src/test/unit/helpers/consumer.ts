@@ -6,13 +6,11 @@ import { mockRequest } from '../mocks/mockRequest';
 /** A user signed in through Entra, as the session holds them once through the welcome. */
 export const LOCAL_USER = {
   id: 0,
+  userReference: 'user001',
   local: true,
   oid: '11111111-2222-3333-4444-555555555555',
   email: 'ada@example.com',
-  firstName: 'Ada',
-  lastName: 'Lovelace',
-  orgName: 'Analytical Engines Ltd',
-  role: 'consumer' as const,
+  name: 'Ada Lovelace',
 };
 
 export const CATALOGUE = [

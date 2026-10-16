@@ -8,10 +8,8 @@ const apiNames = ['api-cp-ai-rag', 'api-cp-crime-court-list-publisher'];
 
 const REQUESTER = {
   id: 1,
-  firstName: 'Joe',
-  lastName: 'Bloggs',
+  name: 'Joe Bloggs',
   email: 'joe.bloggs@justice.gov.uk',
-  orgName: 'HMCTS DTS',
 };
 
 const completeBody = {
@@ -86,7 +84,7 @@ describe('AccessRequest', () => {
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
 
     expect(valueFor('Name')).toBe('Joe Bloggs');
-    expect(valueFor('Organisation')).toBe('HMCTS DTS');
+    expect(valueFor('Organisation')).toBeUndefined();
     expect(valueFor('Email')).toBe('joe.bloggs@justice.gov.uk');
   });
 

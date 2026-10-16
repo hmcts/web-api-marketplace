@@ -82,7 +82,7 @@ src/main/
   server.ts              entrypoint (HTTPS in dev, HTTP in AKS)
   controllers/           awilix-express decorated routes, loaded by convention
   interfaces/            AppRequest — express Request plus i18next typing
-  locales/{en,cy}/       one JSON file per page
+  locales/en/            one JSON file per page
   modules/               appinsights, awilix, entra, helmet, i18next, logging,
                          nunjucks, properties-volume, session, store
   views/                 nunjucks templates
@@ -105,7 +105,7 @@ The consumer onboarding journey, end to end:
 | -------------------------------------------- | -------------------------------------------------------- |
 | Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
 | Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
-| First sign in: organisation, guidelines      | `/account/welcome`                                       |
+| First sign in: guidelines                    | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -120,16 +120,21 @@ Developer accounts belong to Microsoft Entra External ID. Its pages handle signi
 creating an account, confirming the email address and resetting a password, so no password
 reaches this service. The flow is OpenID Connect's authorization code flow:
 
-1. `/sign-in` (`SignInController`) puts a random `state` and `nonce` in the session and
-   redirects to Entra. `?prompt=create` opens Entra on its create-account form.
+1. `/sign-in` (`SignInController`) puts a random `state`, `nonce` and PKCE code verifier in
+   the session and redirects to Entra with the verifier's SHA-256 as the `code_challenge`.
+   `?prompt=create` opens Entra on its create-account form.
 2. Entra sends the browser back to `/auth/callback` (`AuthCallbackController`) with a
    single-use code. The `state` must match the session's.
-3. The code is swapped for an ID token server to server, using the client secret, and the
+3. The code is swapped for an ID token server to server, using the client secret and the
+   PKCE verifier, so a code intercepted on its way back is no use on its own, and the
    token is verified (`services/Entra.ts`): RS256 signature against the tenant's published
    keys, issuer, audience, expiry and `nonce`.
-4. The session starts with the token's `oid`, name and email. The first time, `/account/welcome`
-   asks for the organisation and account type Entra does not hold, and keeps them against the
-   `oid` (`services/Profiles.ts`).
+4. The token's `oid`, email and name (Entra holds a single display name, not first and last)
+   are posted to service-api-marketplace's `POST /session` (`services/EntraUsers.ts`). The
+   backend creates the user the first time and brings them up to date on every later sign in. If it cannot be reached or refuses, sign in says it is
+   unavailable and no session starts.
+5. The session starts as the backend's user, with the token's `oid`, name and email, and every
+   sign in lands on `/account`, whichever page asked for it.
 
 Signing out ends Entra's session too, then comes back to the home page.
 
@@ -142,17 +147,19 @@ are skipped.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Profiles** (`services/Profiles.ts`) — each user's organisation and account type, keyed by
-  their Entra `oid`. The backend cannot resolve an Entra user yet, so every user is treated
-  as one it does not know (`local`): their subscribe requests go to the data store, and
-  requests the backend already holds are not listed for them.
-- **Applications and credentials** (`services/Applications.ts`, `services/Credentials.ts`) —
-  client IDs, secrets and subscription keys are generated in Entra's and APIM's shapes but
-  are **not registered with either**, and every page that shows them says so. Secrets are
-  shown once and only their first three characters are kept.
+- **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
+  their Entra `oid`. The backend holds users but not yet requests, so every user is still
+  `local`: their subscribe requests go to the data store.
+- **Applications** (`services/Applications.ts`) — registered for real through the backend's
+  `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
+  `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
+  not yet record which subscription keys belong to an application or whether its role
+  (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
+  client ID, and subscription keys are given temporary names under the user's prefix,
+  `amp-user001-temp-…`, which the backend requires.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here
-  and listed under My requests alongside the backend's own. So are subscribe
-  requests from users the backend does not know, which it would refuse.
+  and listed under My requests. So are subscribe requests, until the backend has
+  somewhere to put them.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.
@@ -182,9 +189,6 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   environment's home page (the post-sign-out address, `ENTRA_POST_LOGOUT_REDIRECT_URI`).
   Previews have sign in switched off, since each has its own address and Entra takes no
   wildcard redirect URIs.
-- **No Welsh translations.** `locales/cy/*.json` currently mirrors the English strings. The
-  language toggle works, but the Welsh content is not translated. Decide whether this service
-  needs Welsh at all before commissioning translation.
 - **No feedback survey.** The phase banner links to `#`. Needs a real survey URL.
 - **No analytics or RUM.** `analytics.gtmContainerId` and all `dynatrace.jstags` are empty, so
   neither script is rendered. Populate them with this service's own identifiers — the values

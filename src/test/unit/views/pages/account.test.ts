@@ -4,7 +4,7 @@ import { env } from '../helpers/nunjucksEnv';
 
 const i18n = require('../../../../main/locales/en/account.json');
 
-const user = { id: 1, firstName: 'Joe', lastName: 'Bloggs', email: 'joe@example.com', orgName: 'HMCTS DTS' };
+const user = { id: 1, name: 'Joe Bloggs', email: 'joe@example.com' };
 
 describe('Account page', () => {
   test('rendering_the_page_should_show_both_tabs', () => {
@@ -20,7 +20,7 @@ describe('Account page', () => {
 
     expect(html).toContain('Joe Bloggs');
     expect(html).toContain(user.email);
-    expect(html).toContain(user.orgName);
+    expect(html).not.toContain('Organisation');
   });
 
   test('the_requests_tab_should_say_there_are_none_yet_and_point_at_the_available_journeys', () => {

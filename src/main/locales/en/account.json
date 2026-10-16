@@ -1,7 +1,6 @@
 {
   "heading": "Your account",
   "signedInAs": "You are signed in as",
-  "organisation": "Organisation",
   "signOutButton": "Sign out",
   "requests": {
     "tabLabel": "My requests",
@@ -26,58 +25,5 @@
       "NEW_API": "Request a new API",
       "PRODUCTION": "Production credentials"
     }
-  },
-  "accountType": "Account type",
-  "nextSteps": {
-    "heading": "What you can do next",
-    "groups": [
-      {
-        "heading": "Applications",
-        "links": [
-          {
-            "text": "Manage applications",
-            "href": "/account/applications"
-          },
-          {
-            "text": "Add a new application",
-            "href": "/account/applications/new"
-          },
-          {
-            "text": "Request production credentials",
-            "href": "/account/production-credentials"
-          }
-        ]
-      },
-      {
-        "heading": "APIs",
-        "links": [
-          {
-            "text": "API catalogue",
-            "href": "/api-catalogue"
-          },
-          {
-            "text": "Request access to an API",
-            "href": "/subscribe"
-          },
-          {
-            "text": "Email the API Marketplace team to request a new API",
-            "href": "mailto:APIMarketplace@hmcts.net"
-          }
-        ]
-      },
-      {
-        "heading": "Support",
-        "links": [
-          {
-            "text": "Get started with our APIs",
-            "href": "/get-started"
-          },
-          {
-            "text": "Help and support",
-            "href": "/help"
-          }
-        ]
-      }
-    ]
   }
 }
