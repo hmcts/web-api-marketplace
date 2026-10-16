@@ -19,9 +19,15 @@
       An application holds the credentials your software uses to call our APIs: a client ID and secret,
       and a subscription key for each API you add to it.
     </p>
+    <p class="govuk-body">
+      Add an application to try our APIs with dummy data using Try it now. Your credentials and keys are
+      issued automatically, with no review.
+    </p>
     {{ govukButton({ text: "Add new application", href: "/account/applications/new", attributes: { id: "add-application" } }) }}
   </div>
 </div>
+
+<h2 class="govuk-heading-m" id="your-applications">Applications</h2>
 
 {% if applications.length == 0 %}
   <p class="govuk-body" id="applications-empty">You have no applications yet.</p>
@@ -36,7 +42,7 @@
   {% endfor %}
   {{ govukTable({
     caption: "Your applications",
-    captionClasses: "govuk-table__caption--m",
+    captionClasses: "govuk-visually-hidden",
     head: [{ text: "Application" }, { text: "APIs" }, { text: "Client ID" }],
     rows: rows,
     attributes: { id: "applications" }
@@ -45,9 +51,9 @@
 
 <h2 class="govuk-heading-m">Going live</h2>
 <p class="govuk-body">
-  Production credentials are issued by the marketplace team after a review.
-  <a class="govuk-link" href="/account/production-credentials">Request production credentials</a> once your
-  application has been tested.
+  When you are ready to use live data,
+  <a class="govuk-link" href="/account/production-credentials">request production credentials</a> for an
+  application you have tested. Your request is reviewed by the HMCTS Data Access Panel.
 </p>
 
 {% endblock %}
