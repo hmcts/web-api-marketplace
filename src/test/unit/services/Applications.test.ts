@@ -88,6 +88,7 @@ describe('Applications', () => {
 
     test('the_publisher_id_should_be_the_api_name_without_its_prefix_and_the_secret_should_be_masked', () => {
       expect(publisherIdFor('api-cp-crime-hearing')).toBe('cp-crime-hearing');
+      expect(publisherIdFor('api-cp-crime-schedulingandlisting-courtschedule')).toBe('cp-crime-schedulingandlisting');
       expect(maskSecret('Uc6')).toBe('Uc6****');
     });
   });
@@ -122,6 +123,22 @@ describe('Applications', () => {
       expect(created.application).toMatchObject({ id: BACKEND_APP.clientId, accessGranted: false });
       expect(created.application.apis.map(api => api.apiTitle)).toEqual(['API one', 'API two']);
       expect(created.failedApis).toEqual([]);
+    });
+
+    test('an_api_published_under_another_product_should_be_subscribed_to_that_product', async () => {
+      answer({
+        'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
+        'POST /apim/subscription-keys': () => ok({ primaryKey: 'k' }),
+      });
+
+      const created = await createApplication(
+        OWNER,
+        { name: 'Case Viewer', apis: ['api-cp-crime-schedulingandlisting-courtschedule'] },
+        CATALOGUE
+      );
+
+      expect(call(1).data.productId).toBe('cp-crime-schedulingandlisting');
+      expect(created.application.apis[0].publisherId).toBe('cp-crime-schedulingandlisting');
     });
 
     test('a_subscription_name_already_taken_should_be_retried_with_another', async () => {
