@@ -23,6 +23,23 @@ describe('Account page', () => {
     expect(html).not.toContain('Organisation');
   });
 
+  test('the_account_tab_should_list_the_next_steps_in_journey_order', () => {
+    const html = env.render('account.njk', { ...i18n, user });
+    const steps = html.slice(html.indexOf('Next steps'), html.indexOf('</ol>', html.indexOf('Next steps')));
+
+    expect(steps.indexOf('href="/api-catalogue"')).toBeGreaterThan(-1);
+    expect(steps.indexOf('href="/account/applications/new"')).toBeGreaterThan(steps.indexOf('href="/api-catalogue"'));
+    expect(steps.indexOf('href="/account/applications"')).toBeGreaterThan(steps.indexOf('Try it now credentials'));
+    expect(steps).toContain('request production credentials for it');
+  });
+
+  test('the_production_step_should_send_the_user_to_their_applications_not_straight_to_the_form', () => {
+    const html = env.render('account.njk', { ...i18n, user });
+    const steps = html.slice(html.indexOf('Next steps'), html.indexOf('</ol>', html.indexOf('Next steps')));
+
+    expect(steps).not.toContain('href="/account/production-credentials"');
+  });
+
   test('the_requests_tab_should_say_there_are_none_yet_and_point_at_the_available_journeys', () => {
     const html = env.render('account.njk', { ...i18n, user });
 
