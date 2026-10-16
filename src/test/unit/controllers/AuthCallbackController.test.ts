@@ -38,6 +38,7 @@ describe('AuthCallbackController', () => {
     expect(res.redirected).toBe('/account');
     expect(req.session.user).toEqual({
       id: entra.savedUsers.get(ADA.oid)?.id,
+      userReference: `user${String(entra.savedUsers.get(ADA.oid)?.id).padStart(3, '0')}`,
       local: true,
       oid: ADA.oid,
       email: 'ada@example.com',

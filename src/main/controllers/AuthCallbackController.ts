@@ -95,7 +95,7 @@ export default class AuthCallbackController {
         return;
       }
 
-      req.session.user = toSignedInUser(claims, user.id);
+      req.session.user = toSignedInUser(claims, user.id, user.userReference);
       // Every sign in lands on the account page, whichever page asked for it.
       req.session.save(() => res.redirect('/account'));
     });

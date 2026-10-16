@@ -22,7 +22,7 @@ jest.mock('../../../main/services/Applications', () => ({
 const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const Applications = require('../../../main/services/Applications');
 
-const OWNER = { oid: LOCAL_USER.oid };
+const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
 const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
 const APPLICATION: Application = {
   id: 'client-1',

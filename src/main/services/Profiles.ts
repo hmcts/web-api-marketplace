@@ -28,9 +28,10 @@ export async function saveProfile(oid: string, profile: Profile): Promise<void> 
 }
 
 /** The session's user, with the backend's id. Still `local`: the backend has no requests yet. */
-export function toSignedInUser(claims: EntraClaims, id: number): SignedInUser {
+export function toSignedInUser(claims: EntraClaims, id: number, userReference: string): SignedInUser {
   return {
     id,
+    userReference,
     local: true,
     oid: claims.oid,
     email: normalise(claims.email ?? ''),
