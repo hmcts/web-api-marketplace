@@ -7,6 +7,7 @@ import { Logger } from '../modules/logging';
 import { dataStore } from '../modules/store';
 
 import { CatalogueApi } from './ApiCatalogue';
+import { SignedInUser } from './SignIn';
 import { FieldError } from './answers';
 
 /** Which subscriptions belong to an application, and whether its role is granted, are not held by the backend yet. */
@@ -47,6 +48,12 @@ export interface ApplicationDraft {
 
 export interface Owner {
   oid: string;
+  userReference: string;
+}
+
+/** Sessions started before the backend returned userReference carry only the id it is formatted from. */
+export function ownerOf(user: SignedInUser): Owner {
+  return { oid: user.oid ?? '', userReference: user.userReference ?? `user${String(user.id).padStart(3, '0')}` };
 }
 
 export class BackendError extends Error {
@@ -87,9 +94,9 @@ export function maskSecret(hint: string): string {
   return `${hint}****`;
 }
 
-/** Until the backend builds subscription names, a random one: lower case, digits and hyphens. */
-export function temporarySubscriptionName(): string {
-  return `amp-temp-${crypto.randomBytes(4).toString('hex')}`;
+/** The backend accepts only names under the caller's own amp-userNNN- prefix. */
+export function temporarySubscriptionName(owner: Owner): string {
+  return `amp-${owner.userReference}-temp-${crypto.randomBytes(4).toString('hex')}`;
 }
 
 export async function listApplications(owner: Owner): Promise<Application[]> {
@@ -272,7 +279,7 @@ async function subscribe(
 ): Promise<{ subscription: ApiSubscription; key: string }> {
   const publisherId = publisherIdFor(apiName);
   for (let attempt = 1; ; attempt++) {
-    const name = temporarySubscriptionName();
+    const name = temporarySubscriptionName(owner);
     try {
       const created = await call<{ primaryKey?: string }>(owner, {
         method: 'POST',

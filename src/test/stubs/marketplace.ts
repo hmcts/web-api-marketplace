@@ -29,9 +29,9 @@ type Json = (status: number, body?: unknown) => void;
 
 /**
  * service-api-marketplace's /applications and /apim/subscription-keys in memory, with the rules
- * and status codes the real ones answer with. `knownUsers` are the object ids /session has seen.
+ * and status codes the real ones answer with. `knownUsers` are the ids /session gave each object id.
  */
-export function stubMarketplace(knownUsers: () => Set<string>): {
+export function stubMarketplace(knownUsers: () => Map<string, number>): {
   state: StubMarketplace;
   handle: (method: string, path: string, requestingUserId: string | undefined, body: string, json: Json) => boolean;
 } {
@@ -136,11 +136,22 @@ export function stubMarketplace(knownUsers: () => Set<string>): {
 
     const keyPath = /^\/apim\/subscription-keys(?:\/([^/]+))?(\/values)?$/.exec(path);
     if (keyPath) {
+      const id = requestingUserId ? knownUsers().get(requestingUserId.toLowerCase()) : undefined;
+      if (id === undefined) {
+        json(requestingUserId ? 404 : 400, {
+          error: requestingUserId ? 'Sign in again.' : 'Missing requestingUserId.',
+        });
+        return true;
+      }
+      const prefix = `amp-user${String(id).padStart(3, '0')}-`;
       const [, name, values] = keyPath;
-      const existing = name ? subscriptions.get(decodeURIComponent(name)) : undefined;
+      const existing =
+        name && decodeURIComponent(name).startsWith(prefix) ? subscriptions.get(decodeURIComponent(name)) : undefined;
       if (!name && method === 'POST') {
         const request = JSON.parse(body || '{}') as { name: string; productId: string; displayName: string };
-        if (failSubscriptionsWith) {
+        if (!request.name?.startsWith(prefix)) {
+          json(400, { error: `A subscription name must start with ${prefix}.` });
+        } else if (failSubscriptionsWith) {
           json(failSubscriptionsWith, { error: 'APIM could not be reached.' });
         } else if (!/^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$/.test(request.name)) {
           json(400, { error: 'Name must be lower case letters, digits and hyphens, 2 to 80 characters.' });

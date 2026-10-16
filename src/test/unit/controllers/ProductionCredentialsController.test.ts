@@ -80,7 +80,7 @@ describe('ProductionCredentialsController', () => {
   test('the_applications_should_be_read_from_the_backend_as_the_signed_in_user', async () => {
     await controller().form(asUser(), mockResponse());
 
-    expect(listApplications).toHaveBeenCalledWith({ oid: LOCAL_USER.oid });
+    expect(listApplications).toHaveBeenCalledWith({ oid: LOCAL_USER.oid, userReference: 'user001' });
   });
 
   test('applications_that_cannot_be_read_should_leave_none_to_choose_rather_than_fail', async () => {

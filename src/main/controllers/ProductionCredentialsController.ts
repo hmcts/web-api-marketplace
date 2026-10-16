@@ -5,7 +5,7 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
 import { CALL_VOLUMES } from '../services/AccessRequest';
-import { Application, listApplications } from '../services/Applications';
+import { Application, listApplications, ownerOf } from '../services/Applications';
 import { addLocalRequest, getLocalRequest, statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import { SignedInUser } from '../services/SignIn';
@@ -236,7 +236,7 @@ export default class ProductionCredentialsController {
 
   private async applications(user: SignedInUser): Promise<Application[]> {
     try {
-      return await listApplications({ oid: user.oid ?? '' });
+      return await listApplications(ownerOf(user));
     } catch (error) {
       logger.error(`Could not list the applications for the form: ${(error as Error).message}`);
       return [];

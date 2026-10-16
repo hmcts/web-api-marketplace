@@ -2,6 +2,8 @@
 export interface SignedInUser {
   /** The backend's own user id, which every request it stores is attributed to. */
   id: number;
+  /** The backend's reference for them, such as user001, which their APIM names start with. */
+  userReference?: string;
   /** The user's Entra object id: the stable key for everything we hold about them. */
   oid?: string;
   email: string;
