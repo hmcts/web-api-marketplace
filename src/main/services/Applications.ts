@@ -14,6 +14,7 @@ import { FieldError } from './answers';
 const logger = Logger.getLogger('applications');
 
 export const APPLICATION_ROLE: string = config.get('applications.role');
+const PRODUCT_IDS: Record<string, string> = config.get('applications.products');
 export const ACCESS_ATTEMPTS = 8;
 export const ACCESS_RETRY_SECONDS = 15;
 
@@ -77,8 +78,9 @@ interface Links {
 
 const linksKey = (clientId: string) => `application:${clientId}`;
 
+/** The APIM product an API is published under, where it is not the API name without its prefix. */
 export function publisherIdFor(apiName: string): string {
-  return apiName.replace(/^api-/, '');
+  return PRODUCT_IDS[apiName] ?? apiName.replace(/^api-/, '');
 }
 
 export function maskSecret(hint: string): string {

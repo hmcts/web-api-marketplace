@@ -60,6 +60,9 @@
     "postLogoutRedirectUri": ""
   },
   "applications": {
-    "role": "app.read"
+    "role": "app.read",
+    "products": {
+      "api-cp-crime-schedulingandlisting-courtschedule": "cp-crime-schedulingandlisting"
+    }
   }
 }
