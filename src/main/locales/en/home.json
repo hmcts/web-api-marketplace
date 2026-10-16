@@ -43,11 +43,6 @@
         "heading": "Help and support building software",
         "href": "/help",
         "body": "Get help at any point in your project, to make sure your integration with our APIs goes smoothly."
-      },
-      {
-        "heading": "Our architecture",
-        "href": "/documentation/architecture",
-        "body": "Architecture is integral to the design and delivery of all products and services that we produce and maintain for the justice system."
       }
     ]
   ]
