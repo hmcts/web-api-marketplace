@@ -25,5 +25,14 @@
       "NEW_API": "Request a new API",
       "PRODUCTION": "Production credentials"
     }
+  },
+  "nextSteps": {
+    "heading": "Next steps",
+    "stepsHtml": [
+      "<a class=\"govuk-link\" href=\"/api-catalogue\">Browse the API catalogue</a> to find the APIs you want to test.",
+      "<a class=\"govuk-link\" href=\"/account/applications/new\">Create an application</a> for Try it now and add those APIs.",
+      "Test your software with the APIs, using your Try it now credentials.",
+      "When you are ready for live data, go to <a class=\"govuk-link\" href=\"/account/applications\">Manage applications</a>, choose the application you have tested and request production credentials for it. You can follow the request under My requests."
+    ]
   }
 }
