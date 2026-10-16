@@ -11,6 +11,7 @@ import {
   grantAccess,
   listApplications,
   maskSecret,
+  ownerOf,
   publisherIdFor,
   setApis,
   subscriptionKey,
@@ -24,7 +25,7 @@ jest.mock('axios');
 
 const request = axios.request as jest.MockedFunction<typeof axios.request>;
 
-const OWNER = { oid: '11111111-2222-3333-4444-555555555555' };
+const OWNER = { oid: '11111111-2222-3333-4444-555555555555', userReference: 'user001' };
 const BACKEND_APP = {
   clientId: '1bf041a2-a57a-4255-b90f-d218736cda1f',
   name: 'Case Viewer',
@@ -80,10 +81,19 @@ describe('Applications', () => {
       expect(validateApis(['api-one'], CATALOGUE)).toEqual([]);
     });
 
-    test('a_temporary_subscription_name_should_meet_apims_rule_and_differ_each_time', () => {
-      const name = temporarySubscriptionName();
-      expect(name).toMatch(/^amp-temp-[0-9a-f]{8}$/);
-      expect(temporarySubscriptionName()).not.toBe(name);
+    test('a_temporary_subscription_name_should_start_with_the_users_prefix_and_differ_each_time', () => {
+      const name = temporarySubscriptionName(OWNER);
+      expect(name).toMatch(/^amp-user001-temp-[0-9a-f]{8}$/);
+      expect(temporarySubscriptionName(OWNER)).not.toBe(name);
+    });
+
+    test('the_owner_should_carry_the_users_reference_or_one_formatted_from_their_id', () => {
+      expect(ownerOf({ id: 7, userReference: 'user007', oid: 'o', email: '', name: '' })).toEqual({
+        oid: 'o',
+        userReference: 'user007',
+      });
+      expect(ownerOf({ id: 42, oid: 'o', email: '', name: '' }).userReference).toBe('user042');
+      expect(ownerOf({ id: 1234, oid: 'o', email: '', name: '' }).userReference).toBe('user1234');
     });
 
     test('the_publisher_id_should_be_the_api_name_without_its_prefix_and_the_secret_should_be_masked', () => {
@@ -113,7 +123,7 @@ describe('Applications', () => {
         headers: { requestingUserId: OWNER.oid },
       });
       expect(call(1).data).toMatchObject({ productId: 'one', displayName: 'Case Viewer' });
-      expect(call(1).data.name).toMatch(/^amp-temp-/);
+      expect(call(1).data.name).toMatch(/^amp-user001-temp-/);
       expect(call(2).data).toMatchObject({ productId: 'two' });
       expect(created.clientSecret).toBe('Uc6Q~secret');
       expect(created.keys.map(key => key.subscriptionKey)).toEqual([

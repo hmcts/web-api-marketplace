@@ -18,6 +18,7 @@ import {
   grantAccess,
   listApplications,
   maskSecret,
+  ownerOf,
   setApis,
   subscriptionKey,
   validateApis,
@@ -356,7 +357,7 @@ export default class ApplicationsController {
   // ---------------------------------------------------------------------- helpers
 
   private owner(req: AppRequest): Owner {
-    return { oid: (req.session.user as SignedInUser).oid ?? '' };
+    return ownerOf(req.session.user as SignedInUser);
   }
 
   private async find(req: AppRequest, res: Response, next: NextFunction): Promise<Application | undefined> {

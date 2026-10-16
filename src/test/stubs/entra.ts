@@ -80,7 +80,7 @@ export async function startStubEntra(): Promise<StubEntra> {
   let failWith: number | undefined;
   let failSavesWith: number | undefined;
   const savedUsers: StubEntra['savedUsers'] = new Map();
-  const marketplace = stubMarketplace(() => new Set(savedUsers.keys()));
+  const marketplace = stubMarketplace(() => new Map([...savedUsers].map(([oid, user]) => [oid, user.id])));
 
   const server = http.createServer((req, res) => {
     void handle(req, res).catch(() => res.writeHead(500).end());

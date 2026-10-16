@@ -182,7 +182,8 @@ call without touching the journeys:
   `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
   not yet record which subscription keys belong to an application or whether its role
   (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
-  client ID, and subscription keys are given temporary `amp-temp-…` names.
+  client ID, and subscription keys are given temporary names under the user's prefix,
+  `amp-user001-temp-…`, which the backend requires.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here
   and listed under My requests. So are subscribe requests, until the backend has
   somewhere to put them.
