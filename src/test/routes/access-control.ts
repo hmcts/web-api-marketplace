@@ -39,10 +39,9 @@ describe('Access control on the form journeys', () => {
       });
   });
 
-  test('a_signed_in_user_should_be_offered_the_journeys_and_able_to_open_them', async () => {
+  test('a_signed_in_user_should_be_able_to_open_the_subscribe_journey', async () => {
     const agent = await signedIn();
 
-    await agent.get('/').expect(res => expect(res.text).to.contain('href="/subscribe"'));
     await agent.get('/subscribe').expect(res => expect(res.status).to.equal(200));
   });
 

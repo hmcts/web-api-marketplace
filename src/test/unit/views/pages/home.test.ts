@@ -27,7 +27,7 @@ describe('Home page', () => {
 
     expect(html).toContain(i18n.signInButton);
     expect(html).toContain('href="/sign-in?prompt=create"');
-    expect(html).not.toContain(i18n.signedInHeading);
+    expect(html).not.toContain('Your developer account');
   });
 
   test('rendering_the_home_page_for_a_signed_in_user_should_offer_their_account_instead', () => {
@@ -35,9 +35,9 @@ describe('Home page', () => {
 
     expect(html).toContain(i18n.accountButton);
     expect(html).not.toContain(i18n.signInButton);
-    for (const link of i18n.signedInLinks) {
-      expect(html).toContain(`href="${link.href}"`);
-    }
+    expect(html).not.toContain('Your developer account');
+    expect(html).not.toContain('Request access to an API');
+    expect(html).not.toContain('Request production credentials');
   });
 
   test('rendering_the_home_page_should_not_show_a_back_link', () => {
