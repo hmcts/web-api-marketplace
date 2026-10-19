@@ -343,6 +343,9 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain('name="proposed-outputs"');
         expect(res.text).to.not.contain('name="dpia"');
         expect(res.text).to.not.contain('name="declaration"');
+        expect(res.text).to.not.contain('name="dsa"');
+        expect(res.text).to.not.contain('name="security-contact"');
+        expect(res.text).to.not.contain('name="use-case"');
       });
       await agent
         .post('/account/production-credentials')
@@ -363,9 +366,6 @@ describe('Consumer onboarding journey', () => {
           'go-live-month': '4',
           'go-live-year': String(new Date().getFullYear() + 1),
           'call-volume': 'medium',
-          dsa: 'in-place',
-          'security-contact': 'security@example.com',
-          'use-case': 'Case workers look up hearing outcomes.',
           'data-request': 'Hearing outcomes, used with court listings.',
           'proposed-outputs': 'A case summary shown inside our own service.',
         })

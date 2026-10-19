@@ -35,9 +35,6 @@ function answers(applicationId: string, change: Record<string, unknown> = {}) {
     'go-live-month': '4',
     'go-live-year': String(new Date().getFullYear() + 1),
     'call-volume': 'medium',
-    dsa: 'in-place',
-    'security-contact': 'security@example.com',
-    'use-case': 'Case workers look up hearing outcomes.',
     'data-request': 'Hearing outcomes, used with court listings to show case workers what happened.',
     'proposed-outputs': 'A case summary shown to case workers inside our own service.',
     ...change,
@@ -64,16 +61,13 @@ describe('ProductionCredentialsController', () => {
     expect(res.redirected).toBe('/sign-in');
   });
 
-  test('the_form_should_prefill_from_the_account_and_the_chosen_application', async () => {
+  test('the_form_should_preselect_the_chosen_application', async () => {
     const res = mockResponse();
 
     await controller().form(asUser({ query: { application: applicationId } }), res);
 
     expect(res.view).toBe('production-credentials/form');
-    expect(res.data?.answers).toMatchObject({
-      application: applicationId,
-      'security-contact': LOCAL_USER.email,
-    });
+    expect(res.data?.answers).toMatchObject({ application: applicationId });
     expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('1 API');
   });
 
@@ -104,9 +98,6 @@ describe('ProductionCredentialsController', () => {
       'organisation',
       'go-live-day',
       'call-volume',
-      'dsa',
-      'security-contact',
-      'use-case',
       'data-request',
       'proposed-outputs',
     ]);
@@ -116,7 +107,6 @@ describe('ProductionCredentialsController', () => {
     [{ 'go-live-day': '31', 'go-live-month': '2' }, 'Enter a real go-live date'],
     [{ 'go-live-year': '2020' }, 'must be in the future'],
     [{ 'go-live-year': '99' }, 'Enter a real go-live date'],
-    [{ 'use-case': 'x'.repeat(1001) }, '1000 characters or fewer'],
     [{ 'data-request': 'x'.repeat(1001) }, '1000 characters or fewer'],
     [{ 'proposed-outputs': 'x'.repeat(1001) }, '1000 characters or fewer'],
     [{ application: 'not-mine' }, 'Select the application'],
@@ -143,7 +133,8 @@ describe('ProductionCredentialsController', () => {
       expect.arrayContaining([
         { key: 'Application', value: 'Tracker' },
         { key: 'APIs', value: 'API one' },
-        { key: 'Data Sharing Agreement', value: 'Yes, it is in place' },
+        { key: 'Data request', value: expect.stringContaining('Hearing outcomes') },
+        { key: 'Proposed outputs', value: expect.stringContaining('case summary') },
       ])
     );
   });

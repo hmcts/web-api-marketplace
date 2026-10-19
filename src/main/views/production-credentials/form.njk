@@ -76,36 +76,6 @@
         errorMessage: { text: errorFor["call-volume"] } if errorFor["call-volume"]
       }) }}
 
-      {{ govukRadios({
-        name: "dsa",
-        fieldset: { legend: { text: "Is a Data Sharing Agreement in place?", classes: "govuk-fieldset__legend--m" } },
-        hint: { html: 'Read the <a class="govuk-link" href="/documentation/data-governance">data governance standards</a>.' },
-        items: dsaOptions,
-        value: answers.dsa,
-        errorMessage: { text: errorFor.dsa } if errorFor.dsa
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Security contact email address", classes: "govuk-label--m" },
-        hint: { text: "Who we contact about a security incident involving this application. A team inbox is best." },
-        id: "security-contact",
-        name: "security-contact",
-        type: "email",
-        value: answers["security-contact"],
-        spellcheck: false,
-        errorMessage: { text: errorFor["security-contact"] } if errorFor["security-contact"]
-      }) }}
-
-      {{ govukCharacterCount({
-        label: { text: "How will your application use the APIs in production?", classes: "govuk-label--m" },
-        hint: { text: "Include who the users are, what data you need and why, and how you will keep it secure." },
-        id: "use-case",
-        name: "use-case",
-        maxlength: useCaseMaxLength,
-        value: answers["use-case"],
-        errorMessage: { text: errorFor["use-case"] } if errorFor["use-case"]
-      }) }}
-
       {{ govukCharacterCount({
         label: { text: "Please provide a description of the data request, how you plan to use this data, whether this data will be used in conjunction with any other data (if so, how), and an explanation of why this data is required.", classes: "govuk-label--m" },
         id: "data-request",

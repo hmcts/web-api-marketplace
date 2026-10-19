@@ -174,9 +174,6 @@ async function submitProductionRequest(agent: Agent, applicationId: string): Pro
       'go-live-month': '4',
       'go-live-year': String(new Date().getFullYear() + 1),
       'call-volume': 'medium',
-      dsa: 'in-place',
-      'security-contact': 'security@example.com',
-      'use-case': 'Case workers look up hearing outcomes.',
       'data-request': 'Hearing outcomes, used with court listings.',
       'proposed-outputs': 'A case summary shown inside our own service.',
     })
