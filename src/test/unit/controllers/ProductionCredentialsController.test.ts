@@ -35,11 +35,11 @@ function answers(applicationId: string, change: Record<string, unknown> = {}) {
     'go-live-month': '4',
     'go-live-year': String(new Date().getFullYear() + 1),
     'call-volume': 'medium',
-    dpia: 'yes',
     dsa: 'in-place',
     'security-contact': 'security@example.com',
     'use-case': 'Case workers look up hearing outcomes.',
-    declaration: 'confirmed',
+    'data-request': 'Hearing outcomes, used with court listings to show case workers what happened.',
+    'proposed-outputs': 'A case summary shown to case workers inside our own service.',
     ...change,
   };
 }
@@ -104,11 +104,11 @@ describe('ProductionCredentialsController', () => {
       'organisation',
       'go-live-day',
       'call-volume',
-      'dpia',
       'dsa',
       'security-contact',
       'use-case',
-      'declaration',
+      'data-request',
+      'proposed-outputs',
     ]);
   });
 
@@ -117,6 +117,8 @@ describe('ProductionCredentialsController', () => {
     [{ 'go-live-year': '2020' }, 'must be in the future'],
     [{ 'go-live-year': '99' }, 'Enter a real go-live date'],
     [{ 'use-case': 'x'.repeat(1001) }, '1000 characters or fewer'],
+    [{ 'data-request': 'x'.repeat(1001) }, '1000 characters or fewer'],
+    [{ 'proposed-outputs': 'x'.repeat(1001) }, '1000 characters or fewer'],
     [{ application: 'not-mine' }, 'Select the application'],
   ])('the_answer_%j_should_be_refused', async (change, message) => {
     const res = mockResponse();
