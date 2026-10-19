@@ -9,20 +9,12 @@ import { Application, listApplications, ownerOf } from '../services/Applications
 import { addLocalRequest, getLocalRequest, statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import { SignedInUser } from '../services/SignIn';
-import { FieldError, SummaryRow, looksLikeAnEmailAddress, toAnswerText } from '../services/answers';
+import { FieldError, SummaryRow, toAnswerText } from '../services/answers';
 
 const logger = Logger.getLogger('production-credentials');
 
-export const USE_CASE_MAX_LENGTH = 1000;
-
 /** The two questions about the data being requested and what comes out of using it. */
 export const DATA_ANSWER_MAX_LENGTH = 1000;
-
-const DSA_OPTIONS = [
-  { value: 'in-place', text: 'Yes, it is in place' },
-  { value: 'in-progress', text: 'It is being arranged' },
-  { value: 'not-needed', text: 'Not needed', hint: { text: 'None of the APIs return personal data' } },
-];
 
 type Answers = Record<string, string | string[]>;
 
@@ -46,7 +38,6 @@ export default class ProductionCredentialsController {
     const user = req.session.user as SignedInUser;
     const preselected = typeof req.query.application === 'string' ? req.query.application : undefined;
     const answers: Answers = {
-      'security-contact': user.email,
       ...req.session.productionDraft,
       ...(preselected ? { application: preselected } : {}),
     };
@@ -166,9 +157,6 @@ export default class ProductionCredentialsController {
       'go-live-month': text('go-live-month'),
       'go-live-year': text('go-live-year'),
       'call-volume': text('call-volume'),
-      dsa: text('dsa'),
-      'security-contact': text('security-contact'),
-      'use-case': text('use-case'),
       'data-request': text('data-request'),
       'proposed-outputs': text('proposed-outputs'),
     };
@@ -192,20 +180,6 @@ export default class ProductionCredentialsController {
     }
     if (!CALL_VOLUMES.some(volume => volume.value === text('call-volume'))) {
       errors.push({ name: 'call-volume', text: 'Select the expected call volume' });
-    }
-    if (!DSA_OPTIONS.some(option => option.value === text('dsa'))) {
-      errors.push({ name: 'dsa', text: 'Select whether a Data Sharing Agreement is in place' });
-    }
-    if (!looksLikeAnEmailAddress(text('security-contact'))) {
-      errors.push({
-        name: 'security-contact',
-        text: 'Enter a security contact email address, like security@example.com',
-      });
-    }
-    if (!text('use-case')) {
-      errors.push({ name: 'use-case', text: 'Describe how your application will use the APIs in production' });
-    } else if (text('use-case').length > USE_CASE_MAX_LENGTH) {
-      errors.push({ name: 'use-case', text: `Your description must be ${USE_CASE_MAX_LENGTH} characters or fewer` });
     }
     if (!text('data-request')) {
       errors.push({
@@ -274,9 +248,6 @@ export default class ProductionCredentialsController {
           : '',
       },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, answers['call-volume']) },
-      { key: 'Data Sharing Agreement', value: label(DSA_OPTIONS, answers.dsa) },
-      { key: 'Security contact', value: String(answers['security-contact'] ?? '') },
-      { key: 'How the APIs will be used', value: String(answers['use-case'] ?? '') },
       { key: 'Data request', value: String(answers['data-request'] ?? '') },
       { key: 'Proposed outputs', value: String(answers['proposed-outputs'] ?? '') },
     ];
@@ -302,8 +273,6 @@ export default class ProductionCredentialsController {
         },
       })),
       callVolumes: CALL_VOLUMES,
-      dsaOptions: DSA_OPTIONS,
-      useCaseMaxLength: USE_CASE_MAX_LENGTH,
       dataAnswerMaxLength: DATA_ANSWER_MAX_LENGTH,
     };
   }
