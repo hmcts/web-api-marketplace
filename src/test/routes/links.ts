@@ -174,11 +174,11 @@ async function submitProductionRequest(agent: Agent, applicationId: string): Pro
       'go-live-month': '4',
       'go-live-year': String(new Date().getFullYear() + 1),
       'call-volume': 'medium',
-      dpia: 'yes',
       dsa: 'in-place',
       'security-contact': 'security@example.com',
       'use-case': 'Case workers look up hearing outcomes.',
-      declaration: 'confirmed',
+      'data-request': 'Hearing outcomes, used with court listings.',
+      'proposed-outputs': 'A case summary shown inside our own service.',
     })
     .expect(302);
   await agent.post('/account/production-credentials/check-answers').expect(200);

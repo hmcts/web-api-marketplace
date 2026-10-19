@@ -9,27 +9,20 @@ import { Application, listApplications, ownerOf } from '../services/Applications
 import { addLocalRequest, getLocalRequest, statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import { SignedInUser } from '../services/SignIn';
-import { FieldError, SummaryRow, looksLikeAnEmailAddress, toAnswerList, toAnswerText } from '../services/answers';
+import { FieldError, SummaryRow, looksLikeAnEmailAddress, toAnswerText } from '../services/answers';
 
 const logger = Logger.getLogger('production-credentials');
 
 export const USE_CASE_MAX_LENGTH = 1000;
 
-const YES_NO = [
-  { value: 'yes', text: 'Yes' },
-  { value: 'no', text: 'No' },
-];
+/** The two questions about the data being requested and what comes out of using it. */
+export const DATA_ANSWER_MAX_LENGTH = 1000;
 
 const DSA_OPTIONS = [
   { value: 'in-place', text: 'Yes, it is in place' },
   { value: 'in-progress', text: 'It is being arranged' },
   { value: 'not-needed', text: 'Not needed', hint: { text: 'None of the APIs return personal data' } },
 ];
-
-const DECLARATION = {
-  value: 'confirmed',
-  text: 'I confirm the application has been tested against the sandbox, and will be used only as described here and in line with the guidelines for using HMCTS APIs',
-};
 
 type Answers = Record<string, string | string[]>;
 
@@ -173,11 +166,11 @@ export default class ProductionCredentialsController {
       'go-live-month': text('go-live-month'),
       'go-live-year': text('go-live-year'),
       'call-volume': text('call-volume'),
-      dpia: text('dpia'),
       dsa: text('dsa'),
       'security-contact': text('security-contact'),
       'use-case': text('use-case'),
-      declaration: toAnswerList(body.declaration),
+      'data-request': text('data-request'),
+      'proposed-outputs': text('proposed-outputs'),
     };
   }
 
@@ -189,7 +182,7 @@ export default class ProductionCredentialsController {
       errors.push({ name: 'application', text: 'Select the application you need production credentials for' });
     }
     if (!text('organisation')) {
-      errors.push({ name: 'organisation', text: 'Enter the legal name of your organisation' });
+      errors.push({ name: 'organisation', text: 'Enter your organisation or team name' });
     }
     const goLive = this.goLiveDate(answers);
     if (!goLive) {
@@ -199,9 +192,6 @@ export default class ProductionCredentialsController {
     }
     if (!CALL_VOLUMES.some(volume => volume.value === text('call-volume'))) {
       errors.push({ name: 'call-volume', text: 'Select the expected call volume' });
-    }
-    if (!YES_NO.some(option => option.value === text('dpia'))) {
-      errors.push({ name: 'dpia', text: 'Select whether you have completed a Data Protection Impact Assessment' });
     }
     if (!DSA_OPTIONS.some(option => option.value === text('dsa'))) {
       errors.push({ name: 'dsa', text: 'Select whether a Data Sharing Agreement is in place' });
@@ -217,8 +207,24 @@ export default class ProductionCredentialsController {
     } else if (text('use-case').length > USE_CASE_MAX_LENGTH) {
       errors.push({ name: 'use-case', text: `Your description must be ${USE_CASE_MAX_LENGTH} characters or fewer` });
     }
-    if (!toAnswerList(answers.declaration).includes(DECLARATION.value)) {
-      errors.push({ name: 'declaration', text: 'You must confirm the declaration' });
+    if (!text('data-request')) {
+      errors.push({
+        name: 'data-request',
+        text: 'Describe the data request, how you plan to use it and why you need it',
+      });
+    } else if (text('data-request').length > DATA_ANSWER_MAX_LENGTH) {
+      errors.push({
+        name: 'data-request',
+        text: `Your description must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
+      });
+    }
+    if (!text('proposed-outputs')) {
+      errors.push({ name: 'proposed-outputs', text: 'Describe the proposed outputs from this data use' });
+    } else if (text('proposed-outputs').length > DATA_ANSWER_MAX_LENGTH) {
+      errors.push({
+        name: 'proposed-outputs',
+        text: `Your description must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
+      });
     }
 
     return errors;
@@ -255,7 +261,7 @@ export default class ProductionCredentialsController {
         value: application?.name ?? '',
       },
       { key: 'APIs', value: application?.apis.map(api => api.apiTitle).join(', ') || 'None' },
-      { key: 'Organisation', value: String(answers.organisation ?? '') },
+      { key: 'Organisation or team name', value: String(answers.organisation ?? '') },
       {
         key: 'Go-live date',
         value: goLive
@@ -268,11 +274,11 @@ export default class ProductionCredentialsController {
           : '',
       },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, answers['call-volume']) },
-      { key: 'Data Protection Impact Assessment completed', value: label(YES_NO, answers.dpia) },
       { key: 'Data Sharing Agreement', value: label(DSA_OPTIONS, answers.dsa) },
       { key: 'Security contact', value: String(answers['security-contact'] ?? '') },
       { key: 'How the APIs will be used', value: String(answers['use-case'] ?? '') },
-      { key: 'Declaration', value: 'Confirmed' },
+      { key: 'Data request', value: String(answers['data-request'] ?? '') },
+      { key: 'Proposed outputs', value: String(answers['proposed-outputs'] ?? '') },
     ];
   }
 
@@ -296,10 +302,9 @@ export default class ProductionCredentialsController {
         },
       })),
       callVolumes: CALL_VOLUMES,
-      yesNo: YES_NO,
       dsaOptions: DSA_OPTIONS,
-      declaration: DECLARATION,
       useCaseMaxLength: USE_CASE_MAX_LENGTH,
+      dataAnswerMaxLength: DATA_ANSWER_MAX_LENGTH,
     };
   }
 }
