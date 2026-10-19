@@ -1,6 +1,12 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
+jest.mock('../../main/services/Requests', () => ({
+  getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
+  deleteRequest: jest.fn().mockResolvedValue(true),
+  isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
+}));
+
 import { app } from '../../main/app';
 
 import { claimsFor, signInThroughEntra } from './helpers/entra';
@@ -11,7 +17,10 @@ const signedIn = async () => {
   return agent;
 };
 
-const guarded: [string, string][] = [['GET', '/account']];
+const guarded: [string, string][] = [
+  ['GET', '/account'],
+  ['POST', '/account/delete-request'],
+];
 
 describe('Access control on the form journeys', () => {
   test.each(guarded)('a_signed_out_%s_to_%s_should_be_redirected_to_sign_in', async (method, path) => {

@@ -186,9 +186,8 @@ call without touching the journeys:
   client ID, and subscription keys are given temporary names under the user's prefix,
   `amp-user001-temp-…`, which the backend requires.
 - **Production credentials requests** (`services/LocalRequests.ts`) — stored here, and
-  followed from the request's own page, until the backend has somewhere to put them. There is
-  no list of a user's requests on the account page, and no access request ("subscribe")
-  journey: an API is added to an application instead.
+  listed under My requests, until the backend has somewhere to put them. There is no access
+  request ("subscribe") journey: an API is added to an application instead.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.

@@ -384,9 +384,10 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain(reference);
         expect(res.text).to.contain('Submitted');
       });
-      // The confirmation links to the request's own page; there is no list of requests.
-      expect(confirmation.text).to.contain(`href="/account/production-credentials/${reference}"`);
-      await agent.get('/account').expect(res => expect(res.text).to.not.contain(reference));
+      await agent.get('/account').expect(res => {
+        expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);
+        expect(res.text).to.contain('Production credentials');
+      });
 
       const stranger = await signedInConsumer('charles@example.com');
       await stranger.get(`/account/production-credentials/${reference}`).expect(404);

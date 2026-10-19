@@ -7,7 +7,7 @@ import { SummaryRow, newReference } from './answers';
  * Requests this service stores itself, because service-api-marketplace has nowhere to put
  * them yet: production credentials requests, requests for a new API, and the access and
  * publication requests of users the backend does not know (it refuses a user id it has
- * never seen). A user can follow a production credentials request from its own page.
+ * never seen). They are listed under My requests alongside the backend's own.
  */
 export type LocalRequestType = 'PUBLISH' | 'NEW_API' | 'PRODUCTION';
 
