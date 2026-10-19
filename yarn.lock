@@ -9996,15 +9996,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:26.4.4":
-  version: 26.4.4
-  resolution: "i18next@npm:26.4.4"
+"i18next@npm:26.4.7":
+  version: 26.4.7
+  resolution: "i18next@npm:26.4.7"
   peerDependencies:
     typescript: ^5 || ^6 || ^7
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10/0987781149f5dd814148339e553ea775bb4792fad29e5d9deae2784cb8e4d193875e4c67fcebbec9c6071f9423e098a3e0daafb4693fbb6b15fa2aa5f7853df7
+  checksum: 10/245a9e70250841e57c9acc5a804a9f0ebddfdf6b1d509a2021ecf778c3b7535571590d39ce886d81c0f288557f9e47251d54506451da50812d33fc09154dc89c
   languageName: node
   linkType: hard
 
@@ -15704,7 +15704,7 @@ __metadata:
     helmet: "npm:8.3.0"
     html-webpack-plugin: "npm:5.6.8"
     husky: "npm:9.1.7"
-    i18next: "npm:26.4.4"
+    i18next: "npm:26.4.7"
     i18next-http-middleware: "npm:3.9.9"
     jest: "npm:30.4.2"
     jest-environment-jsdom: "npm:30.4.1"
