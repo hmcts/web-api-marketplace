@@ -40,12 +40,12 @@ describe('Account page', () => {
     expect(steps).not.toContain('href="/account/production-credentials"');
   });
 
-  test('the_requests_tab_should_say_there_are_none_yet_and_point_at_the_available_journeys', () => {
+  test('the_requests_tab_should_say_there_are_none_yet_and_point_at_the_applications', () => {
     const html = env.render('account.njk', { ...i18n, user });
 
     expect(html).toContain('You have not submitted any requests yet');
-    expect(html).toContain('href="/subscribe"');
-    expect(html).toContain('href="/account/production-credentials"');
+    expect(html).toContain('request production credentials, open the application you have tested');
+    expect(html).not.toContain('href="/subscribe"');
     expect(html).not.toContain('href="/publish"');
   });
 
