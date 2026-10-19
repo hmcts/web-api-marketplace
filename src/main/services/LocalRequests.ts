@@ -9,7 +9,7 @@ import { SummaryRow, newReference } from './answers';
  * publication requests of users the backend does not know (it refuses a user id it has
  * never seen). A user can follow a production credentials request from its own page.
  */
-export type LocalRequestType = 'SUBSCRIPTION' | 'PUBLISH' | 'NEW_API' | 'PRODUCTION';
+export type LocalRequestType = 'PUBLISH' | 'NEW_API' | 'PRODUCTION';
 
 /**
  * The lifecycle a production credentials request moves through. Only SUBMITTED is set
@@ -30,7 +30,6 @@ export interface StoredRequest {
 }
 
 const PREFIXES: Record<LocalRequestType, string> = {
-  SUBSCRIPTION: 'SUB',
   PUBLISH: 'PUB',
   NEW_API: 'NEW',
   PRODUCTION: 'PCR',

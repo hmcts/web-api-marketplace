@@ -407,20 +407,4 @@ describe('Consumer onboarding journey', () => {
         .expect(res => expect(res.text).to.contain('The go-live date must be in the future'));
     });
   });
-
-  describe('requests from an account registered here', () => {
-    test('a_subscribe_request_should_be_accepted_and_give_a_reference', async () => {
-      const agent = await signedInConsumer('ada@example.com');
-
-      await agent
-        .post('/subscribe/check-answers')
-        .type('form')
-        .send({
-          'api-name': CATALOGUE[0].name,
-          'call-volume': 'low',
-          'use-case': 'Testing',
-        })
-        .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
-    });
-  });
 });

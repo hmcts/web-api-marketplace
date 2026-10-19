@@ -11,8 +11,7 @@ describe('LocalRequests', () => {
   beforeEach(() => useDataStore(new MemoryStore()));
 
   test('a_request_should_get_a_reference_prefixed_by_its_type', async () => {
-    expect((await addLocalRequest('a@example.com', 'SUBSCRIPTION', [])).reference).toMatch(/^SUB-[0-9A-F]{8}$/);
-    expect((await addLocalRequest('a@example.com', 'PUBLISH', [])).reference).toMatch(/^PUB-/);
+    expect((await addLocalRequest('a@example.com', 'PUBLISH', [])).reference).toMatch(/^PUB-[0-9A-F]{8}$/);
     expect((await addLocalRequest('a@example.com', 'NEW_API', [])).reference).toMatch(/^NEW-/);
     expect((await addLocalRequest('a@example.com', 'PRODUCTION', [])).reference).toMatch(/^PCR-/);
   });
