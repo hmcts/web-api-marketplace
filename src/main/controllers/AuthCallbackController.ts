@@ -82,26 +82,25 @@ export default class AuthCallbackController {
     }
 
     logger.info(`Signed in  oid=${claims.oid}  userId=${user.id}`);
-    this.startSession(req, res, claims, user);
-  }
-
-  private startSession(req: AppRequest, res: Response, claims: EntraClaims, user: EntraUser): void {
-    // A new session id on sign in, so a session id an attacker planted before the user
-    // signed in cannot be used afterwards.
-    req.session.regenerate(error => {
-      if (error) {
-        logger.error(`Could not start a session: ${error.message}`);
-        this.problem(req, res, 500, 'unavailable');
-        return;
-      }
-
-      req.session.user = toSignedInUser(claims, user.id, user.userReference);
-      // Every sign in lands on the account page, whichever page asked for it.
-      req.session.save(() => res.redirect('/account'));
-    });
+    startSession(req, res, claims, user);
   }
 
   private problem(req: AppRequest, res: Response, status: number, problem: SignInProblem): void {
     signInProblem(req, res, status, problem);
   }
+}
+
+/** Shared with the Entra bypass, so both regenerate the session id the same way. */
+export function startSession(req: AppRequest, res: Response, claims: EntraClaims, user: EntraUser): void {
+  req.session.regenerate(error => {
+    if (error) {
+      logger.error(`Could not start a session: ${error.message}`);
+      signInProblem(req, res, 500, 'unavailable');
+      return;
+    }
+
+    req.session.user = toSignedInUser(claims, user.id, user.userReference);
+    // Every sign in lands on the account page, whichever page asked for it.
+    req.session.save(() => res.redirect('/account'));
+  });
 }

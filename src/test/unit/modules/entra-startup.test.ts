@@ -65,3 +65,37 @@ describe('prepareEntra', () => {
     await expect(prepareEntra(untouchableVault)).resolves.toBe('Entra client secret from environment');
   });
 });
+
+describe('prepareEntra and BYPASS_ENTRA', () => {
+  withCleanEnv([...SETTINGS, 'BYPASS_ENTRA', 'NODE_ENV']);
+
+  test('with_it_on_entra_should_not_be_prepared_at_all', async () => {
+    process.env.BYPASS_ENTRA = 'true';
+    process.env.NODE_ENV = 'development';
+
+    const line = await prepareEntra(untouchableVault);
+
+    expect(line).toContain('BYPASS_ENTRA is on');
+    expect(line).toContain('john.doe@example.com');
+  });
+
+  test('set_but_ignored_should_still_check_everything_entra_needs', async () => {
+    // An environment that does not get the bypass signs people in through Entra, so a
+    // missing setting has to stop the server here rather than failing a sign in later.
+    process.env.BYPASS_ENTRA = 'true';
+    process.env.NODE_ENV = 'production';
+
+    await expect(prepareEntra(untouchableVault)).rejects.toThrow();
+  });
+
+  test('set_but_ignored_should_say_so_once_entra_is_configured', async () => {
+    process.env.BYPASS_ENTRA = 'true';
+    process.env.NODE_ENV = 'production';
+    process.env.ENTRA_ENABLED = 'false';
+
+    const line = await prepareEntra(untouchableVault);
+
+    expect(line).toContain('BYPASS_ENTRA is set but ignored');
+    expect(line).toContain('switched off');
+  });
+});
