@@ -384,10 +384,9 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain(reference);
         expect(res.text).to.contain('Submitted');
       });
-      await agent.get('/account').expect(res => {
-        expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);
-        expect(res.text).to.contain('Production credentials');
-      });
+      // The confirmation links to the request's own page; there is no list of requests.
+      expect(confirmation.text).to.contain(`href="/account/production-credentials/${reference}"`);
+      await agent.get('/account').expect(res => expect(res.text).to.not.contain(reference));
 
       const stranger = await signedInConsumer('charles@example.com');
       await stranger.get(`/account/production-credentials/${reference}`).expect(404);
@@ -410,7 +409,7 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('requests from an account registered here', () => {
-    test('a_subscribe_request_should_appear_under_my_requests_and_be_deletable', async () => {
+    test('a_subscribe_request_should_be_accepted_and_give_a_reference', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
       await agent
@@ -422,16 +421,6 @@ describe('Consumer onboarding journey', () => {
           'use-case': 'Testing',
         })
         .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
-
-      const account = await agent.get('/account');
-      expect(account.text).to.contain('Subscribe to an API');
-
-      const reference = /(SUB-[0-9A-F]{8})/.exec(account.text)?.[1] as string;
-      await agent.post('/account/delete-request').type('form').send({ reference, type: 'SUBSCRIPTION' }).expect(302);
-      await agent.get('/account').expect(res => {
-        expect(res.text).to.contain('Your request has been deleted');
-        expect(res.text).to.not.contain(reference);
-      });
     });
   });
 });

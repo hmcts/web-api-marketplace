@@ -58,7 +58,6 @@ describe('Links', () => {
     ]) {
       expect(visited, `${path} should be linked from somewhere`).to.include(path);
     }
-    expect(visited.some(path => path.startsWith('/account/production-credentials/PCR-'))).to.equal(true);
   });
 });
 

@@ -1,12 +1,6 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/Requests', () => ({
-  getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
-  deleteRequest: jest.fn().mockResolvedValue(true),
-  isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
-}));
-
 import { app } from '../../main/app';
 
 import { claimsFor, signInThroughEntra } from './helpers/entra';
@@ -24,7 +18,6 @@ const guarded: [string, string][] = [
   ['POST', '/subscribe/check-answers'],
   ['GET', '/subscribe/confirmation'],
   ['GET', '/account'],
-  ['POST', '/account/delete-request'],
 ];
 
 describe('Access control on the form journeys', () => {

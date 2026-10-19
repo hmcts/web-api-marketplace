@@ -185,9 +185,9 @@ call without touching the journeys:
   (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
   client ID, and subscription keys are given temporary names under the user's prefix,
   `amp-user001-temp-…`, which the backend requires.
-- **Production credentials requests** (`services/LocalRequests.ts`) — stored here
-  and listed under My requests. So are subscribe requests, until the backend has
-  somewhere to put them.
+- **Production credentials requests** (`services/LocalRequests.ts`) — stored here, and
+  followed from the request's own page. So are subscribe requests, until the backend has
+  somewhere to put them. There is no longer a list of a user's requests on the account page.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.

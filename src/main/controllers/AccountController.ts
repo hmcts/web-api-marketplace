@@ -1,106 +1,21 @@
-import { GET, POST, route } from 'awilix-express';
+import { GET, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
 import { requireSignIn } from '../modules/session';
-import { deleteLocalRequest, listLocalRequests, statusText } from '../services/LocalRequests';
-import { RequestSummary, deleteRequest, getRequestsFor, isRequestType } from '../services/Requests';
 import { SignedInUser } from '../services/SignIn';
 
 @route('/account')
 export default class AccountController {
   @GET()
-  public async get(req: AppRequest, res: Response): Promise<void> {
+  public get(req: AppRequest, res: Response): void {
     if (!requireSignIn(req, res)) {
       return;
     }
-
-    const user = req.session.user as SignedInUser;
-    // An account registered here is unknown to the backend, which would refuse its id.
-    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id);
-    const local = await listLocalRequests(user.email);
-    const requests: (RequestSummary & { href?: string })[] = [
-      ...result.requests,
-      ...local.map(request => ({
-        reference: request.reference,
-        type: request.type,
-        submittedAt: request.submittedAt,
-        status: statusText(request.status),
-        href: request.type === 'PRODUCTION' ? `/account/production-credentials/${request.reference}` : undefined,
-      })),
-    ].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-    // Read once and cleared, so the banner appears on the page that follows the delete
-    // and not on every visit afterwards.
-    const notice = req.session.requestNotice;
-    delete req.session.requestNotice;
 
     res.render('account', {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
-      user,
-      myRequests: requests.map(request => this.forDisplay(request)),
-      couldNotLoad: !result.ok,
-      deleted: notice === 'deleted',
-      deleteFailed: notice === 'deleteFailed',
+      user: req.session.user as SignedInUser,
     });
-  }
-
-  /**
-   * Deletes one of the signed-in user's requests.
-   *
-   * POST, so no link and no prefetcher can delete a request by being followed, and a
-   * redirect afterwards so refreshing the confirmation does not try to delete it again.
-   *
-   * Which request is named by the reference in the body, but whose it is comes from the
-   * session: the backend is told the signed-in user id, never one posted with the form.
-   */
-  @route('/delete-request')
-  @POST()
-  public async remove(req: AppRequest, res: Response): Promise<void> {
-    if (!requireSignIn(req, res)) {
-      return;
-    }
-
-    const user = req.session.user as SignedInUser;
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const reference = String(body.reference ?? '').trim();
-    const type = body.type;
-
-    const deleted = reference !== '' && (await this.deleteFor(user, type, reference));
-
-    req.session.requestNotice = deleted ? 'deleted' : 'deleteFailed';
-    req.session.save(() => res.redirect('/account'));
-  }
-
-  /**
-   * Held here first: a reference this user owns in the data store is deleted there.
-   * Anything else goes to the backend, which checks the owner itself — unless the account
-   * was registered here, which the backend has never heard of.
-   */
-  private async deleteFor(user: SignedInUser, type: unknown, reference: string): Promise<boolean> {
-    if (await deleteLocalRequest(user.email, reference)) {
-      return true;
-    }
-    if (user.local || !isRequestType(type)) {
-      return false;
-    }
-    return deleteRequest(user.id, type, reference);
-  }
-
-  private forDisplay(request: RequestSummary & { href?: string }) {
-    return { ...request, submittedOn: this.formatDate(request.submittedAt) };
-  }
-
-  private formatDate(submittedAt: string): string {
-    const date = new Date(submittedAt);
-
-    if (Number.isNaN(date.getTime())) {
-      return submittedAt;
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(date);
   }
 }

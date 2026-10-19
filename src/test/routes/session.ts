@@ -1,10 +1,6 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/Requests', () => ({
-  getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
-}));
-
 import { app } from '../../main/app';
 
 import { claimsFor, signInThroughEntra } from './helpers/entra';
