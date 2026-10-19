@@ -5,8 +5,8 @@
   "requests": {
     "tabLabel": "My requests",
     "heading": "My requests",
-    "intro": "Everything you have submitted: access requests, APIs submitted for publication, requests for a new API and production credentials requests.",
-    "emptyHtml": "You have not submitted any requests yet. Start from <a class=\"govuk-link\" href=\"/subscribe\">Subscribe to an API</a> or <a class=\"govuk-link\" href=\"/account/production-credentials\">Request production credentials</a>.",
+    "intro": "Everything you have submitted, including your production credentials requests.",
+    "emptyHtml": "You have not submitted any requests yet. To request production credentials, open the application you have tested in <a class=\"govuk-link\" href=\"/account/applications\">Manage applications</a>.",
     "unavailable": "Your requests could not be loaded just now. Try again in a few minutes.",
     "tableCaption": "Requests you have submitted",
     "columnStatus": "Status",

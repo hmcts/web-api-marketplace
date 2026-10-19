@@ -408,30 +408,4 @@ describe('Consumer onboarding journey', () => {
         .expect(res => expect(res.text).to.contain('The go-live date must be in the future'));
     });
   });
-
-  describe('requests from an account registered here', () => {
-    test('a_subscribe_request_should_appear_under_my_requests_and_be_deletable', async () => {
-      const agent = await signedInConsumer('ada@example.com');
-
-      await agent
-        .post('/subscribe/check-answers')
-        .type('form')
-        .send({
-          'api-name': CATALOGUE[0].name,
-          'call-volume': 'low',
-          'use-case': 'Testing',
-        })
-        .expect(res => expect(res.text).to.match(/id="confirmation-reference">SUB-/));
-
-      const account = await agent.get('/account');
-      expect(account.text).to.contain('Subscribe to an API');
-
-      const reference = /(SUB-[0-9A-F]{8})/.exec(account.text)?.[1] as string;
-      await agent.post('/account/delete-request').type('form').send({ reference, type: 'SUBSCRIPTION' }).expect(302);
-      await agent.get('/account').expect(res => {
-        expect(res.text).to.contain('Your request has been deleted');
-        expect(res.text).to.not.contain(reference);
-      });
-    });
-  });
 });

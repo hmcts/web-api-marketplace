@@ -4,7 +4,6 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
-import { CALL_VOLUMES } from '../services/AccessRequest';
 import { Application, listApplications, ownerOf } from '../services/Applications';
 import { statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
@@ -18,6 +17,13 @@ import { SignedInUser } from '../services/SignIn';
 import { FieldError, SummaryRow, toAnswerText } from '../services/answers';
 
 const logger = Logger.getLogger('production-credentials');
+
+/** What a production request expects to send, in calls per day. */
+const CALL_VOLUMES = [
+  { value: 'low', text: 'Low', hint: { text: 'Under 1,000 calls per day' } },
+  { value: 'medium', text: 'Medium', hint: { text: '1,000 to 100,000 calls per day' } },
+  { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
+];
 
 /** The two questions about the data being requested and what comes out of using it. */
 export const DATA_ANSWER_MAX_LENGTH = 1000;
