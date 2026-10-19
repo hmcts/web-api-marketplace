@@ -18,11 +18,6 @@ const signedIn = async () => {
 };
 
 const guarded: [string, string][] = [
-  ['GET', '/subscribe'],
-  ['POST', '/subscribe'],
-  ['GET', '/subscribe/check-answers'],
-  ['POST', '/subscribe/check-answers'],
-  ['GET', '/subscribe/confirmation'],
   ['GET', '/account'],
   ['POST', '/account/delete-request'],
 ];
@@ -46,12 +41,17 @@ describe('Access control on the form journeys', () => {
       });
   });
 
-  test('a_signed_in_user_should_be_offered_the_journeys_and_able_to_open_them', async () => {
-    const agent = await signedIn();
+  test.each(['/subscribe', '/subscribe/check-answers', '/subscribe/confirmation'])(
+    'the_subscribe_journey_at_%s_should_be_switched_off_even_when_signed_in',
+    async path => {
+      const agent = await signedIn();
 
-    await agent.get('/').expect(res => expect(res.text).to.contain('href="/subscribe"'));
-    await agent.get('/subscribe').expect(res => expect(res.status).to.equal(200));
-  });
+      await request(app)
+        .get(path)
+        .expect(res => expect(res.status).to.equal(404));
+      await agent.get(path).expect(res => expect(res.status).to.equal(404));
+    }
+  );
 
   test.each(['/publish', '/publish/check-answers', '/publish/confirmation'])(
     'the_publish_an_api_journey_at_%s_should_be_switched_off_even_when_signed_in',

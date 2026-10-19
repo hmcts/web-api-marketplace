@@ -5,21 +5,6 @@
   "signInButton": "Sign in to developer account",
   "registerButton": "Create account",
   "accountButton": "Go to your account",
-  "signedInHeading": "Your developer account",
-  "signedInLinks": [
-    {
-      "text": "Manage your applications and credentials",
-      "href": "/account/applications"
-    },
-    {
-      "text": "Request access to an API",
-      "href": "/subscribe"
-    },
-    {
-      "text": "Request production credentials",
-      "href": "/account/production-credentials"
-    }
-  ],
   "cardRows": [
     [
       {
