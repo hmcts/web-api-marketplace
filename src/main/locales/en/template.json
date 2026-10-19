@@ -42,13 +42,8 @@
     "documentation": "Documentation",
     "help": "Help and support",
     "applications": "Applications",
-    "subscribe": "Subscribe to an API",
     "signIn": "Sign in",
     "account": "Your account"
-  },
-  "breadcrumb": {
-    "home": "Home",
-    "subscribe": "Subscribe to an API"
   },
   "phaseTag": "Beta"
 }

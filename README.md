@@ -204,7 +204,7 @@ call without touching the journeys:
 
 - **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
   their Entra `oid`. The backend holds users but not yet requests, so every user is still
-  `local`: their subscribe requests go to the data store.
+  `local`: their production credentials requests go to the data store.
 - **Applications** (`services/Applications.ts`) — registered for real through the backend's
   `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
   `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
@@ -212,9 +212,9 @@ call without touching the journeys:
   (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
   client ID, and subscription keys are given temporary names under the user's prefix,
   `amp-user001-temp-…`, which the backend requires.
-- **Production credentials requests** (`services/LocalRequests.ts`) — stored here
-  and listed under My requests. So are subscribe requests, until the backend has
-  somewhere to put them.
+- **Production credentials requests** (`services/LocalRequests.ts`) — stored here, and
+  listed under My requests, until the backend has somewhere to put them. There is no access
+  request ("subscribe") journey: an API is added to an application instead.
 - **GOV.UK Notify** (`services/Notify.ts`) — no email is sent. The page that follows shows the
   email, with its link, while `NOTIFY_SHOW_EMAILS_ON_PAGE` is true (the default). Turn it off
   once Notify is wired in.
