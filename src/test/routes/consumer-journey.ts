@@ -338,6 +338,11 @@ describe('Consumer onboarding journey', () => {
 
       await agent.get(`/account/production-credentials?application=${id}`).expect(res => {
         expect(res.text).to.contain(`value="${id}" checked`);
+        expect(res.text).to.contain('Organisation or team name');
+        expect(res.text).to.contain('name="data-request"');
+        expect(res.text).to.contain('name="proposed-outputs"');
+        expect(res.text).to.not.contain('name="dpia"');
+        expect(res.text).to.not.contain('name="declaration"');
       });
       await agent
         .post('/account/production-credentials')
@@ -346,7 +351,7 @@ describe('Consumer onboarding journey', () => {
         .expect(res => {
           expect(res.status).to.equal(400);
           expect(res.text).to.contain('Select the application you need production credentials for');
-          expect(res.text).to.contain('You must confirm the declaration');
+          expect(res.text).to.contain('Describe the proposed outputs from this data use');
         });
       await agent
         .post('/account/production-credentials')
@@ -358,11 +363,11 @@ describe('Consumer onboarding journey', () => {
           'go-live-month': '4',
           'go-live-year': String(new Date().getFullYear() + 1),
           'call-volume': 'medium',
-          dpia: 'yes',
           dsa: 'in-place',
           'security-contact': 'security@example.com',
           'use-case': 'Case workers look up hearing outcomes.',
-          declaration: 'confirmed',
+          'data-request': 'Hearing outcomes, used with court listings.',
+          'proposed-outputs': 'A case summary shown inside our own service.',
         })
         .expect(res => expect(res.headers.location).to.equal('/account/production-credentials/check-answers'));
 
