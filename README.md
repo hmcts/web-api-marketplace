@@ -27,6 +27,31 @@ yarn start:dev
 Then <https://localhost:3344>. The development server uses a self-signed certificate,
 so expect a browser warning.
 
+### Without Entra
+
+To work on the pages behind sign in without setting Entra up at all:
+
+```bash
+BYPASS_ENTRA=true npm run start:dev
+```
+
+`/sign-in` then starts a session as John Doe (`john.doe@example.com`) without leaving the
+service. No Entra settings are needed at all: the secret is never read, so there is no
+`ENTRA_CLIENT_SECRET` to export and no Key Vault to be a reader of. The user is still saved
+in service-api-marketplace exactly as a real sign in saves it, so applications and requests
+work normally. To sign in through Entra again, drop the variable — anything but the exact
+value `true` leaves it off.
+
+It also needs `NODE_ENV` to be exactly `development`, which `start:dev` sets. `npm start`
+sets `production`, so the bypass is off there however the variable is set — as it is in
+every deployed environment, none of which sets `NODE_ENV` at all. The startup log says
+which you have:
+
+```
+BYPASS_ENTRA is on: /sign-in starts a session as john.doe@example.com WITHOUT Entra. Local development only
+BYPASS_ENTRA is set but ignored: it works only in development, and this is not. ...
+```
+
 Or let the server read the secret from Key Vault as it starts, with `DefaultAzureCredential`
 (`modules/entra/secret.ts`) and your `az login` session. The value stays in the process;
 nothing is written to a file:
@@ -43,8 +68,8 @@ registration hmcts/external-entra-id manages in the sandbox tenant and whose sec
 The client ID and the secret must belong to the same app registration, or Entra answers
 `AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
 
-The server refuses to start without `ENTRA_CLIENT_SECRET`. Export it; do not put it in a
-file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
+The server refuses to start without `ENTRA_CLIENT_SECRET`, unless `BYPASS_ENTRA` is on.
+Export it; do not put it in a file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
 `config/development.json`, loaded only when `NODE_ENV` is `development`). Deployed
 environments run as `production` and have no defaults: they refuse to start until every
 setting is given for their own tenant, so none can sign users in against the sandbox by
@@ -164,6 +189,9 @@ reaches this service. The flow is OpenID Connect's authorization code flow:
    sign in lands on `/account`, whichever page asked for it.
 
 Signing out ends Entra's session too, then comes back to the home page.
+
+`BYPASS_ENTRA=true` skips steps 1 to 3 and starts the session at step 4, as a fixed user
+(`services/EntraBypass.ts`). Development only — see [Without Entra](#without-entra).
 
 The tests sign in against a stub tenant (`src/test/stubs/entra.ts`) that issues really
 signed tokens, so the same requests and checks run as in production. Only Entra's own pages
