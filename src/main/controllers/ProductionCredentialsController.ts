@@ -5,8 +5,14 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
 import { Application, listApplications, ownerOf } from '../services/Applications';
-import { addLocalRequest, getLocalRequest, statusText } from '../services/LocalRequests';
+import { statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
+import {
+  ProductionRequestDetail,
+  ProductionRequestSubmission,
+  getProductionRequest,
+  submitProductionRequest,
+} from '../services/ProductionRequests';
 import { SignedInUser } from '../services/SignIn';
 import { FieldError, SummaryRow, toAnswerText } from '../services/answers';
 
@@ -110,7 +116,7 @@ export default class ProductionCredentialsController {
     const rows = this.summaryRows(draft, applications);
 
     try {
-      const request = await addLocalRequest(user.email, 'PRODUCTION', rows);
+      const request = await submitProductionRequest(ownerOf(user), this.toSubmission(draft));
 
       sendEmail({
         template: 'production-request-received',
@@ -143,15 +149,18 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const request = await getLocalRequest(user.email, String(req.params.reference));
+    const request = await getProductionRequest(ownerOf(user), String(req.params.reference));
 
-    // Another user's reference is "not found", the same as one that does not exist.
-    if (request?.type !== 'PRODUCTION') {
+    if (!request) {
       next();
       return;
     }
 
-    res.render('production-credentials/view', { request, status: statusText(request.status) });
+    res.render('production-credentials/view', {
+      request,
+      status: statusText(request.status),
+      rows: this.storedRows(request),
+    });
   }
 
   private toAnswers(body: Record<string, unknown>): Answers {
@@ -257,6 +266,48 @@ export default class ProductionCredentialsController {
       { key: 'Data request', value: String(answers['data-request'] ?? '') },
       { key: 'Proposed outputs', value: String(answers['proposed-outputs'] ?? '') },
     ];
+  }
+
+  private toSubmission(answers: Answers): ProductionRequestSubmission {
+    const text = (name: string) => (typeof answers[name] === 'string' ? (answers[name] as string) : '');
+    const goLive = this.goLiveDate(answers) as Date;
+
+    return {
+      clientId: text('application'),
+      organisation: text('organisation'),
+      goLiveDate: goLive.toISOString().slice(0, 10),
+      callVolume: text('call-volume'),
+      dataRequest: text('data-request'),
+      proposedOutputs: text('proposed-outputs'),
+    };
+  }
+
+  private storedRows(request: ProductionRequestDetail): SummaryRow[] {
+    const label = (options: { value: string; text: string }[], value: string) =>
+      options.find(option => option.value === value)?.text ?? value;
+
+    return [
+      { key: 'Application', value: request.applicationName },
+      { key: 'Organisation or team name', value: request.organisation },
+      { key: 'Go-live date', value: this.formatDate(request.goLiveDate) },
+      { key: 'Expected call volume', value: label(CALL_VOLUMES, request.callVolume) },
+      { key: 'Data request', value: request.dataRequest },
+      { key: 'Proposed outputs', value: request.proposedOutputs },
+    ];
+  }
+
+  private formatDate(isoDate: string): string {
+    const date = new Date(isoDate);
+
+    if (Number.isNaN(date.getTime())) {
+      return isoDate;
+    }
+    return new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date);
   }
 
   private async formData(
