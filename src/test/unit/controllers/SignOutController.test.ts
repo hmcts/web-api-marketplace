@@ -40,4 +40,25 @@ describe('SignOutController', () => {
       delete process.env.ENTRA_DISCOVERY_ENDPOINT;
     }
   });
+
+  describe('with the Entra bypass on', () => {
+    const environment = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...environment };
+    });
+
+    test('signing_out_should_go_home_rather_than_to_entra', async () => {
+      process.env.BYPASS_ENTRA = 'true';
+      process.env.NODE_ENV = 'development';
+      const res = mockResponse();
+      const req = mockRequest({}, { user: LOCAL_USER as never });
+
+      await new SignOutController().post(req, res);
+
+      expect(req.session.user).toBeUndefined();
+      expect(res.cleared).toBe('connect.sid');
+      expect(res.redirected).toBe('/');
+    });
+  });
 });

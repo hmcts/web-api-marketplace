@@ -100,14 +100,17 @@ export function temporarySubscriptionName(owner: Owner): string {
 }
 
 export async function listApplications(owner: Owner): Promise<Application[]> {
-  const found = await call<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
+  const found = await callBackend<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
   return Promise.all(found.map(withLinks));
 }
 
 export async function getApplication(owner: Owner, clientId: string): Promise<Application | undefined> {
   try {
     return await withLinks(
-      await call<BackendApplication>(owner, { method: 'GET', url: `/applications/${encodeURIComponent(clientId)}` })
+      await callBackend<BackendApplication>(owner, {
+        method: 'GET',
+        url: `/applications/${encodeURIComponent(clientId)}`,
+      })
     );
   } catch (error) {
     if (error instanceof BackendError && error.status === 404 && !error.signInAgain) {
@@ -154,7 +157,7 @@ export async function createApplication(
   draft: Required<ApplicationDraft>,
   catalogue: CatalogueApi[]
 ): Promise<CreatedApplication> {
-  const created = await call<BackendApplication>(
+  const created = await callBackend<BackendApplication>(
     owner,
     { method: 'POST', url: '/applications', data: { name: draft.name.trim() } },
     30000
@@ -196,7 +199,7 @@ export async function grantAccess(owner: Owner, application: Application): Promi
     return { state: 'granted' };
   }
   try {
-    await call(owner, {
+    await callBackend(owner, {
       method: 'POST',
       url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
       data: { role: APPLICATION_ROLE },
@@ -255,7 +258,7 @@ export async function setApis(
 }
 
 export async function subscriptionKey(owner: Owner, subscription: ApiSubscription): Promise<string> {
-  const values = await call<{ primaryKey?: string }>(owner, {
+  const values = await callBackend<{ primaryKey?: string }>(owner, {
     method: 'GET',
     url: `/apim/subscription-keys/${encodeURIComponent(subscription.subscriptionName)}/values`,
   });
@@ -267,7 +270,7 @@ export async function deleteApplication(owner: Owner, application: Application):
   for (const subscription of application.apis) {
     await revoke(owner, subscription.subscriptionName);
   }
-  await call(owner, { method: 'DELETE', url: `/applications/${encodeURIComponent(application.clientId)}` });
+  await callBackend(owner, { method: 'DELETE', url: `/applications/${encodeURIComponent(application.clientId)}` });
   await dataStore().delete(linksKey(application.clientId));
 }
 
@@ -281,7 +284,7 @@ async function subscribe(
   for (let attempt = 1; ; attempt++) {
     const name = temporarySubscriptionName(owner);
     try {
-      const created = await call<{ primaryKey?: string }>(owner, {
+      const created = await callBackend<{ primaryKey?: string }>(owner, {
         method: 'POST',
         url: '/apim/subscription-keys',
         data: { name, productId: publisherId, displayName },
@@ -306,7 +309,10 @@ async function subscribe(
 
 async function revoke(owner: Owner, subscriptionName: string): Promise<void> {
   try {
-    await call(owner, { method: 'DELETE', url: `/apim/subscription-keys/${encodeURIComponent(subscriptionName)}` });
+    await callBackend(owner, {
+      method: 'DELETE',
+      url: `/apim/subscription-keys/${encodeURIComponent(subscriptionName)}`,
+    });
   } catch (error) {
     if (!(error instanceof BackendError && error.status === 404)) {
       throw error;
@@ -314,7 +320,7 @@ async function revoke(owner: Owner, subscriptionName: string): Promise<void> {
   }
 }
 
-async function call<T = unknown>(owner: Owner, request: AxiosRequestConfig, timeout = 10000): Promise<T> {
+export async function callBackend<T = unknown>(owner: Owner, request: AxiosRequestConfig, timeout = 10000): Promise<T> {
   const baseURL = process.env.API_URL || config.get<string>('backend.url');
   try {
     const response = await axios.request<T>({

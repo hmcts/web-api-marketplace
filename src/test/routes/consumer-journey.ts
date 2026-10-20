@@ -341,6 +341,7 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain('Organisation or team name');
         expect(res.text).to.contain('name="data-request"');
         expect(res.text).to.contain('name="proposed-outputs"');
+        expect(res.text.split('for each API selected in the above application')).to.have.length(3);
         expect(res.text).to.not.contain('name="dpia"');
         expect(res.text).to.not.contain('name="declaration"');
         expect(res.text).to.not.contain('name="dsa"');
@@ -377,7 +378,7 @@ describe('Consumer onboarding journey', () => {
       });
 
       const confirmation = await agent.post('/account/production-credentials/check-answers').expect(200);
-      const reference = /id="confirmation-reference">(PCR-[0-9A-F]{8})</.exec(confirmation.text)?.[1] as string;
+      const reference = /id="confirmation-reference">(PCR-[A-Z2-9]{8})</.exec(confirmation.text)?.[1] as string;
       expect(reference).to.be.a('string');
 
       await agent.get(`/account/production-credentials/${reference}`).expect(res => {

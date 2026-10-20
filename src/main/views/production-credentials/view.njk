@@ -22,7 +22,7 @@
     </p>
 
     {% set summaryRows = [] %}
-    {% for row in request.rows %}
+    {% for row in rows %}
       {% set summaryRows = (summaryRows.push({ key: { text: row.key }, value: { text: row.value } }), summaryRows) %}
     {% endfor %}
     {{ govukSummaryList({ rows: summaryRows }) }}

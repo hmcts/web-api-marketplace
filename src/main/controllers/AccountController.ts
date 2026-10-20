@@ -2,10 +2,17 @@ import { GET, POST, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
+import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
+import { ownerOf } from '../services/Applications';
 import { deleteLocalRequest, listLocalRequests, statusText } from '../services/LocalRequests';
+import { listProductionRequests } from '../services/ProductionRequests';
 import { RequestSummary, deleteRequest, getRequestsFor, isRequestType } from '../services/Requests';
 import { SignedInUser } from '../services/SignIn';
+
+const logger = Logger.getLogger('account');
+
+type Row = RequestSummary & { href?: string };
 
 @route('/account')
 export default class AccountController {
@@ -18,15 +25,23 @@ export default class AccountController {
     const user = req.session.user as SignedInUser;
     // An account registered here is unknown to the backend, which would refuse its id.
     const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id);
-    const local = await listLocalRequests(user.email);
-    const requests: (RequestSummary & { href?: string })[] = [
+    const production = await this.productionRequests(user);
+    const local = (await listLocalRequests(user.email)).filter(request => request.type !== 'PRODUCTION');
+    const requests: Row[] = [
       ...result.requests,
+      ...production.requests.map(request => ({
+        reference: request.reference,
+        type: 'PRODUCTION' as const,
+        submittedAt: request.submittedAt,
+        status: statusText(request.status),
+        href: `/account/production-credentials/${request.reference}`,
+      })),
       ...local.map(request => ({
         reference: request.reference,
         type: request.type,
         submittedAt: request.submittedAt,
         status: statusText(request.status),
-        href: request.type === 'PRODUCTION' ? `/account/production-credentials/${request.reference}` : undefined,
+        href: undefined,
       })),
     ].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
     // Read once and cleared, so the banner appears on the page that follows the delete
@@ -38,7 +53,7 @@ export default class AccountController {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
       user,
       myRequests: requests.map(request => this.forDisplay(request)),
-      couldNotLoad: !result.ok,
+      couldNotLoad: !result.ok || !production.ok,
       deleted: notice === 'deleted',
       deleteFailed: notice === 'deleteFailed',
     });
@@ -86,7 +101,18 @@ export default class AccountController {
     return deleteRequest(user.id, type, reference);
   }
 
-  private forDisplay(request: RequestSummary & { href?: string }) {
+  private async productionRequests(
+    user: SignedInUser
+  ): Promise<{ ok: boolean; requests: { reference: string; status: string; submittedAt: string }[] }> {
+    try {
+      return { ok: true, requests: await listProductionRequests(ownerOf(user)) };
+    } catch (error) {
+      logger.error(`Could not list production requests: ${(error as Error).message}`);
+      return { ok: false, requests: [] };
+    }
+  }
+
+  private forDisplay(request: Row) {
     return { ...request, submittedOn: this.formatDate(request.submittedAt) };
   }
 
