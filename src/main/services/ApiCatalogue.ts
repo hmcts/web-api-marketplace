@@ -54,6 +54,30 @@ export async function getCatalogueApis(): Promise<CatalogueApi[]> {
 }
 
 /**
+ * The names of the APIs this site lists, in the catalogue and for applications
+ * (catalogue.listedApis). Empty means every API in the feed.
+ */
+export function listedApiNames(): string[] {
+  return config.has('catalogue.listedApis') ? config.get<string[]>('catalogue.listedApis') : [];
+}
+
+/**
+ * The feed's APIs to show: the allowed ones, plus any an application already has. Those
+ * stay on its pages so that saving the form does not revoke a subscription the consumer
+ * never saw.
+ */
+export function offeredApis(
+  catalogue: CatalogueApi[],
+  allowed: string[],
+  alreadyChosen: string[] = []
+): CatalogueApi[] {
+  if (!allowed.length) {
+    return catalogue;
+  }
+  return catalogue.filter(api => allowed.includes(api.name) || alreadyChosen.includes(api.name));
+}
+
+/**
  * Where an API's own documentation and source live. The feed carries neither, but every
  * API in it is published from an hmcts repository of the same name by the
  * publish-api-docs workflow, which is what puts it in the feed at all.

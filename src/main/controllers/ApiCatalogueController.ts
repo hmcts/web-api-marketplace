@@ -1,7 +1,15 @@
 import { GET, route } from 'awilix-express';
 import { NextFunction, Request, Response } from 'express';
 
-import { CatalogueApi, domainOf, getCatalogueApis, linksFor, platformOf } from '../services/ApiCatalogue';
+import {
+  CatalogueApi,
+  domainOf,
+  getCatalogueApis,
+  linksFor,
+  listedApiNames,
+  offeredApis,
+  platformOf,
+} from '../services/ApiCatalogue';
 
 const ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 
@@ -17,7 +25,7 @@ const ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 export default class ApiCatalogueController {
   @GET()
   public async list(req: Request, res: Response): Promise<void> {
-    const apis = await getCatalogueApis();
+    const apis = await listedApis();
     const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const results = (query ? apis.filter(api => matches(api, query)) : apis).map(withTags);
     const groups = query ? [] : byLetter(results);
@@ -43,7 +51,7 @@ export default class ApiCatalogueController {
   @route('/:name')
   @GET()
   public async detail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const api = (await getCatalogueApis()).find(candidate => candidate.name === req.params.name);
+    const api = (await listedApis()).find(candidate => candidate.name === req.params.name);
 
     if (!api) {
       next();
@@ -52,6 +60,11 @@ export default class ApiCatalogueController {
 
     res.render('api-catalogue/detail', { api: withTags(api), ...linksFor(api.name) });
   }
+}
+
+/** The feed's APIs that this site lists: see listedApiNames. */
+async function listedApis(): Promise<CatalogueApi[]> {
+  return offeredApis(await getCatalogueApis(), listedApiNames());
 }
 
 type TaggedApi = CatalogueApi & { domain: string; platform: string };

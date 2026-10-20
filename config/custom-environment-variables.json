@@ -27,7 +27,11 @@
     }
   },
   "catalogue": {
-    "url": "CATALOGUE_URL"
+    "url": "CATALOGUE_URL",
+    "listedApis": {
+      "__name": "CATALOGUE_LISTED_APIS",
+      "__format": "json"
+    }
   },
   "marketplaceSite": {
     "url": "MARKETPLACE_SITE_URL"
