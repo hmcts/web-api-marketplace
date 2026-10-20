@@ -341,6 +341,7 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain('Organisation or team name');
         expect(res.text).to.contain('name="data-request"');
         expect(res.text).to.contain('name="proposed-outputs"');
+        expect(res.text.split('for each API selected in the above application')).to.have.length(3);
         expect(res.text).to.not.contain('name="dpia"');
         expect(res.text).to.not.contain('name="declaration"');
         expect(res.text).to.not.contain('name="dsa"');

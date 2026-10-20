@@ -77,7 +77,7 @@
       }) }}
 
       {{ govukCharacterCount({
-        label: { text: "Please provide a description of the data request, how you plan to use this data, whether this data will be used in conjunction with any other data (if so, how), and an explanation of why this data is required.", classes: "govuk-label--m" },
+        label: { text: "Please provide a description of the data request, how you plan to use this data for each API selected in the above application, whether this data will be used in conjunction with any other data (if so, how), and an explanation of why this data is required.", classes: "govuk-label--m" },
         id: "data-request",
         name: "data-request",
         maxlength: dataAnswerMaxLength,
@@ -86,7 +86,7 @@
       }) }}
 
       {{ govukCharacterCount({
-        label: { text: "Please describe any proposed outputs from this data use, including what the output aims to achieve, and how/where it will be shared.", classes: "govuk-label--m" },
+        label: { text: "Please describe any proposed outputs from this data use for each API selected in the above application, including what the output aims to achieve, and how/where it will be shared.", classes: "govuk-label--m" },
         id: "proposed-outputs",
         name: "proposed-outputs",
         maxlength: dataAnswerMaxLength,
