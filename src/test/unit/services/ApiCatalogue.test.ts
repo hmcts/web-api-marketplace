@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-import { clearCatalogueCache, domainOf, getCatalogueApis, platformOf } from '../../../main/services/ApiCatalogue';
+import {
+  clearCatalogueCache,
+  domainOf,
+  getCatalogueApis,
+  listedApiNames,
+  offeredApis,
+  platformOf,
+} from '../../../main/services/ApiCatalogue';
 
 jest.mock('axios');
 
@@ -85,5 +92,33 @@ describe('ApiCatalogue', () => {
   test('the_platform_should_be_common_platform_for_cp_apis_and_other_otherwise', () => {
     expect(platformOf('api-cp-crime-hearing')).toBe('Common Platform');
     expect(platformOf('api-cft-something')).toBe('Other');
+  });
+
+  describe('offeredApis', () => {
+    const catalogue = [
+      { name: 'api-one', title: 'API one' },
+      { name: 'api-two', title: 'API two' },
+      { name: 'api-three', title: 'API three' },
+    ];
+
+    test('only_the_allowed_apis_should_be_offered_in_catalogue_order', () => {
+      expect(offeredApis(catalogue, ['api-three', 'api-one']).map(api => api.name)).toEqual(['api-one', 'api-three']);
+    });
+
+    test('an_empty_allow_list_should_offer_the_whole_catalogue', () => {
+      expect(offeredApis(catalogue, [])).toEqual(catalogue);
+    });
+
+    test('an_allowed_api_missing_from_the_catalogue_should_not_be_offered', () => {
+      expect(offeredApis(catalogue, ['api-gone'])).toEqual([]);
+    });
+
+    test('apis_already_chosen_should_stay_offered_so_they_are_not_dropped_unseen', () => {
+      expect(offeredApis(catalogue, ['api-one'], ['api-two']).map(api => api.name)).toEqual(['api-one', 'api-two']);
+    });
+  });
+
+  test('the_test_config_should_allow_every_api', () => {
+    expect(listedApiNames()).toEqual([]);
   });
 });

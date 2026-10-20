@@ -42,7 +42,8 @@
     }
   },
   "catalogue": {
-    "url": "https://hmcts.github.io/amp-catalog/apis.json"
+    "url": "https://hmcts.github.io/amp-catalog/apis.json",
+    "listedApis": ["api-cp-crime-schedulingandlisting-courtschedule", "api-cp-refdata-courthearing-courthouses"]
   },
   "marketplaceSite": {
     "url": "/"

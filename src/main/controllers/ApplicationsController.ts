@@ -4,7 +4,7 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
-import { CatalogueApi, getCatalogueApis } from '../services/ApiCatalogue';
+import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis } from '../services/ApiCatalogue';
 import {
   ACCESS_ATTEMPTS,
   ACCESS_RETRY_SECONDS,
@@ -103,7 +103,10 @@ export default class ApplicationsController {
       res.redirect('/account/applications/new/details');
       return;
     }
-    res.render('applications/new/apis', await this.apisData(req.session.applicationDraft.apis ?? [], []));
+    res.render(
+      'applications/new/apis',
+      this.apisData(req.session.applicationDraft.apis ?? [], [], await this.offered())
+    );
   }
 
   @route('/new/apis')
@@ -117,12 +120,12 @@ export default class ApplicationsController {
       return;
     }
 
-    const catalogue = await getCatalogueApis();
+    const offered = await this.offered();
     const selected = this.selectedApis(req);
-    const errors = validateApis(selected, catalogue);
+    const errors = validateApis(selected, offered);
 
     if (errors.length) {
-      res.status(400).render('applications/new/apis', await this.apisData(selected, errors, catalogue));
+      res.status(400).render('applications/new/apis', this.apisData(selected, errors, offered));
       return;
     }
 
@@ -158,7 +161,8 @@ export default class ApplicationsController {
 
     const draft = req.session.applicationDraft;
     const catalogue = await getCatalogueApis();
-    const errors = draft ? [...validateName(draft.name), ...validateApis(draft.apis ?? [], catalogue)] : [];
+    const offered = offeredApis(catalogue, listedApiNames());
+    const errors = draft ? [...validateName(draft.name), ...validateApis(draft.apis ?? [], offered)] : [];
 
     if (!draft?.name || errors.length) {
       res.redirect(draft?.name ? '/account/applications/new/details' : '/account/applications');
@@ -246,12 +250,10 @@ export default class ApplicationsController {
       return;
     }
 
+    const current = application.apis.map(api => api.apiName);
     res.render('applications/apis', {
       application,
-      ...(await this.apisData(
-        application.apis.map(api => api.apiName),
-        []
-      )),
+      ...this.apisData(current, [], await this.offered(current)),
     });
   }
 
@@ -264,13 +266,16 @@ export default class ApplicationsController {
     }
 
     const catalogue = await getCatalogueApis();
+    const offered = offeredApis(
+      catalogue,
+      listedApiNames(),
+      application.apis.map(api => api.apiName)
+    );
     const selected = this.selectedApis(req);
-    const errors = validateApis(selected, catalogue);
+    const errors = validateApis(selected, offered);
 
     if (errors.length) {
-      res
-        .status(400)
-        .render('applications/apis', { application, ...(await this.apisData(selected, errors, catalogue)) });
+      res.status(400).render('applications/apis', { application, ...this.apisData(selected, errors, offered) });
       return;
     }
 
@@ -398,18 +403,17 @@ export default class ApplicationsController {
     return { draft, errors, errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])) };
   }
 
-  private async apisData(
-    selected: string[],
-    errors: FieldError[],
-    apis?: CatalogueApi[]
-  ): Promise<Record<string, unknown>> {
-    const catalogue = apis ?? (await getCatalogueApis());
+  /** The APIs the application pages offer: see offeredApis. */
+  private async offered(alreadyChosen: string[] = []): Promise<CatalogueApi[]> {
+    return offeredApis(await getCatalogueApis(), listedApiNames(), alreadyChosen);
+  }
 
+  private apisData(selected: string[], errors: FieldError[], apis: CatalogueApi[]): Record<string, unknown> {
     return {
       errors,
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      catalogueUnavailable: catalogue.length === 0,
-      apiItems: catalogue.map(api => ({
+      catalogueUnavailable: apis.length === 0,
+      apiItems: apis.map(api => ({
         value: api.name,
         text: api.title,
         hint: api.description ? { text: api.description } : undefined,

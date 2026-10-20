@@ -5,12 +5,37 @@ import { mockResponse } from '../mocks/mockResponse';
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
+  listedApiNames: jest.fn(),
 }));
 
-const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+const { getCatalogueApis, listedApiNames } = require('../../../main/services/ApiCatalogue');
 
 describe('ApiCatalogueController', () => {
-  beforeEach(() => (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE));
+  beforeEach(() => {
+    (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    (listedApiNames as jest.Mock).mockReturnValue([]);
+  });
+
+  test('browsing_and_searching_should_show_only_the_listed_apis', async () => {
+    (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+
+    for (const query of [{}, { q: 'API' }] as Record<string, string>[]) {
+      const res = mockResponse();
+      await new ApiCatalogueController().list(anonymous({ query }), res);
+      expect((res.data?.results as { name: string }[]).map(api => api.name)).toEqual(['api-two']);
+    }
+  });
+
+  test('an_api_not_listed_should_be_handed_on_even_though_the_feed_has_it', async () => {
+    (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+    const res = mockResponse();
+    const next = jest.fn();
+
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'api-one' } }), res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+  });
 
   test('browsing_should_list_every_api', async () => {
     const res = mockResponse();
