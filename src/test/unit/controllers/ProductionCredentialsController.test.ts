@@ -10,7 +10,26 @@ jest.mock('../../../main/services/Applications', () => ({
   listApplications: jest.fn(),
 }));
 
+jest.mock('../../../main/services/ProductionRequests', () => ({
+  submitProductionRequest: jest.fn(),
+  getProductionRequest: jest.fn(),
+}));
+
 const { listApplications } = require('../../../main/services/Applications');
+const { submitProductionRequest, getProductionRequest } = require('../../../main/services/ProductionRequests');
+
+const STORED = {
+  reference: 'PCR-ABCD2345',
+  status: 'SUBMITTED',
+  submittedAt: '2026-10-19T11:00:00',
+  applicationName: 'Tracker',
+  clientId: 'client-1',
+  organisation: 'Analytical Engines Ltd',
+  goLiveDate: '2027-04-01',
+  callVolume: 'medium',
+  dataRequest: 'Hearing outcomes for listed cases.',
+  proposedOutputs: 'A weekly outcomes report.',
+};
 
 const APPLICATION = {
   id: 'client-1',
@@ -148,27 +167,42 @@ describe('ProductionCredentialsController', () => {
   });
 
   test('submitting_should_store_the_request_email_the_user_and_quote_a_reference', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
     const req = asUser({ session: { productionDraft: answers(applicationId) } });
     const res = mockResponse();
 
     await controller().submit(req, res);
 
     expect(res.view).toBe('production-credentials/confirmation');
-    expect(res.data?.reference).toMatch(/^PCR-[0-9A-F]{8}$/);
+    expect(res.data?.reference).toBe('PCR-ABCD2345');
     expect(req.session.productionDraft).toBeUndefined();
-    expect(await LocalRequests.listLocalRequests(LOCAL_USER.email)).toHaveLength(1);
+    expect(await LocalRequests.listLocalRequests(LOCAL_USER.email)).toHaveLength(0);
+  });
+
+  test('submitting_should_send_the_answers_the_backend_asks_for', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const req = asUser({ session: { productionDraft: answers(applicationId) } });
+
+    await controller().submit(req, mockResponse());
+
+    const [owner, submission] = (submitProductionRequest as jest.Mock).mock.calls[0];
+    expect(owner.oid).toBe(LOCAL_USER.oid);
+    expect(submission).toMatchObject({
+      clientId: applicationId,
+      organisation: 'Analytical Engines Ltd',
+      goLiveDate: `${new Date().getFullYear() + 1}-04-01`,
+      callVolume: 'medium',
+    });
+    expect(submission.dataRequest).toBeDefined();
+    expect(submission.proposedOutputs).toBeDefined();
   });
 
   test('a_failure_to_store_should_keep_the_answers_and_say_so', async () => {
-    const store = jest.spyOn(LocalRequests, 'addLocalRequest').mockRejectedValueOnce(new Error('Redis down'));
+    (submitProductionRequest as jest.Mock).mockRejectedValueOnce(new BackendError('Backend down'));
     const req = asUser({ session: { productionDraft: answers(applicationId) } });
     const res = mockResponse();
 
-    try {
-      await controller().submit(req, res);
-    } finally {
-      store.mockRestore();
-    }
+    await controller().submit(req, res);
 
     expect(res.statusCode).toBe(502);
     expect(res.view).toBe('production-credentials/check-answers');
@@ -176,17 +210,36 @@ describe('ProductionCredentialsController', () => {
   });
 
   test('a_request_should_be_viewable_by_its_owner_only', async () => {
-    const request = await LocalRequests.addLocalRequest(LOCAL_USER.email, 'PRODUCTION', []);
-    const other = await LocalRequests.addLocalRequest(LOCAL_USER.email, 'NEW_API', []);
+    (getProductionRequest as jest.Mock).mockResolvedValue(STORED);
     const res = mockResponse();
     const next = jest.fn();
 
-    await controller().view(asUser({ params: { reference: request.reference } }), res, next);
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, next);
     expect(res.view).toBe('production-credentials/view');
     expect(res.data?.status).toBe('Submitted');
 
-    await controller().view(asUser({ params: { reference: other.reference } }), mockResponse(), next);
+    // The backend answers 404 for a reference that is not this user's, and for one that
+    // does not exist. Both arrive here as undefined and fall through to not found.
+    (getProductionRequest as jest.Mock).mockResolvedValue(undefined);
+    await controller().view(asUser({ params: { reference: 'PCR-SOMEONE1' } }), mockResponse(), next);
     await controller().view(asUser({ params: { reference: 'PCR-00000000' } }), mockResponse(), next);
     expect(next).toHaveBeenCalledTimes(2);
+  });
+
+  test('the_request_page_should_show_the_answers_as_check_answers_did', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    const rows = res.data?.rows as { key: string; value: string }[];
+    const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
+    expect(valueFor('Application')).toBe('Tracker');
+    expect(valueFor('Organisation or team name')).toBe('Analytical Engines Ltd');
+    // Stored values become their labels, as they do on check answers.
+    expect(valueFor('Expected call volume')).toBe('Medium');
+    expect(valueFor('Go-live date')).toBe('1 April 2027');
+    expect(valueFor('Data request')).toBe('Hearing outcomes for listed cases.');
+    expect(valueFor('Proposed outputs')).toBe('A weekly outcomes report.');
   });
 });

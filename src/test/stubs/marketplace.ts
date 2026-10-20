@@ -2,6 +2,20 @@ import crypto from 'node:crypto';
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
 
+interface StubProductionRequest {
+  owner: string;
+  reference: string;
+  status: string;
+  submittedAt: string;
+  applicationName: string;
+  clientId: string;
+  organisation: string;
+  goLiveDate: string;
+  callVolume: string;
+  dataRequest: string;
+  proposedOutputs: string;
+}
+
 interface StubApplication {
   owner: string;
   clientId: string;
@@ -15,6 +29,7 @@ interface StubApplication {
 
 export interface StubMarketplace {
   applications: Map<string, StubApplication>;
+  productionRequests: Map<string, StubProductionRequest>;
   subscriptions: Map<string, { productId: string; displayName: string; primaryKey: string }>;
   /** The next n role grants answer 404, as Entra does for a service principal seconds old. */
   roleNotAssignableFor(times: number): void;
@@ -36,6 +51,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
   handle: (method: string, path: string, requestingUserId: string | undefined, body: string, json: Json) => boolean;
 } {
   const applications = new Map<string, StubApplication>();
+  const productionRequests = new Map<string, StubProductionRequest>();
   const subscriptions = new Map<string, { productId: string; displayName: string; primaryKey: string }>();
   let notAssignable = 0;
   let refuseRolesWith: number | undefined;
@@ -43,12 +59,14 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
 
   const state: StubMarketplace = {
     applications,
+    productionRequests,
     subscriptions,
     roleNotAssignableFor: times => (notAssignable = times),
     refuseRoles: status => (refuseRolesWith = status),
     failSubscriptions: status => (failSubscriptionsWith = status),
     reset: () => {
       applications.clear();
+      productionRequests.clear();
       subscriptions.clear();
       notAssignable = 0;
       refuseRolesWith = undefined;
@@ -64,6 +82,69 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     secretExpiresAt,
     createdAt,
   });
+
+  const summary = ({ reference, status, submittedAt }: StubProductionRequest) => ({
+    reference,
+    status,
+    submittedAt,
+  });
+
+  const detail = (request: StubProductionRequest) => ({
+    ...summary(request),
+    applicationName: request.applicationName,
+    clientId: applications.has(request.clientId) ? request.clientId : null,
+    organisation: request.organisation,
+    goLiveDate: request.goLiveDate,
+    callVolume: request.callVolume,
+    dataRequest: request.dataRequest,
+    proposedOutputs: request.proposedOutputs,
+  });
+
+  const REFERENCE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  function newReference(): string {
+    let suffix = '';
+    for (let character = 0; character < 8; character++) {
+      suffix += REFERENCE_ALPHABET[crypto.randomInt(REFERENCE_ALPHABET.length)];
+    }
+    return `PCR-${suffix}`;
+  }
+
+  function submitProductionRequest(user: string, body: string, json: Json): void {
+    const request = JSON.parse(body || '{}') as Record<string, unknown>;
+    const text = (name: string) => String(request[name] ?? '').trim();
+    const application = applications.get(text('clientId'));
+
+    if (!application || application.owner !== user) {
+      json(400, { error: `No application with client id ${text('clientId')}.` });
+    } else if (!text('organisation')) {
+      json(400, { error: "Enter the organisation's legal name." });
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(text('goLiveDate'))) {
+      json(400, { error: 'Enter a go live date.' });
+    } else if (!['low', 'medium', 'high'].includes(text('callVolume'))) {
+      json(400, { error: 'Call volume must be low, medium or high.' });
+    } else if (!text('dataRequest') || text('dataRequest').length > 1000) {
+      json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
+    } else if (!text('proposedOutputs') || text('proposedOutputs').length > 1000) {
+      json(400, { error: 'Describe the proposed outputs from this data use.' });
+    } else {
+      const stored: StubProductionRequest = {
+        owner: user,
+        reference: newReference(),
+        status: 'SUBMITTED',
+        submittedAt: new Date().toISOString().slice(0, 19),
+        applicationName: application.name,
+        clientId: application.clientId,
+        organisation: text('organisation'),
+        goLiveDate: text('goLiveDate'),
+        callVolume: text('callVolume'),
+        dataRequest: text('dataRequest'),
+        proposedOutputs: text('proposedOutputs'),
+      };
+      productionRequests.set(stored.reference, stored);
+      json(201, summary(stored));
+    }
+  }
 
   function handle(
     method: string,
@@ -128,6 +209,41 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       } else if (!roles && method === 'DELETE') {
         applications.delete(mine.clientId);
         json(204);
+      } else {
+        return false;
+      }
+      return true;
+    }
+
+    const productionPath = /^\/production-requests(?:\/([^/]+))?$/.exec(path);
+    if (productionPath) {
+      const user = requestingUserId?.toLowerCase();
+      if (!user) {
+        json(400, { error: 'Missing requestingUserId.' });
+        return true;
+      }
+      if (!knownUsers().has(user)) {
+        json(404, { error: 'Sign in again.' });
+        return true;
+      }
+      const [, reference] = productionPath;
+      const mine = reference ? productionRequests.get(decodeURIComponent(reference)) : undefined;
+      const owned = mine?.owner === user ? mine : undefined;
+
+      if (!reference && method === 'GET') {
+        json(
+          200,
+          [...productionRequests.values()]
+            .filter(request => request.owner === user)
+            .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+            .map(summary)
+        );
+      } else if (!reference && method === 'POST') {
+        submitProductionRequest(user, body, json);
+      } else if (!owned) {
+        json(404, { error: `No request with reference ${reference}.` });
+      } else if (method === 'GET') {
+        json(200, detail(owned));
       } else {
         return false;
       }

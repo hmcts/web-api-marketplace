@@ -10,6 +10,9 @@ jest.mock('../../../main/services/Requests', () => ({
   isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
 }));
 
+jest.mock('../../../main/services/ProductionRequests', () => ({ listProductionRequests: jest.fn() }));
+
+const { listProductionRequests } = require('../../../main/services/ProductionRequests');
 const { getRequestsFor, deleteRequest } = require('../../../main/services/Requests');
 
 const content = { heading: 'Your account', signOutButton: 'Sign out' };
@@ -29,6 +32,8 @@ describe('AccountController', () => {
     (getRequestsFor as jest.Mock).mockResolvedValue({ ok: true, requests: [] });
     (deleteRequest as jest.Mock).mockReset();
     (deleteRequest as jest.Mock).mockResolvedValue(true);
+    (listProductionRequests as jest.Mock).mockReset();
+    (listProductionRequests as jest.Mock).mockResolvedValue([]);
   });
 
   test('a_signed_out_visitor_should_be_redirected_to_sign_in', async () => {
@@ -193,17 +198,42 @@ describe('AccountController', () => {
 
     test('they_should_be_listed_with_the_backends_newest_first_and_production_ones_linked', async () => {
       (getRequestsFor as jest.Mock).mockResolvedValue({ ok: true, requests: [request] });
-      const production = await addLocalRequest(user.email, 'PRODUCTION', []);
+      (listProductionRequests as jest.Mock).mockResolvedValue([
+        { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '2026-09-04T09:00:00' },
+      ]);
       const res = mockResponse();
 
       await new AccountController().get(mockRequest({ account: content }, { user: user as never }), res);
 
       const listed = res.data?.myRequests as { reference: string; href?: string; status: string }[];
-      expect(listed.map(item => item.reference)).toEqual([production.reference, request.reference]);
+      expect(listed.map(item => item.reference)).toEqual(['PCR-ABCD2345', request.reference]);
       expect(listed[0]).toMatchObject({
-        href: `/account/production-credentials/${production.reference}`,
+        href: '/account/production-credentials/PCR-ABCD2345',
         status: 'Submitted',
       });
+    });
+
+    test('a_production_request_left_in_the_data_store_should_not_be_listed_twice', async () => {
+      const stale = await addLocalRequest(user.email, 'PRODUCTION', []);
+      (listProductionRequests as jest.Mock).mockResolvedValue([
+        { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '2026-09-04T09:00:00' },
+      ]);
+      const res = mockResponse();
+
+      await new AccountController().get(mockRequest({ account: content }, { user: user as never }), res);
+
+      const listed = res.data?.myRequests as { reference: string }[];
+      expect(listed.map(item => item.reference)).toEqual(['PCR-ABCD2345']);
+      expect(listed.map(item => item.reference)).not.toContain(stale.reference);
+    });
+
+    test('a_backend_that_cannot_list_production_requests_should_say_so', async () => {
+      (listProductionRequests as jest.Mock).mockRejectedValue(new Error('connect ECONNREFUSED'));
+      const res = mockResponse();
+
+      await new AccountController().get(mockRequest({ account: content }, { user: user as never }), res);
+
+      expect(res.data?.couldNotLoad).toBe(true);
     });
 
     test('an_account_registered_here_should_not_ask_the_backend_for_its_requests', async () => {
