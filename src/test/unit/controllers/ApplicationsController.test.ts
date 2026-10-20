@@ -6,6 +6,7 @@ import { mockResponse } from '../mocks/mockResponse';
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
+  listedApiNames: jest.fn(),
 }));
 
 jest.mock('../../../main/services/Applications', () => ({
@@ -19,7 +20,7 @@ jest.mock('../../../main/services/Applications', () => ({
   deleteApplication: jest.fn(),
 }));
 
-const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+const { listedApiNames, getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const Applications = require('../../../main/services/Applications');
 
 const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
@@ -51,6 +52,7 @@ describe('ApplicationsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    (listedApiNames as jest.Mock).mockReturnValue([]);
     Applications.getApplication.mockResolvedValue(APPLICATION);
   });
 
@@ -183,6 +185,28 @@ describe('ApplicationsController', () => {
       await controller().saveApis(req, res);
       expect(req.session.applicationDraft?.apis).toEqual(['api-two']);
       expect(res.redirected).toBe('/account/applications/new/check-answers');
+    });
+
+    test('only_the_allowed_apis_should_be_offered', async () => {
+      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+      const res = mockResponse();
+
+      await controller().chooseApis(asUser({ session: { applicationDraft: { name: 'Case Viewer' } } }), res);
+
+      expect((res.data?.apiItems as { value: string }[]).map(item => item.value)).toEqual(['api-two']);
+    });
+
+    test('an_api_that_is_not_offered_should_be_refused_when_chosen_and_when_created', async () => {
+      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+
+      const refused = mockResponse();
+      const req = asUser({ body: { apis: ['api-one'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
+      await controller().saveApis(req, refused);
+      expect(refused.statusCode).toBe(400);
+
+      const res = mockResponse();
+      await controller().create(asUser({ session: { applicationDraft: DRAFT } }), res);
+      expect(Applications.createApplication).not.toHaveBeenCalled();
     });
 
     test('check_answers_should_list_the_name_and_api_titles', async () => {
@@ -324,6 +348,35 @@ describe('ApplicationsController', () => {
       await controller().editApis(forId(), res, jest.fn());
 
       expect((res.data?.apiItems as { checked: boolean }[]).map(item => item.checked)).toEqual([true, false]);
+    });
+
+    test('an_api_no_longer_offered_should_still_show_while_the_application_has_it', async () => {
+      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+      const res = mockResponse();
+
+      await controller().editApis(forId(), res, jest.fn());
+
+      expect(
+        (res.data?.apiItems as { value: string; checked: boolean }[]).map(item => [item.value, item.checked])
+      ).toEqual([
+        ['api-one', true],
+        ['api-two', false],
+      ]);
+    });
+
+    test('keeping_an_api_no_longer_offered_should_be_allowed_but_adding_one_should_not', async () => {
+      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+      Applications.setApis.mockResolvedValue({ added: [], removed: [], failed: [] });
+
+      await controller().saveEditedApis(forId({ body: { apis: ['api-one'] } }), mockResponse(), jest.fn());
+      expect(Applications.setApis).toHaveBeenCalledWith(OWNER, APPLICATION, ['api-one'], CATALOGUE);
+
+      Applications.getApplication.mockResolvedValue({ ...APPLICATION, apis: [] });
+      Applications.setApis.mockClear();
+      const refused = mockResponse();
+      await controller().saveEditedApis(forId({ body: { apis: ['api-one'] } }), refused, jest.fn());
+      expect(refused.statusCode).toBe(400);
+      expect(Applications.setApis).not.toHaveBeenCalled();
     });
 
     test('saving_no_apis_should_be_refused', async () => {

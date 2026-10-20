@@ -163,6 +163,11 @@ The consumer onboarding journey, end to end:
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
 | Request production credentials, follow it    | `/account/production-credentials`, `.../:reference`      |
 
+The site lists only the feed's APIs named in `catalogue.listedApis` (`CATALOGUE_LISTED_APIS`,
+a JSON array; empty means every API in the feed), in the catalogue and for applications alike.
+The page of an API outside the list is not found. An application that already has one keeps
+seeing it on its "change APIs" page, so saving does not revoke it.
+
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
 
