@@ -18,9 +18,9 @@
         "body": "An A to Z list of HMCTS APIs and other integrations, with descriptions of what each one returns."
       },
       {
-        "heading": "Documentation, guides and tutorials",
+        "heading": "Documentation",
         "href": "/documentation",
-        "body": "Learn about APIs and the standards we use, and how to make the most of our developer resources."
+        "body": "Guidance for teams using our APIs and for teams listing their own, including the standards an API must meet."
       }
     ],
     [
