@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 import axios, { AxiosRequestConfig } from 'axios';
 import config from 'config';
 
@@ -15,12 +13,11 @@ import { FieldError } from './answers';
 const logger = Logger.getLogger('applications');
 
 export const APPLICATION_ROLE: string = config.get('applications.role');
-const PRODUCT_IDS: Record<string, string> = config.get('applications.products');
+const SHORT_CODES: Record<string, string> = config.get('applications.shortCodes');
 export const ACCESS_ATTEMPTS = 8;
 export const ACCESS_RETRY_SECONDS = 15;
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
-const SUBSCRIPTION_NAME_ATTEMPTS = 3;
 
 export interface ApiSubscription {
   apiName: string;
@@ -78,6 +75,13 @@ interface BackendApplication {
   clientSecret?: string;
 }
 
+interface BackendSubscription {
+  title: string;
+  productId: string;
+  subscriptionName: string;
+  subscriptionKey?: string;
+}
+
 interface Links {
   apis: ApiSubscription[];
   accessGranted: boolean;
@@ -85,18 +89,13 @@ interface Links {
 
 const linksKey = (clientId: string) => `application:${clientId}`;
 
-/** The APIM product an API is published under, where it is not the API name without its prefix. */
-export function publisherIdFor(apiName: string): string {
-  return PRODUCT_IDS[apiName] ?? apiName.replace(/^api-/, '');
+/** The short code the marketplace knows an API by. Undefined for an API it holds no row for. */
+export function shortCodeFor(apiName: string): string | undefined {
+  return SHORT_CODES[apiName];
 }
 
 export function maskSecret(hint: string): string {
   return `${hint}****`;
-}
-
-/** The backend accepts only names under the caller's own amp-userNNN- prefix. */
-export function temporarySubscriptionName(owner: Owner): string {
-  return `amp-${owner.userReference}-temp-${crypto.randomBytes(4).toString('hex')}`;
 }
 
 export async function listApplications(owner: Owner): Promise<Application[]> {
@@ -168,7 +167,7 @@ export async function createApplication(
   const apis: ApiSubscription[] = [];
   for (const apiName of draft.apis) {
     try {
-      const { subscription, key } = await subscribe(owner, created.name, apiName, catalogue);
+      const { subscription, key } = await subscribe(owner, created.clientId, apiName, catalogue);
       apis.push(subscription);
       keys.push({
         apiName,
@@ -245,7 +244,7 @@ export async function setApis(
   }
   for (const apiName of selected.filter(name => !current.includes(name))) {
     try {
-      apis.push((await subscribe(owner, application.name, apiName, catalogue)).subscription);
+      apis.push((await subscribe(owner, application.clientId, apiName, catalogue)).subscription);
       changes.added.push(apiName);
     } catch (error) {
       logger.error(`Could not subscribe ${application.clientId} to ${apiName}: ${(error as Error).message}`);
@@ -276,35 +275,30 @@ export async function deleteApplication(owner: Owner, application: Application):
 
 async function subscribe(
   owner: Owner,
-  displayName: string,
+  clientId: string,
   apiName: string,
   catalogue: CatalogueApi[]
 ): Promise<{ subscription: ApiSubscription; key: string }> {
-  const publisherId = publisherIdFor(apiName);
-  for (let attempt = 1; ; attempt++) {
-    const name = temporarySubscriptionName(owner);
-    try {
-      const created = await callBackend<{ primaryKey?: string }>(owner, {
-        method: 'POST',
-        url: '/apim/subscription-keys',
-        data: { name, productId: publisherId, displayName },
-      });
-      return {
-        subscription: {
-          apiName,
-          apiTitle: titleOf(apiName, catalogue),
-          publisherId,
-          subscriptionName: name,
-          subscribedAt: new Date().toISOString(),
-        },
-        key: created.primaryKey ?? '',
-      };
-    } catch (error) {
-      if (!(error instanceof BackendError && error.status === 409) || attempt === SUBSCRIPTION_NAME_ATTEMPTS) {
-        throw error;
-      }
-    }
+  const shortCode = shortCodeFor(apiName);
+  if (!shortCode) {
+    throw new BackendError(`The marketplace does not offer ${titleOf(apiName, catalogue)}.`);
   }
+
+  const created = await callBackend<BackendSubscription>(owner, {
+    method: 'POST',
+    url: '/apim/subscription-keys',
+    data: { clientId, shortCode },
+  });
+  return {
+    subscription: {
+      apiName,
+      apiTitle: created.title || titleOf(apiName, catalogue),
+      publisherId: created.productId,
+      subscriptionName: created.subscriptionName,
+      subscribedAt: new Date().toISOString(),
+    },
+    key: created.subscriptionKey ?? '',
+  };
 }
 
 async function revoke(owner: Owner, subscriptionName: string): Promise<void> {

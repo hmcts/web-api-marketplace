@@ -12,10 +12,9 @@ import {
   listApplications,
   maskSecret,
   ownerOf,
-  publisherIdFor,
   setApis,
+  shortCodeFor,
   subscriptionKey,
-  temporarySubscriptionName,
   validateApis,
   validateName,
 } from '../../../main/services/Applications';
@@ -81,12 +80,6 @@ describe('Applications', () => {
       expect(validateApis(['api-one'], CATALOGUE)).toEqual([]);
     });
 
-    test('a_temporary_subscription_name_should_start_with_the_users_prefix_and_differ_each_time', () => {
-      const name = temporarySubscriptionName(OWNER);
-      expect(name).toMatch(/^amp-user001-temp-[0-9a-f]{8}$/);
-      expect(temporarySubscriptionName(OWNER)).not.toBe(name);
-    });
-
     test('the_owner_should_carry_the_users_reference_or_one_formatted_from_their_id', () => {
       expect(ownerOf({ id: 7, userReference: 'user007', oid: 'o', email: '', name: '' })).toEqual({
         oid: 'o',
@@ -96,9 +89,9 @@ describe('Applications', () => {
       expect(ownerOf({ id: 1234, oid: 'o', email: '', name: '' }).userReference).toBe('user1234');
     });
 
-    test('the_publisher_id_should_be_the_api_name_without_its_prefix_and_the_secret_should_be_masked', () => {
-      expect(publisherIdFor('api-cp-crime-hearing')).toBe('cp-crime-hearing');
-      expect(publisherIdFor('api-cp-crime-schedulingandlisting-courtschedule')).toBe('cp-crime-schedulingandlisting');
+    test('an_api_the_marketplace_holds_should_map_to_its_short_code_and_the_secret_should_be_masked', () => {
+      expect(shortCodeFor('api-one')).toBe('one');
+      expect(shortCodeFor('api-not-in-the-marketplace')).toBeUndefined();
       expect(maskSecret('Uc6')).toBe('Uc6****');
     });
   });
@@ -107,7 +100,13 @@ describe('Applications', () => {
     test('should_register_with_the_name_then_subscribe_each_api_and_return_the_secret_once', async () => {
       answer({
         'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 'Uc6Q~secret' }),
-        'POST /apim/subscription-keys': () => ok({ primaryKey: 'c5212ea63015c827b1a0f713fdbf42d6' }),
+        'POST /apim/subscription-keys': () =>
+          ok({
+            title: 'API one',
+            productId: 'try-it-now-one',
+            subscriptionName: 'amp-user001-case-viewer-one',
+            subscriptionKey: 'c5212ea63015c827b1a0f713fdbf42d6',
+          }),
       });
 
       const created = await createApplication(
@@ -122,46 +121,49 @@ describe('Applications', () => {
         data: { name: 'Case Viewer' },
         headers: { requestingUserId: OWNER.oid },
       });
-      expect(call(1).data).toMatchObject({ productId: 'one', displayName: 'Case Viewer' });
-      expect(call(1).data.name).toMatch(/^amp-user001-temp-/);
-      expect(call(2).data).toMatchObject({ productId: 'two' });
+      expect(call(1).data).toEqual({ clientId: BACKEND_APP.clientId, shortCode: 'one' });
+      expect(call(2).data).toEqual({ clientId: BACKEND_APP.clientId, shortCode: 'two' });
       expect(created.clientSecret).toBe('Uc6Q~secret');
       expect(created.keys.map(key => key.subscriptionKey)).toEqual([
         'c5212ea63015c827b1a0f713fdbf42d6',
         'c5212ea63015c827b1a0f713fdbf42d6',
       ]);
       expect(created.application).toMatchObject({ id: BACKEND_APP.clientId, accessGranted: false });
-      expect(created.application.apis.map(api => api.apiTitle)).toEqual(['API one', 'API two']);
+      expect(created.application.apis.map(api => api.subscriptionName)).toEqual([
+        'amp-user001-case-viewer-one',
+        'amp-user001-case-viewer-one',
+      ]);
       expect(created.failedApis).toEqual([]);
     });
 
-    test('an_api_published_under_another_product_should_be_subscribed_to_that_product', async () => {
+    test('the_product_and_subscription_name_should_be_taken_from_the_backends_reply', async () => {
       answer({
         'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
-        'POST /apim/subscription-keys': () => ok({ primaryKey: 'k' }),
-      });
-
-      const created = await createApplication(
-        OWNER,
-        { name: 'Case Viewer', apis: ['api-cp-crime-schedulingandlisting-courtschedule'] },
-        CATALOGUE
-      );
-
-      expect(call(1).data.productId).toBe('cp-crime-schedulingandlisting');
-      expect(created.application.apis[0].publisherId).toBe('cp-crime-schedulingandlisting');
-    });
-
-    test('a_subscription_name_already_taken_should_be_retried_with_another', async () => {
-      let attempts = 0;
-      answer({
-        'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
-        'POST /apim/subscription-keys': () => (++attempts === 1 ? refused(409) : ok({ primaryKey: 'k' })),
+        'POST /apim/subscription-keys': () =>
+          ok({
+            title: 'Court Schedule',
+            productId: 'try-it-now-cp-crime-schedulingandlisting',
+            subscriptionName: 'amp-user001-case-viewer-one',
+            subscriptionKey: 'k',
+          }),
       });
 
       const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE);
 
-      expect(call(1).data.name).not.toBe(call(2).data.name);
-      expect(created.keys).toHaveLength(1);
+      expect(created.application.apis[0]).toMatchObject({
+        apiTitle: 'Court Schedule',
+        publisherId: 'try-it-now-cp-crime-schedulingandlisting',
+        subscriptionName: 'amp-user001-case-viewer-one',
+      });
+    });
+
+    test('an_api_the_marketplace_does_not_offer_should_be_reported_without_being_called', async () => {
+      answer({ 'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }) });
+
+      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-three'] }, CATALOGUE);
+
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(created.failedApis).toEqual(['api-three']);
     });
 
     test('an_api_that_cannot_be_subscribed_should_be_reported_without_losing_the_secret', async () => {

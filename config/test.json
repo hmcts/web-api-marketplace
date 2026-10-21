@@ -1,5 +1,13 @@
 {
   "catalogue": {
     "listedApis": []
+  },
+  "applications": {
+    "shortCodes": {
+      "api-one": "one",
+      "api-two": "two",
+      "api-cp-crime-hearing": "hearing",
+      "api-cp-crime-defendant-details": "defendant"
+    }
   }
 }
