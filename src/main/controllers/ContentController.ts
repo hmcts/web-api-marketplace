@@ -12,18 +12,9 @@ import { Request, Response } from 'express';
 export const CONTENT_PAGES: Record<string, string> = {
   '/get-started': 'content/get-started/index',
   '/documentation': 'content/documentation/index',
-  '/documentation/architecture': 'content/documentation/architecture',
-  '/documentation/architecture-principles': 'content/documentation/architecture-principles',
   '/documentation/consumer-guidance': 'content/documentation/consumer-guidance',
-  '/documentation/technology-introduction': 'content/documentation/technology-introduction',
-  '/documentation/building-software': 'content/documentation/building-software',
-  '/documentation/glossary': 'content/documentation/glossary',
   '/documentation/producer-guidance': 'content/documentation/producer-guidance',
   '/documentation/producer-standards': 'content/documentation/producer-standards',
-  '/documentation/resources': 'content/documentation/resources',
-  '/documentation/case-studies': 'content/documentation/case-studies',
-  '/documentation/our-api-technologies': 'content/documentation/our-api-technologies',
-  '/documentation/our-capabilities': 'content/documentation/our-capabilities',
   '/help': 'content/help/index',
   '/privacy': 'content/privacy',
 };

@@ -1,7 +1,6 @@
 import AuthCallbackController from '../../../main/controllers/AuthCallbackController';
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import { newPkce } from '../../../main/services/Entra';
-import { saveProfile } from '../../../main/services/Profiles';
 import { ADA, StubEntra, codeFor, startStubEntra } from '../../stubs/entra';
 import { anonymous } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
@@ -47,8 +46,6 @@ describe('AuthCallbackController', () => {
   });
 
   test('a_later_sign_in_should_go_to_the_account', async () => {
-    await saveProfile(ADA.oid, { onboardedAt: 'then' });
-
     const { res } = await callback();
 
     expect(res.redirected).toBe('/account');

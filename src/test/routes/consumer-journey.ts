@@ -15,7 +15,7 @@ const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
 /**
  * The consumer onboarding journey end to end, through the real app: create an account,
- * confirm the address, sign in, get through the welcome, create an application, manage its
+ * confirm the address, sign in, create an application, manage its
  * APIs and credentials, ask for production credentials, and tidy up.
  */
 describe('Consumer onboarding journey', () => {
