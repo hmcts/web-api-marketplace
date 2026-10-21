@@ -1,0 +1,33 @@
+{#- How to use this application's credentials: the token request always, SLC calls when it has SLC. -#}
+<h3 class="govuk-heading-s">Get an access token</h3>
+<p class="govuk-body">Request a token from Microsoft Entra ID with the OAuth 2.0 client credentials flow:</p>
+<pre class="apim-code" id="token-request"><code>POST {{ token.url }}
+Content-Type: application/x-www-form-urlencoded</code></pre>
+<h4 class="govuk-heading-s">Request body</h4>
+<pre class="apim-code" id="token-request-body"><code>grant_type=client_credentials
+client_id={{ token.clientId }}
+client_secret={{ token.clientSecret }}
+scope={{ token.scope }}</code></pre>
+<ul class="govuk-list govuk-list--bullet">
+  <li>client_id is this application's client ID</li>
+  <li>client_secret is the secret you saved when it was created or last regenerated</li>
+  <li>scope is the Publisher ID (scope) of the API you are calling</li>
+</ul>
+<p class="govuk-body">The access_token in the response is the token you send with each call.</p>
+
+{% if slc %}
+  <h3 class="govuk-heading-s">Call the Scheduling and Listing Court Schedule API</h3>
+  <p class="govuk-body">Send the access token with each request:</p>
+  <pre class="apim-code" id="slc-request"><code>GET {{ slc.courtScheduleUrl }}
+Accept: application/json
+Authorization: Bearer &lt;token&gt;</code></pre>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>&lt;case_urn&gt; is the unique reference number of the case</li>
+    <li>&lt;token&gt; is the access token from the step above</li>
+  </ul>
+
+  <h3 class="govuk-heading-s">Find a case URN to try</h3>
+  <p class="govuk-body">List the test scenarios to get a case URN to use in the request above:</p>
+  <pre class="apim-code" id="scenarios-request"><code>GET {{ slc.scenariosUrl }}
+Accept: application/json</code></pre>
+{% endif %}

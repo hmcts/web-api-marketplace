@@ -27,6 +27,7 @@ const request = axios.request as jest.MockedFunction<typeof axios.request>;
 const OWNER = { oid: '11111111-2222-3333-4444-555555555555', userReference: 'user001' };
 const BACKEND_APP = {
   clientId: '1bf041a2-a57a-4255-b90f-d218736cda1f',
+  tenantId: 'd44f885c-4fac-47bf-afde-d7d861ec4d7b',
   name: 'Case Viewer',
   appname: 'case-viewer',
   secretHint: 'Uc6',
@@ -218,6 +219,15 @@ describe('Applications', () => {
       expect(listed.apis.map(api => api.apiName)).toEqual(['api-one']);
     });
 
+    test('the_tenant_should_come_from_the_backend_and_be_empty_while_it_sends_none', async () => {
+      const { tenantId, ...withoutTenant } = BACKEND_APP;
+      answer({ 'GET /applications': () => ok([BACKEND_APP, { ...withoutTenant, clientId: 'other' }]) });
+
+      const listed = await listApplications(OWNER);
+
+      expect(listed.map(application => application.tenantId)).toEqual([tenantId, '']);
+    });
+
     test('an_application_that_is_not_the_callers_should_be_undefined', async () => {
       answer({ 'GET /applications/*': () => refused(404, 'No application with client id x.') });
 
@@ -253,6 +263,7 @@ describe('Applications', () => {
     const application = (): Application => ({
       id: BACKEND_APP.clientId,
       clientId: BACKEND_APP.clientId,
+      tenantId: BACKEND_APP.tenantId,
       name: 'Case Viewer',
       secretHint: 'Uc6',
       secretExpiresAt: '',

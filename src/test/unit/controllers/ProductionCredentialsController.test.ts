@@ -34,6 +34,7 @@ const STORED = {
 const APPLICATION = {
   id: 'client-1',
   clientId: 'client-1',
+  tenantId: 'tenant-1',
   name: 'Tracker',
   secretHint: 'Uc6',
   secretExpiresAt: '',

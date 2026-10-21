@@ -140,6 +140,13 @@ a JSON array; empty means every API in the feed), in the catalogue and for appli
 The page of an API outside the list is not found. An application that already has one keeps
 seeing it on its "change APIs" page, so saving does not revoke it.
 
+An application's page shows how to get an access token for it: the token endpoint uses the
+tenant the backend returns (`tenantId`), and the scope is each API's Publisher ID followed by
+`/.default`. An application with Scheduling and Listing Court Schedule also gets example calls,
+to the address in `apiEndpoints.slcBaseUrls` for this environment. The environment is
+`PLATFORM_ENVIRONMENT`, which the chart sets from `global.environment`, and `sandbox` locally.
+An environment with no address there (prod, for now) leaves those examples out.
+
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
 
