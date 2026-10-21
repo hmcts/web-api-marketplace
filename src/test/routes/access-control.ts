@@ -86,6 +86,22 @@ describe('Access control on the form journeys', () => {
       .expect(res => expect(res.status).to.equal(200));
   });
 
+  test.each([
+    '/documentation/architecture',
+    '/documentation/architecture-principles',
+    '/documentation/our-capabilities',
+    '/documentation/our-api-technologies',
+    '/documentation/glossary',
+    '/documentation/technology-introduction',
+    '/documentation/building-software',
+    '/documentation/case-studies',
+    '/documentation/resources',
+  ])('the_page_at_%s_should_be_off_the_site_for_now', async path => {
+    await request(app)
+      .get(path)
+      .expect(res => expect(res.status).to.equal(404));
+  });
+
   test('sign_in_itself_should_stay_reachable_when_signed_out', async () => {
     await request(app)
       .get('/sign-in')
