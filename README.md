@@ -130,7 +130,6 @@ The consumer onboarding journey, end to end:
 | -------------------------------------------- | -------------------------------------------------------- |
 | Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
 | Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
-| First sign in: guidelines                    | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -180,9 +179,9 @@ are skipped.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
-  their Entra `oid`. The backend holds users but not yet requests, so every user is still
-  `local`: their production credentials requests go to the data store.
+- **Users** (`services/Profiles.ts`) — turns what Entra says into the signed-in user. The
+  backend holds users but not yet requests, so every user is still `local`: their production
+  credentials requests go to the data store.
 - **Applications** (`services/Applications.ts`) — registered for real through the backend's
   `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
   `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
