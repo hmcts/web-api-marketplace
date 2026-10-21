@@ -2,6 +2,12 @@ import crypto from 'node:crypto';
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
 
+/** marketplace_api, which is what a short code resolves to. */
+const CATALOGUE: Record<string, { title: string; productId: string }> = {
+  hearing: { title: 'CP Crime Hearing API', productId: 'cp-crime-hearing' },
+  defendant: { title: 'Defendant Details', productId: 'cp-crime-defendant-details' },
+};
+
 interface StubProductionRequest {
   owner: string;
   reference: string;
@@ -264,19 +270,34 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       const existing =
         name && decodeURIComponent(name).startsWith(prefix) ? subscriptions.get(decodeURIComponent(name)) : undefined;
       if (!name && method === 'POST') {
-        const request = JSON.parse(body || '{}') as { name: string; productId: string; displayName: string };
-        if (!request.name?.startsWith(prefix)) {
-          json(400, { error: `A subscription name must start with ${prefix}.` });
+        const request = JSON.parse(body || '{}') as { clientId: string; shortCode: string };
+        const application = applications.get(request.clientId);
+        const api = CATALOGUE[request.shortCode];
+        const subscriptionName = application && `${prefix}${application.appname}-${request.shortCode}`;
+        if (!request.clientId || !request.shortCode) {
+          json(400, { error: 'Choose which API to subscribe to. Say which application the subscription is for.' });
+        } else if (!application || application.owner !== requestingUserId?.toLowerCase()) {
+          json(404, { error: `No application with client id ${request.clientId}.` });
+        } else if (!api) {
+          json(404, { error: `No API with short code ${request.shortCode}.` });
         } else if (failSubscriptionsWith) {
           json(failSubscriptionsWith, { error: 'APIM could not be reached.' });
-        } else if (!/^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$/.test(request.name)) {
-          json(400, { error: 'Name must be lower case letters, digits and hyphens, 2 to 80 characters.' });
-        } else if (subscriptions.has(request.name)) {
-          json(409, { error: 'A subscription of that name already exists.' });
+        } else if (subscriptions.has(subscriptionName as string)) {
+          json(409, { error: `Already subscribed to ${request.shortCode}.` });
         } else {
-          const created = { ...request, primaryKey: crypto.randomBytes(16).toString('hex') };
-          subscriptions.set(request.name, created);
-          json(201, { name: request.name, state: 'active', primaryKey: created.primaryKey });
+          const primaryKey = crypto.randomBytes(16).toString('hex');
+          subscriptions.set(subscriptionName as string, {
+            productId: api.productId,
+            displayName: application.name,
+            primaryKey,
+          });
+          json(201, {
+            shortCode: request.shortCode,
+            title: api.title,
+            productId: api.productId,
+            subscriptionName,
+            subscriptionKey: primaryKey,
+          });
         }
       } else if (!existing) {
         json(404, { error: 'No such subscription.' });
