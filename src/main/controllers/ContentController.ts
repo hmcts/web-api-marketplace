@@ -20,7 +20,6 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/documentation/glossary': 'content/documentation/glossary',
   '/documentation/producer-guidance': 'content/documentation/producer-guidance',
   '/documentation/producer-standards': 'content/documentation/producer-standards',
-  '/documentation/data-governance': 'content/documentation/data-governance',
   '/documentation/resources': 'content/documentation/resources',
   '/documentation/case-studies': 'content/documentation/case-studies',
   '/documentation/our-api-technologies': 'content/documentation/our-api-technologies',
