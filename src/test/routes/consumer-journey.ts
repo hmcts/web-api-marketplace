@@ -152,9 +152,9 @@ describe('Consumer onboarding journey', () => {
       expect(created.text).to.contain(`data-access-url="/account/applications/${id}/access"`);
 
       const subscriptions = [...stubEntra().marketplace.subscriptions.entries()];
-      expect(subscriptions.map(([name]) => name).every(name => /^amp-user\d{3}-temp-[0-9a-f]{8}$/.test(name))).to.equal(
-        true
-      );
+      expect(
+        subscriptions.map(([name]) => name).every(name => /^amp-user\d{3}-[a-z0-9-]+-(hearing|defendant)$/.test(name))
+      ).to.equal(true);
       expect(subscriptions.map(([, subscription]) => subscription.productId)).to.deep.equal([
         'cp-crime-hearing',
         'cp-crime-defendant-details',
