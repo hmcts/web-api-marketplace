@@ -102,6 +102,12 @@ describe('Access control on the form journeys', () => {
       .expect(res => expect(res.status).to.equal(404));
   });
 
+  test('the_welcome_page_should_be_gone_even_when_signed_in', async () => {
+    const agent = await signedIn();
+
+    await agent.get('/account/welcome').expect(res => expect(res.status).to.equal(404));
+  });
+
   test('sign_in_itself_should_stay_reachable_when_signed_out', async () => {
     await request(app)
       .get('/sign-in')
