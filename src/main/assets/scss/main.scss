@@ -54,6 +54,17 @@
   word-break: break-all;
 }
 
+// Example requests on an application's page: kept as written, so long URLs scroll inside
+// the block rather than widen the page on a phone.
+.apim-code {
+  @include govuk-font($size: 16);
+  font-family: monospace;
+  overflow-x: auto;
+  padding: govuk-spacing(3);
+  margin: 0 0 govuk-spacing(4);
+  background-color: govuk-colour('light-grey');
+}
+
 .cookie-preference-success {
   display: none;
 }

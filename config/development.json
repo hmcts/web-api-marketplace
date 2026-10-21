@@ -5,5 +5,8 @@
     "tokenEndpoint": "https://hmctsextsbox.ciamlogin.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/token",
     "redirectUri": "https://localhost:3344/auth/callback",
     "postLogoutRedirectUri": "https://localhost:3344/"
+  },
+  "apiEndpoints": {
+    "environment": "sandbox"
   }
 }

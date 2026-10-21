@@ -7,6 +7,7 @@ jest.mock('../../main/services/ApiCatalogue', () => ({
 }));
 
 import { MemoryStore, useDataStore } from '../../main/modules/store';
+import { STUB_TENANT_ID } from '../stubs/marketplace';
 
 import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
 import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
@@ -163,7 +164,10 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        expect(res.text).to.contain('cp-crime-hearing');
+        expect(res.text).to.contain('id="publisher-id-1">cp-crime-hearing<');
+        expect(res.text).to.contain('scope=cp-crime-hearing/.default');
+        expect(res.text).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
+        expect(res.text).to.contain('client_secret=&lt;client_secret&gt;');
       });
 
       await agent.post('/account/applications/new/check-answers').expect(302);
@@ -241,14 +245,14 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('viewing_an_api_should_show_its_publisher_id_and_the_key_from_apim', async () => {
+    test('viewing_an_api_should_show_the_key_from_apim_but_not_the_publisher_id', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
       const [subscription] = [...stubEntra().marketplace.subscriptions.values()];
 
       await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].name}`).expect(res => {
         expect(res.status).to.equal(200);
-        expect(res.text).to.match(/id="publisher-id">cp-crime-hearing</);
+        expect(res.text).to.not.contain('Publisher ID');
         expect(res.text).to.contain(`id="subscription-key">${subscription.primaryKey}<`);
       });
       await agent.get(`/account/applications/${id}/apis/api-not-subscribed`).expect(404);

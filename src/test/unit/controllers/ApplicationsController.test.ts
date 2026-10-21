@@ -28,6 +28,7 @@ const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
 const APPLICATION: Application = {
   id: 'client-1',
   clientId: 'client-1',
+  tenantId: 'tenant-1',
   name: 'Case Viewer',
   secretHint: 'Uc6',
   secretExpiresAt: '2028-10-15T12:00:00',
@@ -302,6 +303,20 @@ describe('ApplicationsController', () => {
       expect(Applications.getApplication).toHaveBeenCalledWith(OWNER, 'client-1');
       expect(res.view).toBe('applications/detail');
       expect(res.data).toMatchObject({ maskedSecret: 'Uc6****', accessAttempts: 8, accessRetrySeconds: 15 });
+    });
+
+    test('the_detail_page_should_carry_the_token_instructions_for_the_application', async () => {
+      const res = mockResponse();
+
+      await controller().detail(forId(), res, jest.fn());
+
+      expect(res.data?.token).toMatchObject({
+        url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
+        clientId: 'client-1',
+        clientSecret: '<client_secret>',
+        scope: 'one/.default',
+      });
+      expect(res.data?.slc).toBeUndefined();
     });
 
     test.each([[{ state: 'granted' }], [{ state: 'pending' }], [{ state: 'failed', message: 'Graph refused.' }]])(
