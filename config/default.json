@@ -62,8 +62,9 @@
   },
   "applications": {
     "role": "app.read",
-    "products": {
-      "api-cp-crime-schedulingandlisting-courtschedule": "cp-crime-schedulingandlisting"
+    "shortCodes": {
+      "api-cp-crime-schedulingandlisting-courtschedule": "slc",
+      "api-cp-refdata-courthearing-courthouses": "rcc"
     }
   }
 }
