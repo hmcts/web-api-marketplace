@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
+/** Every application is registered in the one tenant the backend is configured with. */
+export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 
 /** marketplace_api, which is what a short code resolves to. */
 const CATALOGUE: Record<string, { title: string; productId: string }> = {
@@ -82,6 +84,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
 
   const view = ({ clientId, name, appname, secretHint, secretExpiresAt, createdAt }: StubApplication) => ({
     clientId,
+    tenantId: STUB_TENANT_ID,
     name,
     appname,
     secretHint,

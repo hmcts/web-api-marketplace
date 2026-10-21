@@ -20,7 +20,6 @@
     {{ govukSummaryList({
       rows: [
         { key: { text: "API" }, value: { html: '<a class="govuk-link" href="/api-catalogue/' + subscription.apiName + '">' + (subscription.apiTitle | escape) + '</a>' } },
-        { key: { text: "Publisher ID" }, value: { html: '<span class="apim-credential" id="publisher-id">' + subscription.publisherId + '</span>' } },
         { key: { text: "Subscribed" }, value: { text: subscription.subscribedAt | date } }
       ]
     }) }}

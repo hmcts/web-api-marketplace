@@ -5,6 +5,7 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
 import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis } from '../services/ApiCatalogue';
+import { instructionsFor } from '../services/ApiInstructions';
 import {
   ACCESS_ATTEMPTS,
   ACCESS_RETRY_SECONDS,
@@ -201,6 +202,7 @@ export default class ApplicationsController {
       maskedSecret: maskSecret(application.secretHint),
       notice: takeNotice(req),
       ...this.accessData(),
+      ...instructionsFor(application),
     });
   }
 
