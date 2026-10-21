@@ -15,7 +15,6 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/documentation/consumer-guidance': 'content/documentation/consumer-guidance',
   '/documentation/producer-guidance': 'content/documentation/producer-guidance',
   '/documentation/producer-standards': 'content/documentation/producer-standards',
-  '/documentation/data-governance': 'content/documentation/data-governance',
   '/help': 'content/help/index',
   '/privacy': 'content/privacy',
 };

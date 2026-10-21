@@ -81,9 +81,12 @@ describe('Access control on the form journeys', () => {
     await request(app)
       .get('/documentation/producer-guidance')
       .expect(res => expect(res.status).to.equal(200));
+  });
+
+  test('the_data_governance_standards_page_should_be_off_the_site_for_now', async () => {
     await request(app)
       .get('/documentation/data-governance')
-      .expect(res => expect(res.status).to.equal(200));
+      .expect(res => expect(res.status).to.equal(404));
   });
 
   test.each([
