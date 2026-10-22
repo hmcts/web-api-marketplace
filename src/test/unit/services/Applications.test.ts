@@ -291,8 +291,11 @@ describe('Applications', () => {
       expect((await getApplication(OWNER, BACKEND_APP.clientId))?.accessGranted).toBe(true);
     });
 
-    test('a_principal_not_assignable_yet_should_be_pending', async () => {
-      answer({ 'POST /applications/*': () => refused(404, 'No service principal yet.') });
+    test.each([
+      [404, 'No service principal yet.'],
+      [502, 'Could not assign the app role.'],
+    ])('a_principal_not_assignable_yet_should_be_pending_on_%i', async (status, message) => {
+      answer({ 'POST /applications/*': () => refused(status, message) });
 
       await expect(grantAccess(OWNER, application())).resolves.toEqual({ state: 'pending' });
     });

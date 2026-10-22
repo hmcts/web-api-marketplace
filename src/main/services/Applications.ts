@@ -194,7 +194,13 @@ export async function createApplication(
 
 export type AccessResult = { state: 'granted' } | { state: 'pending' } | { state: 'failed'; message: string };
 
-/** One attempt. A service principal seconds old is not assignable yet, so 404 means "try again". */
+const RETRYABLE = [404, 502];
+
+/**
+ * One attempt. A service principal seconds old is not assignable yet: the backend answers 404
+ * while it looks for the principal and 502 once Graph refuses the assignment, and both come
+ * good on their own. 500 does not - it means a permission is missing.
+ */
 export async function grantAccess(owner: Owner, application: Application): Promise<AccessResult> {
   if (application.accessGranted) {
     return { state: 'granted' };
@@ -208,7 +214,7 @@ export async function grantAccess(owner: Owner, application: Application): Promi
       });
     }
   } catch (error) {
-    if (error instanceof BackendError && error.status === 404 && !error.signInAgain) {
+    if (error instanceof BackendError && RETRYABLE.includes(error.status as number) && !error.signInAgain) {
       return { state: 'pending' };
     }
     if (error instanceof BackendError && error.status !== undefined && !error.signInAgain) {
