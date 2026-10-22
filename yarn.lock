@@ -7324,10 +7324,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"colord@npm:2.9.4":
-  version: 2.9.4
-  resolution: "colord@npm:2.9.4"
-  checksum: 10/ec05e0a94fb50ba4368938c3d47c9d588f631f7424f84d0edc1c761c338886099fbd6704984a95fe04e298a1f0f163d80635b50df2f5ba5bc0c7c9840257f3b3
+"colord@npm:2.10.0":
+  version: 2.10.0
+  resolution: "colord@npm:2.10.0"
+  checksum: 10/0983763f320b52e9026a59bd7f7633f1487130310d1f381901d14939b3a6e0aef3128c8bd8e5669ededbda0b69e6ba12c801c8905fce6de359284d1ff5d48431
   languageName: node
   linkType: hard
 
