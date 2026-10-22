@@ -1,5 +1,10 @@
 import { expect } from 'chai';
 
+jest.mock('../../main/services/ApiSpecs', () => ({
+  ...jest.requireActual('../../main/services/ApiSpecs'),
+  getSpecDescription: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
