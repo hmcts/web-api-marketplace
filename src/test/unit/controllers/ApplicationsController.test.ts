@@ -3,10 +3,16 @@ import { Application, BackendError } from '../../../main/services/Applications';
 import { CATALOGUE, LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
+/** SLC's own Entra resource application, which the instructions are scoped to. */
+const SLC_RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
+
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
   listedApiNames: jest.fn(),
+  tokenScopes: jest.fn().mockResolvedValue({
+    'api-cp-crime-schedulingandlisting-courtschedule': 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
+  }),
 }));
 
 jest.mock('../../../main/services/Applications', () => ({
@@ -243,7 +249,7 @@ describe('ApplicationsController', () => {
         ...created,
         accessAttempts: 8,
         accessRetrySeconds: 15,
-        publisherId: '30288840-e345-4543-99ee-f9253d789339',
+        publisherId: SLC_RESOURCE_APP_ID,
       });
       expect(req.session.applicationDraft).toBeUndefined();
     });
@@ -319,7 +325,7 @@ describe('ApplicationsController', () => {
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',
         clientSecret: '<client_secret>',
-        scope: '30288840-e345-4543-99ee-f9253d789339/.default',
+        scope: `${SLC_RESOURCE_APP_ID}/.default`,
       });
       expect(res.data?.slc).toBeUndefined();
     });

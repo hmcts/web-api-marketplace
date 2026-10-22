@@ -3,10 +3,12 @@ import axios from 'axios';
 import {
   clearCatalogueCache,
   domainOf,
+  getApiProducts,
   getCatalogueApis,
   listedApiNames,
   offeredApis,
   platformOf,
+  tokenScopes,
 } from '../../../main/services/ApiCatalogue';
 
 jest.mock('axios');
@@ -92,6 +94,60 @@ describe('ApiCatalogue', () => {
   test('the_platform_should_be_common_platform_for_cp_apis_and_other_otherwise', () => {
     expect(platformOf('api-cp-crime-hearing')).toBe('Common Platform');
     expect(platformOf('api-cft-something')).toBe('Other');
+  });
+
+  describe('products', () => {
+    const PRODUCTS = [
+      {
+        shortCode: 'slc',
+        title: 'Court Schedule',
+        catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
+        productId: 'try-it-now-cp-crime-schedulingandlisting',
+        gatewayPath: 'amp/try/slc',
+        role: 'slc.read',
+        resourceAppId: 'aaaaaaaa-1111-2222-3333-444444444444',
+      },
+      {
+        shortCode: 'rcc',
+        title: 'Court Houses',
+        catalogueName: 'api-cp-refdata-courthearing-courthouses',
+        productId: 'try-it-now-cp-refdata-courthearing',
+        gatewayPath: 'amp/try/rcc',
+        role: 'rcc.read',
+        resourceAppId: 'bbbbbbbb-1111-2222-3333-444444444444',
+      },
+    ];
+
+    test('each_api_should_be_scoped_to_its_own_resource_application', async () => {
+      mockedGet.mockResolvedValue({ data: PRODUCTS });
+
+      expect(await tokenScopes()).toEqual({
+        'api-cp-crime-schedulingandlisting-courtschedule': 'aaaaaaaa-1111-2222-3333-444444444444/.default',
+        'api-cp-refdata-courthearing-courthouses': 'bbbbbbbb-1111-2222-3333-444444444444/.default',
+      });
+    });
+
+    test('an_api_without_a_resource_application_should_be_left_out_rather_than_scoped_wrongly', async () => {
+      mockedGet.mockResolvedValue({ data: [{ ...PRODUCTS[0], resourceAppId: undefined }] });
+
+      expect(await tokenScopes()).toEqual({});
+    });
+
+    test('a_second_read_should_come_from_the_cache', async () => {
+      mockedGet.mockResolvedValue({ data: PRODUCTS });
+
+      await getApiProducts();
+      await getApiProducts();
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+    });
+
+    test('an_unreachable_backend_should_leave_the_scopes_empty_rather_than_throw', async () => {
+      mockedGet.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+      expect(await getApiProducts()).toEqual([]);
+      expect(await tokenScopes()).toEqual({});
+    });
   });
 
   describe('offeredApis', () => {

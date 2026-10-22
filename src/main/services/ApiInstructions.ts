@@ -1,5 +1,6 @@
 import config from 'config';
 
+import { tokenScopes } from './ApiCatalogue';
 import { Application } from './Applications';
 
 /** Scheduling and Listing Court Schedule, the API the call and scenario instructions are for. */
@@ -43,21 +44,24 @@ export function slcBaseUrl(): string | undefined {
 }
 
 /**
- * The marketplace API's app registration in Entra (apiEndpoints.publisherId): the resource every
- * consumer asks for a token on, whichever APIs its application has.
+ * The Entra application an API's roles belong to, which is what a consumer asks for a token on.
+ * Each API has its own, so it is read from the marketplace rather than configured here;
+ * apiEndpoints.publisherId stands in only when the marketplace cannot be reached.
  */
-export function publisherId(): string {
-  return config.get<string>('apiEndpoints.publisherId');
+export async function publisherId(apiName: string = SLC_API_NAME): Promise<string> {
+  const scope = (await tokenScopes())[apiName];
+  return scope ? scope.replace(/\/\.default$/, '') : config.get<string>('apiEndpoints.publisherId');
 }
 
 /**
  * How a consumer gets a token for this application and calls SLC with it. Values the page
  * knows are filled in; the secret, the token and the case URN stay as placeholders.
  */
-export function instructionsFor(application: Application): Instructions {
+export async function instructionsFor(application: Application): Promise<Instructions> {
   const slc = application.apis.find(api => api.apiName === SLC_API_NAME);
   const tenant = application.tenantId || '{tenant_id}';
   const base = slc ? slcBaseUrl() : undefined;
+  const resourceAppId = await publisherId(SLC_API_NAME);
 
   return {
     apiName: SLC_API_NAME,
@@ -65,8 +69,8 @@ export function instructionsFor(application: Application): Instructions {
       url: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
       clientId: application.clientId,
       clientSecret: '<client_secret>',
-      publisherId: publisherId(),
-      scope: `${publisherId()}/.default`,
+      publisherId: resourceAppId,
+      scope: `${resourceAppId}/.default`,
     },
     ...(base
       ? {
