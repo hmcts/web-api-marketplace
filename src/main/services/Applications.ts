@@ -12,7 +12,6 @@ import { FieldError } from './answers';
 
 const logger = Logger.getLogger('applications');
 
-export const APPLICATION_ROLE: string = config.get('applications.role');
 const SHORT_CODES: Record<string, string> = config.get('applications.shortCodes');
 export const ACCESS_ATTEMPTS = 8;
 export const ACCESS_RETRY_SECONDS = 15;
@@ -198,11 +197,13 @@ export async function grantAccess(owner: Owner, application: Application): Promi
     return { state: 'granted' };
   }
   try {
-    await callBackend(owner, {
-      method: 'POST',
-      url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
-      data: { role: APPLICATION_ROLE },
-    });
+    for (const shortCode of application.apis.map(api => shortCodeFor(api.apiName)).filter(Boolean)) {
+      await callBackend(owner, {
+        method: 'POST',
+        url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
+        data: { shortCode },
+      });
+    }
   } catch (error) {
     if (error instanceof BackendError && error.status === 404 && !error.signInAgain) {
       return { state: 'pending' };

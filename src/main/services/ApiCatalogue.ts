@@ -20,7 +20,20 @@ interface CatalogueFeed {
   apis?: { name?: string; title?: string; description?: string; team?: string }[];
 }
 
+/** An API as the marketplace holds it. resourceAppId is the Entra application its roles belong to. */
+export interface ApiProduct {
+  shortCode: string;
+  title: string;
+  catalogueName: string;
+  productId: string;
+  gatewayPath: string;
+  role: string;
+  tenantId?: string;
+  resourceAppId?: string;
+}
+
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
+let products: { all: ApiProduct[]; fetchedAt: number } | null = null;
 
 /**
  * The published API catalogue, used to fill the "Which API do you need access to?" list.
@@ -51,6 +64,38 @@ export async function getCatalogueApis(): Promise<CatalogueApi[]> {
     logger.error(`Could not load the catalogue from ${catalogueUrl}: ${detail}`);
     return cache?.apis ?? [];
   }
+}
+
+/**
+ * The APIs the marketplace holds, which is where the scope a consumer asks a token for comes
+ * from. Each API has its own resource application, so the scope differs between them.
+ */
+export async function getApiProducts(): Promise<ApiProduct[]> {
+  if (products && Date.now() - products.fetchedAt < CACHE_TTL_MS) {
+    return products.all;
+  }
+
+  const url = `${process.env.API_URL || config.get<string>('backend.url')}/products`;
+  try {
+    const response = await axios.get<ApiProduct[]>(url, { timeout: 5000 });
+    products = { all: response.data ?? [], fetchedAt: Date.now() };
+    return products.all;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`Could not load the API products from ${url}: ${detail}`);
+    return products?.all ?? [];
+  }
+}
+
+/** The token scope for each API, by the catalogue name the application pages hold. */
+export async function tokenScopes(): Promise<Record<string, string>> {
+  const scopes: Record<string, string> = {};
+  for (const product of await getApiProducts()) {
+    if (product.resourceAppId) {
+      scopes[product.catalogueName] = `${product.resourceAppId}/.default`;
+    }
+  }
+  return scopes;
 }
 
 /**
@@ -116,6 +161,7 @@ export function platformOf(name: string): string {
 /** Only for tests — the module-level cache otherwise leaks between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
+  products = null;
 }
 
 function toApis(feed: CatalogueFeed): CatalogueApi[] {

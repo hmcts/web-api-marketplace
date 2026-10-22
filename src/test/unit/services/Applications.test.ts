@@ -2,7 +2,6 @@ import axios from 'axios';
 
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import {
-  APPLICATION_ROLE,
   Application,
   BackendError,
   createApplication,
@@ -257,7 +256,15 @@ describe('Applications', () => {
       secretHint: 'Uc6',
       secretExpiresAt: '',
       createdAt: '',
-      apis: [],
+      apis: [
+        {
+          apiName: 'api-one',
+          apiTitle: 'API one',
+          publisherId: 'one',
+          subscriptionName: 'amp-user001-case-viewer-one',
+          subscribedAt: '',
+        },
+      ],
       accessGranted: false,
     });
 
@@ -269,7 +276,7 @@ describe('Applications', () => {
 
       await expect(grantAccess(OWNER, application())).resolves.toEqual({ state: 'granted' });
 
-      expect(call(0).data).toEqual({ role: APPLICATION_ROLE });
+      expect(call(0).data).toEqual({ shortCode: 'one' });
       expect((await getApplication(OWNER, BACKEND_APP.clientId))?.accessGranted).toBe(true);
     });
 

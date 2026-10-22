@@ -61,7 +61,6 @@
     "postLogoutRedirectUri": ""
   },
   "applications": {
-    "role": "app.read",
     "shortCodes": {
       "api-cp-crime-schedulingandlisting-courtschedule": "slc",
       "api-cp-refdata-courthearing-courthouses": "rcc"

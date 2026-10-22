@@ -50,7 +50,7 @@
       {% for api in application.apis %}
         {% set rows = (rows.push([
           { text: api.apiTitle },
-          { text: "30288840-e345-4543-99ee-f9253d789339/.default", classes: "apim-reference" },
+          { text: scopes[api.apiName] or "Not available", classes: "apim-reference" },
           { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
         ]), rows) %}
       {% endfor %}

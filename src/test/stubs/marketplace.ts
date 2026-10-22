@@ -3,10 +3,31 @@ import crypto from 'node:crypto';
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
 
 /** marketplace_api, which is what a short code resolves to. */
-const CATALOGUE: Record<string, { title: string; productId: string }> = {
-  hearing: { title: 'CP Crime Hearing API', productId: 'cp-crime-hearing' },
-  defendant: { title: 'Defendant Details', productId: 'cp-crime-defendant-details' },
+const CATALOGUE: Record<string, { title: string; productId: string; role: string; resourceAppId: string }> = {
+  hearing: {
+    title: 'CP Crime Hearing API',
+    productId: 'cp-crime-hearing',
+    role: 'hearing.read',
+    resourceAppId: '11111111-1111-1111-1111-111111111111',
+  },
+  defendant: {
+    title: 'Defendant Details',
+    productId: 'cp-crime-defendant-details',
+    role: 'defendant.read',
+    resourceAppId: '22222222-2222-2222-2222-222222222222',
+  },
 };
+
+/** Each API's own resource application, which is what /products carries for the token scope. */
+const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
+  shortCode,
+  title: api.title,
+  catalogueName: `api-cp-crime-${shortCode === 'hearing' ? 'hearing' : 'defendant-details'}`,
+  productId: api.productId,
+  gatewayPath: `amp/${shortCode}`,
+  role: api.role,
+  resourceAppId: api.resourceAppId,
+}));
 
 interface StubProductionRequest {
   owner: string;
@@ -177,7 +198,8 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       if (!clientId && method === 'GET') {
         json(200, [...applications.values()].filter(application => application.owner === user).map(view));
       } else if (!clientId && method === 'POST') {
-        const name = String(JSON.parse(body || '{}').name ?? '');
+        const request = JSON.parse(body || '{}') as { name?: string; apis?: string[] };
+        const name = String(request.name ?? '');
         const appname = name.trim().toLowerCase().replace(/\s+/g, '-');
         if (!NAME_PATTERN.test(name)) {
           json(400, { error: 'Use letters, digits and spaces only, 8 to 50 characters.' });
@@ -193,7 +215,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
             secretHint: secret.slice(0, 3),
             secretExpiresAt: '2028-10-15T12:00:00',
             createdAt: '2026-10-15T12:00:00',
-            roles: [],
+            roles: (request.apis ?? []).map(shortCode => CATALOGUE[shortCode]?.role).filter(Boolean),
           };
           applications.set(created.clientId, created);
           json(201, { ...view(created), clientSecret: secret });
@@ -207,8 +229,14 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
           notAssignable--;
           json(404, { error: 'No service principal yet.' });
         } else {
-          mine.roles.push(String(JSON.parse(body || '{}').role));
-          json(204);
+          const { shortCode } = JSON.parse(body || '{}') as { shortCode?: string };
+          const api = shortCode ? CATALOGUE[shortCode] : undefined;
+          if (!api) {
+            json(404, { error: `No API with short code ${shortCode}.` });
+          } else {
+            mine.roles.push(api.role);
+            json(204);
+          }
         }
       } else if (!roles && method === 'GET') {
         json(200, view(mine));
@@ -253,6 +281,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       } else {
         return false;
       }
+      return true;
+    }
+
+    if (path === '/products' && method === 'GET') {
+      json(200, PRODUCTS);
       return true;
     }
 

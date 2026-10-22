@@ -4,7 +4,7 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
-import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis } from '../services/ApiCatalogue';
+import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis, tokenScopes } from '../services/ApiCatalogue';
 import {
   ACCESS_ATTEMPTS,
   ACCESS_RETRY_SECONDS,
@@ -199,6 +199,7 @@ export default class ApplicationsController {
     res.render('applications/detail', {
       application,
       maskedSecret: maskSecret(application.secretHint),
+      scopes: await tokenScopes(),
       notice: takeNotice(req),
       ...this.accessData(),
     });

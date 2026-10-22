@@ -194,7 +194,7 @@ describe('Consumer onboarding journey', () => {
       await check().expect(res => expect(res.body).to.deep.equal({ state: 'pending' }));
       await check().expect(res => expect(res.body).to.deep.equal({ state: 'granted' }));
 
-      expect(stubEntra().marketplace.applications.get(id)?.roles).to.deep.equal(['app.read']);
+      expect(stubEntra().marketplace.applications.get(id)?.roles).to.deep.equal(['hearing.read']);
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain('id="access-granted"');
         expect(res.text).to.not.contain('These credentials will not work yet');
