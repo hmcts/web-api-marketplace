@@ -5,7 +5,7 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
 import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis } from '../services/ApiCatalogue';
-import { instructionsFor } from '../services/ApiInstructions';
+import { instructionsFor, publisherId } from '../services/ApiInstructions';
 import {
   ACCESS_ATTEMPTS,
   ACCESS_RETRY_SECONDS,
@@ -184,7 +184,9 @@ export default class ApplicationsController {
     }
 
     delete req.session.applicationDraft;
-    req.session.save(() => res.render('applications/new/confirmation', { ...created, ...this.accessData() }));
+    req.session.save(() =>
+      res.render('applications/new/confirmation', { ...created, ...this.accessData(), publisherId: publisherId() })
+    );
   }
 
   // --------------------------------------------------------------- one application
