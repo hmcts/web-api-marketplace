@@ -8,6 +8,7 @@ export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 const CATALOGUE: Record<string, { title: string; productId: string }> = {
   hearing: { title: 'CP Crime Hearing API', productId: 'cp-crime-hearing' },
   defendant: { title: 'Defendant Details', productId: 'cp-crime-defendant-details' },
+  slc: { title: 'Scheduling and Listing Court Schedule', productId: 'try-it-now-cp-crime-schedulingandlisting' },
 };
 
 interface StubProductionRequest {

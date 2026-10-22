@@ -140,12 +140,18 @@ a JSON array; empty means every API in the feed), in the catalogue and for appli
 The page of an API outside the list is not found. An application that already has one keeps
 seeing it on its "change APIs" page, so saving does not revoke it.
 
-An application's page shows how to get an access token for it: the token endpoint uses the
-tenant the backend returns (`tenantId`), and the scope is each API's Publisher ID followed by
-`/.default`. An application with Scheduling and Listing Court Schedule also gets example calls,
-to the address in `apiEndpoints.slcBaseUrls` for this environment. The environment is
-`PLATFORM_ENVIRONMENT`, which the chart sets from `global.environment`, and `sandbox` locally.
-An environment with no address there (prod, for now) leaves those examples out.
+On an application's page, the Scheduling and Listing Court Schedule row has a collapsible panel
+right under it, "How to get an access token and call an API". It shows the Publisher ID (scope),
+then curl commands to get a token and to call SLC and its scenarios. The token endpoint uses the
+tenant the backend returns (`tenantId`), and the scope is the Publisher ID followed by
+`/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
+registration in Entra, the same for every API.
+
+The calls go to the address in `apiEndpoints.slcBaseUrls` for this environment: the API
+Management base up to `/amp/try/slc`, to which the page adds `/case/{case_urn}/courtschedule`
+and `/scenarios`. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
+`global.environment`, and `sandbox` locally. Sandbox, preview, AAT and demo have addresses; an
+environment with none (prod, for now) leaves the calls out and shows only the token request.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.

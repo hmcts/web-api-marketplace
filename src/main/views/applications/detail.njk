@@ -3,6 +3,7 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 
 {% set pageTitle = application.name + " - Manage applications - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "applications" %}
@@ -32,22 +33,15 @@
 
     <h2 class="govuk-heading-m">Authorisation details</h2>
     <p class="govuk-body">Use your client ID and secret to get an access token from Microsoft Entra ID for your calls.</p>
-    {% set authorisationRows = [
-      { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
-      {
-        key: { text: "Client secret" },
-        value: { html: '<span class="apim-credential" id="masked-secret">' + maskedSecret + '</span><br><span class="govuk-hint">Expires ' + (application.secretExpiresAt | date) + '</span>' }
-      }
-    ] %}
-    {% for publisher in token.publishers %}
-      {% set authorisationRows = (authorisationRows.push({
-        key: { text: "Publisher ID (scope)" },
-        value: { html: '<span class="apim-credential" id="publisher-id-' + loop.index + '">' + (publisher.publisherId | escape) + '</span><br><span class="govuk-hint">' + (publisher.apiTitle | escape) + '</span>' }
-      }), authorisationRows) %}
-    {% endfor %}
-    {{ govukSummaryList({ rows: authorisationRows }) }}
-
-    {% include "applications/instructions.njk" %}
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
+        {
+          key: { text: "Client secret" },
+          value: { html: '<span class="apim-credential" id="masked-secret">' + maskedSecret + '</span><br><span class="govuk-hint">Expires ' + (application.secretExpiresAt | date) + '</span>' }
+        }
+      ]
+    }) }}
 
     {% include "applications/access.njk" %}
 
@@ -59,6 +53,19 @@
           { text: api.apiTitle },
           { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
         ]), rows) %}
+        {#- Part of that API's row: a full-width row right under it, folded away. -#}
+        {% if api.apiName == apiName %}
+          {% set instructionsHtml %}{% include "applications/instructions.njk" %}{% endset %}
+          {% set detailsHtml %}
+            {{- govukDetails({
+              id: "api-instructions",
+              summaryText: "How to get an access token and call an API",
+              html: instructionsHtml,
+              classes: "govuk-!-margin-bottom-0"
+            }) -}}
+          {% endset %}
+          {% set rows = (rows.push([{ html: detailsHtml, colspan: 2 }]), rows) %}
+        {% endif %}
       {% endfor %}
       {{ govukTable({
         caption: "APIs added to this application",
