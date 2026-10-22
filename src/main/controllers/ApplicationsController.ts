@@ -184,8 +184,9 @@ export default class ApplicationsController {
     }
 
     delete req.session.applicationDraft;
+    const scopedTo = await publisherId();
     req.session.save(() =>
-      res.render('applications/new/confirmation', { ...created, ...this.accessData(), publisherId: publisherId() })
+      res.render('applications/new/confirmation', { ...created, ...this.accessData(), publisherId: scopedTo })
     );
   }
 
@@ -204,7 +205,7 @@ export default class ApplicationsController {
       maskedSecret: maskSecret(application.secretHint),
       notice: takeNotice(req),
       ...this.accessData(),
-      ...instructionsFor(application),
+      ...(await instructionsFor(application)),
     });
   }
 
