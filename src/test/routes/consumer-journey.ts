@@ -14,6 +14,8 @@ import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
+const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'Scheduling and Listing Court Schedule' };
+
 /**
  * The consumer onboarding journey end to end, through the real app: create an account,
  * confirm the address, sign in, create an application, manage its
@@ -146,6 +148,7 @@ describe('Consumer onboarding journey', () => {
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       expect(created.text).to.contain('Application created');
+      expect(created.text).to.contain('id="publisher-id">30288840-e345-4543-99ee-f9253d789339<');
       expect(created.text).to.contain('You will not be able to see it again');
       expect(secret).to.match(/^.{3}8Q~.{34}$/);
       expect(created.text.match(/Subscription key: <span class="apim-credential">[0-9a-f]{32}</g)).to.have.length(2);
@@ -164,10 +167,9 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        expect(res.text).to.contain('id="publisher-id-1">cp-crime-hearing<');
-        expect(res.text).to.contain('scope=cp-crime-hearing/.default');
-        expect(res.text).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
-        expect(res.text).to.contain('client_secret=&lt;client_secret&gt;');
+        // Neither API is SLC, so there are no instructions, Publisher ID included, to fold away.
+        expect(res.text).to.not.contain('id="publisher-id"');
+        expect(res.text).to.not.contain('id="api-instructions"');
       });
 
       await agent.post('/account/applications/new/check-answers').expect(302);
@@ -242,6 +244,36 @@ describe('Consumer onboarding journey', () => {
         expect(res.status).to.equal(200);
         expect(res.text).to.match(/id="client-secret"[^>]*>.{3}8Q~/);
         expect(res.text).to.contain('These APIs could not be added just now: CP Crime Hearing API');
+      });
+    });
+
+    test('the_instructions_should_fold_away_right_under_the_slc_row_and_no_other', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([...CATALOGUE, SLC]);
+      const agent = await signedInConsumer('ada@example.com');
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'Court tracker' });
+      await agent
+        .post('/account/applications/new/apis')
+        .type('form')
+        .send({ apis: [CATALOGUE[0].name, SLC.name] });
+      const created = await agent.post('/account/applications/new/check-answers').expect(200);
+      const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
+
+      await agent.get(`/account/applications/${id}`).expect(res => {
+        const rows = res.text.split('<tr class="govuk-table__row">').slice(2);
+        const slcRow = rows.findIndex(row => row.includes(`>${SLC.title}<`));
+
+        expect(res.text.match(/id="api-instructions"/g)).to.have.length(1);
+        expect(rows[slcRow + 1]).to.match(/colspan="2"[\s\S]*id="api-instructions"/);
+        expect(rows[slcRow + 1]).to.match(/<summary[\s\S]*?How to get an access token and call an API/);
+        expect(rows[slcRow + 1]).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
+        expect(rows[slcRow + 1]).to.contain('scope=30288840-e345-4543-99ee-f9253d789339/.default');
+        // The Publisher ID is at the top of the panel, before the token request, and nowhere else.
+        expect(rows[slcRow + 1]).to.match(
+          /id="publisher-id">30288840-e345-4543-99ee-f9253d789339<[\s\S]*id="token-request"/
+        );
+        expect(res.text.match(/id="publisher-id"/g)).to.have.length(1);
+        expect(rows[slcRow + 1]).to.contain('client_secret=&lt;client_secret&gt;');
+        expect(rows.filter(row => row.includes('id="api-instructions"'))).to.have.length(1);
       });
     });
 

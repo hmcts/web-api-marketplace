@@ -20,16 +20,12 @@
 
     <h2 class="govuk-heading-m">Authorisation details</h2>
 
-    {% set authorisationRows = [
-      { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } }
-    ] %}
-    {% for key in keys %}
-      {% set authorisationRows = (authorisationRows.push({
-        key: { text: "Publisher ID (scope)" },
-        value: { html: '<span class="apim-credential">' + (key.publisherId | escape) + '</span><br><span class="govuk-hint">' + (key.apiTitle | escape) + '</span>' }
-      }), authorisationRows) %}
-    {% endfor %}
-    {{ govukSummaryList({ rows: authorisationRows }) }}
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
+        { key: { text: "Publisher ID (scope)" }, value: { html: '<span class="apim-credential" id="publisher-id">' + (publisherId | escape) + '</span>' } }
+      ]
+    }) }}
 
     {% include "applications/secret-once.njk" %}
 

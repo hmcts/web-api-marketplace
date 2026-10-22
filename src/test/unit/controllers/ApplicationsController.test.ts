@@ -239,7 +239,12 @@ describe('ApplicationsController', () => {
 
       expect(Applications.createApplication).toHaveBeenCalledWith(OWNER, DRAFT, CATALOGUE);
       expect(res.view).toBe('applications/new/confirmation');
-      expect(res.data).toEqual({ ...created, accessAttempts: 8, accessRetrySeconds: 15 });
+      expect(res.data).toEqual({
+        ...created,
+        accessAttempts: 8,
+        accessRetrySeconds: 15,
+        publisherId: '30288840-e345-4543-99ee-f9253d789339',
+      });
       expect(req.session.applicationDraft).toBeUndefined();
     });
 
@@ -314,7 +319,7 @@ describe('ApplicationsController', () => {
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',
         clientSecret: '<client_secret>',
-        scope: 'one/.default',
+        scope: '30288840-e345-4543-99ee-f9253d789339/.default',
       });
       expect(res.data?.slc).toBeUndefined();
     });
