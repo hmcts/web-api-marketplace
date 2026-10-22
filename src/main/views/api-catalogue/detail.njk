@@ -18,9 +18,9 @@
     <span class="govuk-caption-l">API catalogue</span>
     <h1 class="govuk-heading-xl">{{ api.title }}</h1>
 
-    {% if api.description %}
-      <p class="govuk-body-l">{{ api.description }}</p>
-    {% endif %}
+    {% for paragraph in descriptionParagraphs %}
+      <p class="{{ 'govuk-body-l' if loop.first else 'govuk-body' }}">{{ paragraph }}</p>
+    {% endfor %}
 
     {{ govukSummaryList({
       rows: [

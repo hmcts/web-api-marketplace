@@ -15809,6 +15809,7 @@ __metadata:
     webpack: "npm:5.108.4"
     webpack-cli: "npm:7.2.3"
     webpack-dev-middleware: "npm:8.1.1"
+    yaml: "npm:^2.9.0"
     zod: "npm:4.4.3"
   languageName: unknown
   linkType: soft

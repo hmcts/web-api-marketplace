@@ -10,6 +10,7 @@ import {
   offeredApis,
   platformOf,
 } from '../services/ApiCatalogue';
+import { getSpecDescription, paragraphsOf } from '../services/ApiSpecs';
 
 const ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 
@@ -58,7 +59,14 @@ export default class ApiCatalogueController {
       return;
     }
 
-    res.render('api-catalogue/detail', { api: withTags(api), ...linksFor(api.name) });
+    // The full description from the API's own spec; the feed's short summary if that cannot be had.
+    const description = (await getSpecDescription(api.name)) ?? api.description;
+
+    res.render('api-catalogue/detail', {
+      api: withTags(api),
+      descriptionParagraphs: description ? paragraphsOf(description) : [],
+      ...linksFor(api.name),
+    });
   }
 }
 
