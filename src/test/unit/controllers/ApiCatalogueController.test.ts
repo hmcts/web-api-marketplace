@@ -8,12 +8,20 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
   listedApiNames: jest.fn(),
 }));
 
+jest.mock('../../../main/services/ApiSpecs', () => ({
+  ...jest.requireActual('../../../main/services/ApiSpecs'),
+  getSpecDescription: jest.fn(),
+}));
+
 const { getCatalogueApis, listedApiNames } = require('../../../main/services/ApiCatalogue');
+const { getSpecDescription } = require('../../../main/services/ApiSpecs');
 
 describe('ApiCatalogueController', () => {
   beforeEach(() => {
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
     (listedApiNames as jest.Mock).mockReturnValue([]);
+    (getSpecDescription as jest.Mock).mockReset();
+    (getSpecDescription as jest.Mock).mockResolvedValue(undefined);
   });
 
   test('browsing_and_searching_should_show_only_the_listed_apis', async () => {
@@ -120,6 +128,33 @@ describe('ApiCatalogueController', () => {
       repoUrl: 'https://github.com/hmcts/api-one',
     });
     expect(next).not.toHaveBeenCalled();
+  });
+
+  test('the_full_description_from_the_apis_spec_should_be_shown_as_paragraphs', async () => {
+    (getSpecDescription as jest.Mock).mockResolvedValue('First paragraph\nwrapped.\n\nSecond paragraph.');
+    const res = mockResponse();
+
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'api-one' } }), res, jest.fn());
+
+    expect(getSpecDescription).toHaveBeenCalledWith('api-one');
+    expect(res.data?.descriptionParagraphs).toEqual(['First paragraph wrapped.', 'Second paragraph.']);
+  });
+
+  test('when_the_spec_cannot_be_read_the_feeds_short_description_should_be_shown', async () => {
+    const res = mockResponse();
+
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'api-one' } }), res, jest.fn());
+
+    expect(res.data?.descriptionParagraphs).toEqual([CATALOGUE[0].description]);
+  });
+
+  test('an_api_with_no_description_anywhere_should_show_none', async () => {
+    (getCatalogueApis as jest.Mock).mockResolvedValue([{ name: 'api-one', title: 'API One' }]);
+    const res = mockResponse();
+
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'api-one' } }), res, jest.fn());
+
+    expect(res.data?.descriptionParagraphs).toEqual([]);
   });
 
   test('a_name_not_in_the_catalogue_should_be_handed_on', async () => {
