@@ -10,7 +10,7 @@
       {
         "heading": "Getting started with our APIs",
         "href": "/get-started",
-        "body": "A step-by-step introduction to what our APIs can do and how your team can get connected."
+        "body": "The steps to connect to our APIs, from testing with dummy data to applying for production access."
       },
       {
         "heading": "API and integration catalogue",
@@ -18,9 +18,9 @@
         "body": "An A to Z list of HMCTS APIs and other integrations, with descriptions of what each one returns."
       },
       {
-        "heading": "Documentation, guides and tutorials",
+        "heading": "Documentation",
         "href": "/documentation",
-        "body": "Learn about APIs and the standards we use, and how to make the most of our developer resources."
+        "body": "Guidance for teams using our APIs and for teams listing their own, including the standards an API must meet."
       }
     ],
     [

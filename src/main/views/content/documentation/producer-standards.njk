@@ -8,7 +8,6 @@
 ] %}
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
-{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% block content %}
@@ -211,12 +210,6 @@
       ]
     }) }}
     </section>
-
-    {{ govukInsetText({
-      text: "Full detail on the legal framework, data minimisation, audit, breaches and
-             accountability is set out in the Data Governance Standards, which are being moved into
-             this service."
-    }) }}
 
   </div>
 </div>

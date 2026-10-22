@@ -130,7 +130,6 @@ The consumer onboarding journey, end to end:
 | -------------------------------------------- | -------------------------------------------------------- |
 | Create a developer account (on Entra)        | `/sign-in?prompt=create` (also `/register`)              |
 | Sign in, forgotten password (on Entra)       | `/sign-in`, back to `/auth/callback`                     |
-| First sign in: guidelines                    | `/account/welcome`                                       |
 | Manage applications, create one, choose APIs | `/account/applications`, `/account/applications/new/...` |
 | View, change APIs, view a subscription key   | `/account/applications/:id`, `.../apis`, `.../apis/:api` |
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
@@ -140,6 +139,19 @@ The site lists only the feed's APIs named in `catalogue.listedApis` (`CATALOGUE_
 a JSON array; empty means every API in the feed), in the catalogue and for applications alike.
 The page of an API outside the list is not found. An application that already has one keeps
 seeing it on its "change APIs" page, so saving does not revoke it.
+
+On an application's page, the Scheduling and Listing Court Schedule row has a collapsible panel
+right under it, "How to get an access token and call an API". It shows the Publisher ID (scope),
+then curl commands to get a token and to call SLC and its scenarios. The token endpoint uses the
+tenant the backend returns (`tenantId`), and the scope is the Publisher ID followed by
+`/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
+registration in Entra, the same for every API.
+
+The calls go to the address in `apiEndpoints.slcBaseUrls` for this environment: the API
+Management base up to `/amp/try/slc`, to which the page adds `/case/{case_urn}/courtschedule`
+and `/scenarios`. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
+`global.environment`, and `sandbox` locally. Sandbox, preview, AAT and demo have addresses; an
+environment with none (prod, for now) leaves the calls out and shows only the token request.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
@@ -180,9 +192,9 @@ are skipped.
 These are deliberate, and each is confined to one service so it can be swapped for a backend
 call without touching the journeys:
 
-- **Profiles** (`services/Profiles.ts`) — when each user agreed to the guidelines, keyed by
-  their Entra `oid`. The backend holds users but not yet requests, so every user is still
-  `local`: their production credentials requests go to the data store.
+- **Users** (`services/Profiles.ts`) — turns what Entra says into the signed-in user. The
+  backend holds users but not yet requests, so every user is still `local`: their production
+  credentials requests go to the data store.
 - **Applications** (`services/Applications.ts`) — registered for real through the backend's
   `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
   `requestingUserId`. The secret is shown once, on the page after creating it. The backend does

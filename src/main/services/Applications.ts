@@ -29,6 +29,8 @@ export interface ApiSubscription {
 export interface Application {
   id: string;
   clientId: string;
+  /** The Entra tenant it is registered in, for its token endpoint. Empty from a backend that sends none. */
+  tenantId: string;
   name: string;
   secretHint: string;
   secretExpiresAt: string;
@@ -67,6 +69,7 @@ export class BackendError extends Error {
 
 interface BackendApplication {
   clientId: string;
+  tenantId?: string;
   name: string;
   secretHint?: string;
   secretExpiresAt?: string;
@@ -343,6 +346,7 @@ function toApplication(found: BackendApplication, links: Links): Application {
   return {
     id: found.clientId,
     clientId: found.clientId,
+    tenantId: found.tenantId ?? '',
     name: found.name,
     secretHint: found.secretHint ?? '',
     secretExpiresAt: found.secretExpiresAt ?? '',

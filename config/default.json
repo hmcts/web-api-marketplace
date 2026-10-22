@@ -45,6 +45,16 @@
     "url": "https://hmcts.github.io/amp-catalog/apis.json",
     "listedApis": ["api-cp-crime-schedulingandlisting-courtschedule", "api-cp-refdata-courthearing-courthouses"]
   },
+  "apiEndpoints": {
+    "publisherId": "30288840-e345-4543-99ee-f9253d789339",
+    "environment": "",
+    "slcBaseUrls": {
+      "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc",
+      "preview": "https://sps-api-mgmt.preview.api.hmcts.net/amp/try/slc",
+      "aat": "https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc",
+      "demo": "https://sps-api-mgmt.sandbox.demo.hmcts.net/amp/try/slc"
+    }
+  },
   "marketplaceSite": {
     "url": "/"
   },

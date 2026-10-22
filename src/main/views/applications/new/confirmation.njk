@@ -21,7 +21,10 @@
     <h2 class="govuk-heading-m">Authorisation details</h2>
 
     {{ govukSummaryList({
-      rows: [{ key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } }]
+      rows: [
+        { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + application.clientId + '</span>' } },
+        { key: { text: "Publisher ID (scope)" }, value: { html: '<span class="apim-credential" id="publisher-id">' + (publisherId | escape) + '</span>' } }
+      ]
     }) }}
 
     {% include "applications/secret-once.njk" %}
@@ -35,7 +38,7 @@
     {% for key in keys %}
       {% set keyRows = (keyRows.push({
         key: { text: key.apiTitle },
-        value: { html: 'Publisher ID: <span class="apim-credential">' + key.publisherId + '</span><br>Subscription key: <span class="apim-credential">' + key.subscriptionKey + '</span>' }
+        value: { html: 'Subscription key: <span class="apim-credential">' + key.subscriptionKey + '</span>' }
       }), keyRows) %}
     {% endfor %}
     {{ govukSummaryList({ rows: keyRows, attributes: { id: "subscription-keys" } }) }}

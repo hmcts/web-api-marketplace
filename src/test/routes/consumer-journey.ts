@@ -7,15 +7,18 @@ jest.mock('../../main/services/ApiCatalogue', () => ({
 }));
 
 import { MemoryStore, useDataStore } from '../../main/modules/store';
+import { STUB_TENANT_ID } from '../stubs/marketplace';
 
 import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
 import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
 
 const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
+const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'Scheduling and Listing Court Schedule' };
+
 /**
  * The consumer onboarding journey end to end, through the real app: create an account,
- * confirm the address, sign in, get through the welcome, create an application, manage its
+ * confirm the address, sign in, create an application, manage its
  * APIs and credentials, ask for production credentials, and tidy up.
  */
 describe('Consumer onboarding journey', () => {
@@ -145,6 +148,7 @@ describe('Consumer onboarding journey', () => {
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       expect(created.text).to.contain('Application created');
+      expect(created.text).to.contain('id="publisher-id">33333333-3333-3333-3333-333333333333<');
       expect(created.text).to.contain('You will not be able to see it again');
       expect(secret).to.match(/^.{3}8Q~.{34}$/);
       expect(created.text.match(/Subscription key: <span class="apim-credential">[0-9a-f]{32}</g)).to.have.length(2);
@@ -163,7 +167,9 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        expect(res.text).to.contain('cp-crime-hearing');
+        // Neither API is SLC, so there are no instructions, Publisher ID included, to fold away.
+        expect(res.text).to.not.contain('id="publisher-id"');
+        expect(res.text).to.not.contain('id="api-instructions"');
       });
 
       await agent.post('/account/applications/new/check-answers').expect(302);
@@ -194,7 +200,7 @@ describe('Consumer onboarding journey', () => {
       await check().expect(res => expect(res.body).to.deep.equal({ state: 'pending' }));
       await check().expect(res => expect(res.body).to.deep.equal({ state: 'granted' }));
 
-      expect(stubEntra().marketplace.applications.get(id)?.roles).to.deep.equal(['hearing.read']);
+      expect(stubEntra().marketplace.applications.get(id)?.roles).to.deep.equal(['app.read']);
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain('id="access-granted"');
         expect(res.text).to.not.contain('These credentials will not work yet');
@@ -241,14 +247,44 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('viewing_an_api_should_show_its_publisher_id_and_the_key_from_apim', async () => {
+    test('the_instructions_should_fold_away_right_under_the_slc_row_and_no_other', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([...CATALOGUE, SLC]);
+      const agent = await signedInConsumer('ada@example.com');
+      await agent.post('/account/applications/new/details').type('form').send({ name: 'Court tracker' });
+      await agent
+        .post('/account/applications/new/apis')
+        .type('form')
+        .send({ apis: [CATALOGUE[0].name, SLC.name] });
+      const created = await agent.post('/account/applications/new/check-answers').expect(200);
+      const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
+
+      await agent.get(`/account/applications/${id}`).expect(res => {
+        const rows = res.text.split('<tr class="govuk-table__row">').slice(2);
+        const slcRow = rows.findIndex(row => row.includes(`>${SLC.title}<`));
+
+        expect(res.text.match(/id="api-instructions"/g)).to.have.length(1);
+        expect(rows[slcRow + 1]).to.match(/colspan="2"[\s\S]*id="api-instructions"/);
+        expect(rows[slcRow + 1]).to.match(/<summary[\s\S]*?How to get an access token and call an API/);
+        expect(rows[slcRow + 1]).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
+        expect(rows[slcRow + 1]).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
+        // The Publisher ID is at the top of the panel, before the token request, and nowhere else.
+        expect(rows[slcRow + 1]).to.match(
+          /id="publisher-id">33333333-3333-3333-3333-333333333333<[\s\S]*id="token-request"/
+        );
+        expect(res.text.match(/id="publisher-id"/g)).to.have.length(1);
+        expect(rows[slcRow + 1]).to.contain('client_secret=&lt;client_secret&gt;');
+        expect(rows.filter(row => row.includes('id="api-instructions"'))).to.have.length(1);
+      });
+    });
+
+    test('viewing_an_api_should_show_the_key_from_apim_but_not_the_publisher_id', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
       const [subscription] = [...stubEntra().marketplace.subscriptions.values()];
 
       await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].name}`).expect(res => {
         expect(res.status).to.equal(200);
-        expect(res.text).to.match(/id="publisher-id">cp-crime-hearing</);
+        expect(res.text).to.not.contain('Publisher ID');
         expect(res.text).to.contain(`id="subscription-key">${subscription.primaryKey}<`);
       });
       await agent.get(`/account/applications/${id}/apis/api-not-subscribed`).expect(404);

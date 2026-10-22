@@ -3,7 +3,7 @@ import { SessionData } from 'express-session';
 import { AppRequest } from '../../../main/interfaces/AppRequest';
 import { mockRequest } from '../mocks/mockRequest';
 
-/** A user signed in through Entra, as the session holds them once through the welcome. */
+/** A user signed in through Entra, as the session holds them. */
 export const LOCAL_USER = {
   id: 0,
   userReference: 'user001',

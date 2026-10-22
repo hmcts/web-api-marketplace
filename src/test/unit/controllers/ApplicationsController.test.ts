@@ -3,10 +3,16 @@ import { Application, BackendError } from '../../../main/services/Applications';
 import { CATALOGUE, LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
+/** SLC's own Entra resource application, which the instructions are scoped to. */
+const SLC_RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
+
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
   listedApiNames: jest.fn(),
+  tokenScopes: jest.fn().mockResolvedValue({
+    'api-cp-crime-schedulingandlisting-courtschedule': 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
+  }),
 }));
 
 jest.mock('../../../main/services/Applications', () => ({
@@ -28,6 +34,7 @@ const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
 const APPLICATION: Application = {
   id: 'client-1',
   clientId: 'client-1',
+  tenantId: 'tenant-1',
   name: 'Case Viewer',
   secretHint: 'Uc6',
   secretExpiresAt: '2028-10-15T12:00:00',
@@ -238,7 +245,12 @@ describe('ApplicationsController', () => {
 
       expect(Applications.createApplication).toHaveBeenCalledWith(OWNER, DRAFT, CATALOGUE);
       expect(res.view).toBe('applications/new/confirmation');
-      expect(res.data).toEqual({ ...created, accessAttempts: 8, accessRetrySeconds: 15 });
+      expect(res.data).toEqual({
+        ...created,
+        accessAttempts: 8,
+        accessRetrySeconds: 15,
+        publisherId: SLC_RESOURCE_APP_ID,
+      });
       expect(req.session.applicationDraft).toBeUndefined();
     });
 
@@ -302,6 +314,20 @@ describe('ApplicationsController', () => {
       expect(Applications.getApplication).toHaveBeenCalledWith(OWNER, 'client-1');
       expect(res.view).toBe('applications/detail');
       expect(res.data).toMatchObject({ maskedSecret: 'Uc6****', accessAttempts: 8, accessRetrySeconds: 15 });
+    });
+
+    test('the_detail_page_should_carry_the_token_instructions_for_the_application', async () => {
+      const res = mockResponse();
+
+      await controller().detail(forId(), res, jest.fn());
+
+      expect(res.data?.token).toMatchObject({
+        url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
+        clientId: 'client-1',
+        clientSecret: '<client_secret>',
+        scope: `${SLC_RESOURCE_APP_ID}/.default`,
+      });
+      expect(res.data?.slc).toBeUndefined();
     });
 
     test.each([[{ state: 'granted' }], [{ state: 'pending' }], [{ state: 'failed', message: 'Graph refused.' }]])(

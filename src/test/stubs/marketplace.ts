@@ -1,20 +1,34 @@
 import crypto from 'node:crypto';
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
+/** Every application is registered in the one tenant the backend is configured with. */
+export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 
 /** marketplace_api, which is what a short code resolves to. */
-const CATALOGUE: Record<string, { title: string; productId: string; role: string; resourceAppId: string }> = {
+const CATALOGUE: Record<
+  string,
+  { title: string; catalogueName: string; productId: string; role: string; resourceAppId: string }
+> = {
   hearing: {
     title: 'CP Crime Hearing API',
+    catalogueName: 'api-cp-crime-hearing',
     productId: 'cp-crime-hearing',
-    role: 'hearing.read',
+    role: 'app.read',
     resourceAppId: '11111111-1111-1111-1111-111111111111',
   },
   defendant: {
     title: 'Defendant Details',
+    catalogueName: 'api-cp-crime-defendant-details',
     productId: 'cp-crime-defendant-details',
-    role: 'defendant.read',
+    role: 'app.read',
     resourceAppId: '22222222-2222-2222-2222-222222222222',
+  },
+  slc: {
+    title: 'Scheduling and Listing Court Schedule',
+    catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
+    productId: 'try-it-now-cp-crime-schedulingandlisting',
+    role: 'app.read',
+    resourceAppId: '33333333-3333-3333-3333-333333333333',
   },
 };
 
@@ -22,7 +36,7 @@ const CATALOGUE: Record<string, { title: string; productId: string; role: string
 const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
   shortCode,
   title: api.title,
-  catalogueName: `api-cp-crime-${shortCode === 'hearing' ? 'hearing' : 'defendant-details'}`,
+  catalogueName: api.catalogueName,
   productId: api.productId,
   gatewayPath: `amp/${shortCode}`,
   role: api.role,
@@ -103,6 +117,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
 
   const view = ({ clientId, name, appname, secretHint, secretExpiresAt, createdAt }: StubApplication) => ({
     clientId,
+    tenantId: STUB_TENANT_ID,
     name,
     appname,
     secretHint,
