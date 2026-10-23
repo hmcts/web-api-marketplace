@@ -30,17 +30,12 @@ export interface Instructions {
 }
 
 /**
- * Which platform environment this is: sandbox, aat, demo or prod. Read on every use, as
- * entraConfig is, since NODE_ENV is production in all of them and cannot tell them apart.
+ * Where SLC is called in this environment, or undefined where it has no address yet. Each
+ * environment sets SLC_BASE_URL in cnp-flux-config; apiEndpoints.slcBaseUrl is the fallback,
+ * empty everywhere but local development. Read on every use, as entraConfig is.
  */
-function platformEnvironment(): string {
-  return process.env.PLATFORM_ENVIRONMENT || config.get<string>('apiEndpoints.environment');
-}
-
-/** Where SLC is called in this environment, or undefined where it has no address yet. */
 export function slcBaseUrl(): string | undefined {
-  const urls = config.get<Record<string, string>>('apiEndpoints.slcBaseUrls');
-  return urls[platformEnvironment()] || undefined;
+  return process.env.SLC_BASE_URL || config.get<string>('apiEndpoints.slcBaseUrl') || undefined;
 }
 
 /**

@@ -11,7 +11,6 @@ const RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
 /** Stood in only when the marketplace cannot be reached. */
 const CONFIGURED_FALLBACK = '30288840-e345-4543-99ee-f9253d789339';
 const SANDBOX_URL = 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc';
-const DEMO_URL = 'https://sps-api-mgmt.sandbox.demo.hmcts.net/amp/try/slc';
 
 const subscription = (apiName: string, publisherId: string): ApiSubscription => ({
   apiName,
@@ -37,32 +36,39 @@ const application = (apis: ApiSubscription[], tenantId = 'tenant-1'): Applicatio
 });
 
 describe('ApiInstructions', () => {
-  const environment = process.env.PLATFORM_ENVIRONMENT;
+  const configured = process.env.SLC_BASE_URL;
 
   beforeEach(() => {
-    process.env.PLATFORM_ENVIRONMENT = 'sandbox';
+    process.env.SLC_BASE_URL = SANDBOX_URL;
     mockedScopes.mockReset();
     mockedScopes.mockResolvedValue({ [SLC_API_NAME]: `${RESOURCE_APP_ID}/.default` });
   });
 
   afterAll(() => {
-    if (environment === undefined) {
-      delete process.env.PLATFORM_ENVIRONMENT;
+    if (configured === undefined) {
+      delete process.env.SLC_BASE_URL;
     } else {
-      process.env.PLATFORM_ENVIRONMENT = environment;
+      process.env.SLC_BASE_URL = configured;
     }
   });
 
-  test.each([
-    ['sandbox', SANDBOX_URL],
-    ['preview', 'https://sps-api-mgmt.preview.api.hmcts.net/amp/try/slc'],
-    ['aat', 'https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc'],
-    ['demo', DEMO_URL],
-    ['somewhere-else', undefined],
-  ])('the_slc_url_in_%s_should_be_%s', (name, url) => {
-    process.env.PLATFORM_ENVIRONMENT = name;
+  test('the_slc_url_should_be_the_one_this_environment_sets_in_slc_base_url', () => {
+    process.env.SLC_BASE_URL = 'https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc';
 
-    expect(slcBaseUrl()).toBe(url);
+    expect(slcBaseUrl()).toBe('https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc');
+  });
+
+  test('without_slc_base_url_it_should_fall_back_to_config_which_deployed_environments_leave_empty', () => {
+    delete process.env.SLC_BASE_URL;
+
+    // config/test.json, like default.json, has no address: only development.json has one.
+    expect(slcBaseUrl()).toBeUndefined();
+  });
+
+  test('an_empty_slc_base_url_should_mean_no_address', () => {
+    process.env.SLC_BASE_URL = '';
+
+    expect(slcBaseUrl()).toBeUndefined();
   });
 
   test('the_token_request_should_name_the_tenant_client_and_the_apis_own_resource_app', async () => {
@@ -103,7 +109,7 @@ describe('ApiInstructions', () => {
   test('the_slc_instructions_should_be_left_out_without_slc_or_without_a_url_for_the_environment', async () => {
     expect((await instructionsFor(application([RCC]))).slc).toBeUndefined();
 
-    process.env.PLATFORM_ENVIRONMENT = 'somewhere-else';
+    delete process.env.SLC_BASE_URL;
     expect((await instructionsFor(application([SLC]))).slc).toBeUndefined();
   });
 });
