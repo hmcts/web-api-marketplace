@@ -37,7 +37,7 @@ describe('PropertiesVolume', () => {
   });
 
   test('secrets_mounted_from_the_sandbox_vault_should_reach_the_session_config', () => {
-    store.secrets = mounted('apim-sbox');
+    store.secrets = mounted('amp-sbox');
 
     enable('sandbox');
 
@@ -48,7 +48,7 @@ describe('PropertiesVolume', () => {
   });
 
   test('secrets_mounted_from_the_shared_vault_should_reach_the_session_config', () => {
-    store.secrets = mounted('apim');
+    store.secrets = mounted('amp');
 
     enable('aat');
 
@@ -64,7 +64,7 @@ describe('PropertiesVolume', () => {
   });
 
   test('running_in_development_should_not_read_any_volume', () => {
-    store.secrets = mounted('apim-sbox');
+    store.secrets = mounted('amp-sbox');
 
     enable('development');
 
@@ -72,7 +72,7 @@ describe('PropertiesVolume', () => {
   });
 
   test('a_sandbox_vault_should_win_over_an_empty_shared_vault', () => {
-    store.secrets = { apim: {}, 'apim-sbox': mounted('apim-sbox')['apim-sbox'] };
+    store.secrets = { amp: {}, 'amp-sbox': mounted('amp-sbox')['amp-sbox'] };
 
     enable('sandbox');
 
