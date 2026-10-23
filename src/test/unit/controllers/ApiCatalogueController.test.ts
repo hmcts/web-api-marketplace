@@ -148,6 +148,15 @@ describe('ApiCatalogueController', () => {
     expect(res.data?.descriptionParagraphs).toEqual([CATALOGUE[0].description]);
   });
 
+  test('the_owning_team_should_be_the_fixed_one_whatever_team_the_feed_names', async () => {
+    const res = mockResponse();
+
+    await new ApiCatalogueController().detail(anonymous({ params: { name: 'api-one' } }), res, jest.fn());
+
+    expect(CATALOGUE[0].team).toBe('team-one');
+    expect(res.data?.owningTeam).toBe('Crime - Scheduling and Listing');
+  });
+
   test('an_api_with_no_description_anywhere_should_show_none', async () => {
     (getCatalogueApis as jest.Mock).mockResolvedValue([{ name: 'api-one', title: 'API One' }]);
     const res = mockResponse();

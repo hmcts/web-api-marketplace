@@ -15,6 +15,14 @@ import { getSpecDescription, paragraphsOf } from '../services/ApiSpecs';
 const ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 
 /**
+ * Shown as every API's owning team for now. The feed's team is the slug of the GitHub team
+ * in the repository's CODEOWNERS (api-marketplace), which is not the owning team in the
+ * sense the page means. Only two APIs are listed, so this is fixed here until there is a
+ * source for the real owning team, and then it should be read from that instead.
+ */
+const OWNING_TEAM = 'Crime - Scheduling and Listing';
+
+/**
  * The API catalogue, migrated from the GitHub Pages site.
  *
  * The prototype fetched the feed in the browser and filtered it with JavaScript. Here the
@@ -65,6 +73,7 @@ export default class ApiCatalogueController {
     res.render('api-catalogue/detail', {
       api: withTags(api),
       descriptionParagraphs: description ? paragraphsOf(description) : [],
+      owningTeam: OWNING_TEAM,
       ...linksFor(api.name),
     });
   }
