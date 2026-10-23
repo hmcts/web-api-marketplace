@@ -55,11 +55,17 @@ describe('Application instructions', () => {
         'curl --request GET \\',
         `  --url ${slc.courtScheduleUrl} \\`,
         "  --header 'Accept: application/json' \\",
-        "  --header 'Authorization: Bearer &lt;token&gt;'",
+        "  --header 'Authorization: Bearer &lt;token&gt;' \\",
+        "  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'",
       ].join('\n')
     );
     expect(block(html, 'scenarios-request')).toBe(
-      ['curl --request GET \\', `  --url ${slc.scenariosUrl} \\`, "  --header 'Accept: application/json'"].join('\n')
+      [
+        'curl --request GET \\',
+        `  --url ${slc.scenariosUrl} \\`,
+        "  --header 'Accept: application/json' \\",
+        "  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'",
+      ].join('\n')
     );
   });
 
