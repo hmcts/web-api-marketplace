@@ -62,18 +62,6 @@ export async function addLocalRequest(
   return request;
 }
 
-/** Whether a request with that reference was this user's and is now gone. */
-export async function deleteLocalRequest(ownerEmail: string, reference: string): Promise<boolean> {
-  const requests = await listLocalRequests(ownerEmail);
-  const remaining = requests.filter(request => request.reference !== reference);
-
-  if (remaining.length === requests.length) {
-    return false;
-  }
-  await dataStore().set(key(ownerEmail), remaining);
-  return true;
-}
-
 export function statusText(status: string): string {
   return (
     {
