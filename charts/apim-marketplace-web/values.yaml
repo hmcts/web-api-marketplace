@@ -32,7 +32,7 @@ nodejs:
     # external-entra-id) exactly as written, or Entra refuses them.
     ENTRA_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
     ENTRA_POST_LOGOUT_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/
-    # APIM_BASE_URL, the API Management gateway the example calls on an application's page go
+    # AMP_BASE_URL, the API Management gateway the example calls on an application's page go
     # to (the app adds each API's path, e.g. /amp/try/slc), is set per environment: in
     # cnp-flux-config for flux releases and in values.<env>.template.yaml for the pipeline's.
     # Without it the page shows no API calls.

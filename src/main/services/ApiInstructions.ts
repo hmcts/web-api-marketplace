@@ -34,18 +34,18 @@ const SLC_PATH = '/amp/try/slc';
 
 /**
  * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
- * or undefined where it has none yet. Each environment sets APIM_BASE_URL in cnp-flux-config;
- * apiEndpoints.apimBaseUrl is the fallback, empty everywhere but local development. Read on
+ * or undefined where it has none yet. Each environment sets AMP_BASE_URL in cnp-flux-config;
+ * apiEndpoints.ampBaseUrl is the fallback, empty everywhere but local development. Read on
  * every use, as entraConfig is.
  */
-function apimBaseUrl(): string | undefined {
-  const url = process.env.APIM_BASE_URL || config.get<string>('apiEndpoints.apimBaseUrl');
+function ampBaseUrl(): string | undefined {
+  const url = process.env.AMP_BASE_URL || config.get<string>('apiEndpoints.ampBaseUrl');
   return url ? url.replace(/\/+$/, '') : undefined;
 }
 
 /** Where SLC is called in this environment, or undefined where it has no gateway yet. */
 export function slcBaseUrl(): string | undefined {
-  const gateway = apimBaseUrl();
+  const gateway = ampBaseUrl();
   return gateway ? `${gateway}${SLC_PATH}` : undefined;
 }
 

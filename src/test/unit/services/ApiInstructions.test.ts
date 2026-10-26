@@ -10,8 +10,8 @@ const mockedScopes = tokenScopes as jest.MockedFunction<typeof tokenScopes>;
 const RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
 /** Stood in only when the marketplace cannot be reached. */
 const CONFIGURED_FALLBACK = '30288840-e345-4543-99ee-f9253d789339';
-/** The API Management gateway, as an environment sets it in APIM_BASE_URL. */
-const SANDBOX_APIM = 'https://sps-api-mgmt.sandbox.api.hmcts.net';
+/** The API Management gateway, as an environment sets it in AMP_BASE_URL. */
+const SANDBOX_AMP = 'https://sps-api-mgmt.sandbox.api.hmcts.net';
 
 const subscription = (apiName: string, publisherId: string): ApiSubscription => ({
   apiName,
@@ -37,43 +37,43 @@ const application = (apis: ApiSubscription[], tenantId = 'tenant-1'): Applicatio
 });
 
 describe('ApiInstructions', () => {
-  const configured = process.env.APIM_BASE_URL;
+  const configured = process.env.AMP_BASE_URL;
 
   beforeEach(() => {
-    process.env.APIM_BASE_URL = SANDBOX_APIM;
+    process.env.AMP_BASE_URL = SANDBOX_AMP;
     mockedScopes.mockReset();
     mockedScopes.mockResolvedValue({ [SLC_API_NAME]: `${RESOURCE_APP_ID}/.default` });
   });
 
   afterAll(() => {
     if (configured === undefined) {
-      delete process.env.APIM_BASE_URL;
+      delete process.env.AMP_BASE_URL;
     } else {
-      process.env.APIM_BASE_URL = configured;
+      process.env.AMP_BASE_URL = configured;
     }
   });
 
   test('the_slc_url_should_be_the_apim_gateway_this_environment_sets_with_slcs_path_appended', () => {
-    process.env.APIM_BASE_URL = 'https://sps-api-mgmt.aat.api.hmcts.net';
+    process.env.AMP_BASE_URL = 'https://sps-api-mgmt.aat.api.hmcts.net';
 
     expect(slcBaseUrl()).toBe('https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc');
   });
 
   test('a_trailing_slash_on_the_gateway_should_not_double_up', () => {
-    process.env.APIM_BASE_URL = 'https://sps-api-mgmt.aat.api.hmcts.net/';
+    process.env.AMP_BASE_URL = 'https://sps-api-mgmt.aat.api.hmcts.net/';
 
     expect(slcBaseUrl()).toBe('https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc');
   });
 
-  test('without_apim_base_url_it_should_fall_back_to_config_which_deployed_environments_leave_empty', () => {
-    delete process.env.APIM_BASE_URL;
+  test('without_amp_base_url_it_should_fall_back_to_config_which_deployed_environments_leave_empty', () => {
+    delete process.env.AMP_BASE_URL;
 
     // config/test.json, like default.json, has no address: only development.json has one.
     expect(slcBaseUrl()).toBeUndefined();
   });
 
-  test('an_empty_apim_base_url_should_mean_no_address', () => {
-    process.env.APIM_BASE_URL = '';
+  test('an_empty_amp_base_url_should_mean_no_address', () => {
+    process.env.AMP_BASE_URL = '';
 
     expect(slcBaseUrl()).toBeUndefined();
   });
@@ -116,7 +116,7 @@ describe('ApiInstructions', () => {
   test('the_slc_instructions_should_be_left_out_without_slc_or_without_a_url_for_the_environment', async () => {
     expect((await instructionsFor(application([RCC]))).slc).toBeUndefined();
 
-    delete process.env.APIM_BASE_URL;
+    delete process.env.AMP_BASE_URL;
     expect((await instructionsFor(application([SLC]))).slc).toBeUndefined();
   });
 });
