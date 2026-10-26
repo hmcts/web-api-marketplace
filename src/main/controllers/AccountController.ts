@@ -1,13 +1,13 @@
-import { GET, POST, route } from 'awilix-express';
+import { GET, route } from 'awilix-express';
 import { Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
 import { ownerOf } from '../services/Applications';
-import { deleteLocalRequest, listLocalRequests, statusText } from '../services/LocalRequests';
+import { listLocalRequests, statusText } from '../services/LocalRequests';
 import { listProductionRequests } from '../services/ProductionRequests';
-import { RequestSummary, deleteRequest, getRequestsFor, isRequestType } from '../services/Requests';
+import { RequestSummary, getRequestsFor } from '../services/Requests';
 import { SignedInUser } from '../services/SignIn';
 
 const logger = Logger.getLogger('account');
@@ -44,61 +44,12 @@ export default class AccountController {
         href: undefined,
       })),
     ].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-    // Read once and cleared, so the banner appears on the page that follows the delete
-    // and not on every visit afterwards.
-    const notice = req.session.requestNotice;
-    delete req.session.requestNotice;
-
     res.render('account', {
       ...req.i18n?.getDataByLanguage(req.lng)?.account,
       user,
       myRequests: requests.map(request => this.forDisplay(request)),
       couldNotLoad: !result.ok || !production.ok,
-      deleted: notice === 'deleted',
-      deleteFailed: notice === 'deleteFailed',
     });
-  }
-
-  /**
-   * Deletes one of the signed-in user's requests.
-   *
-   * POST, so no link and no prefetcher can delete a request by being followed, and a
-   * redirect afterwards so refreshing the confirmation does not try to delete it again.
-   *
-   * Which request is named by the reference in the body, but whose it is comes from the
-   * session: the backend is told the signed-in user id, never one posted with the form.
-   */
-  @route('/delete-request')
-  @POST()
-  public async remove(req: AppRequest, res: Response): Promise<void> {
-    if (!requireSignIn(req, res)) {
-      return;
-    }
-
-    const user = req.session.user as SignedInUser;
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const reference = String(body.reference ?? '').trim();
-    const type = body.type;
-
-    const deleted = reference !== '' && (await this.deleteFor(user, type, reference));
-
-    req.session.requestNotice = deleted ? 'deleted' : 'deleteFailed';
-    req.session.save(() => res.redirect('/account'));
-  }
-
-  /**
-   * Held here first: a reference this user owns in the data store is deleted there.
-   * Anything else goes to the backend, which checks the owner itself — unless the account
-   * was registered here, which the backend has never heard of.
-   */
-  private async deleteFor(user: SignedInUser, type: unknown, reference: string): Promise<boolean> {
-    if (await deleteLocalRequest(user.email, reference)) {
-      return true;
-    }
-    if (user.local || !isRequestType(type)) {
-      return false;
-    }
-    return deleteRequest(user.id, type, reference);
   }
 
   private async productionRequests(

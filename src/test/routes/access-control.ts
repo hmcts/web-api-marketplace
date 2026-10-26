@@ -3,8 +3,6 @@ import request from 'supertest';
 
 jest.mock('../../main/services/Requests', () => ({
   getRequestsFor: jest.fn().mockResolvedValue({ ok: true, requests: [] }),
-  deleteRequest: jest.fn().mockResolvedValue(true),
-  isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
 }));
 
 import { app } from '../../main/app';
@@ -17,10 +15,7 @@ const signedIn = async () => {
   return agent;
 };
 
-const guarded: [string, string][] = [
-  ['GET', '/account'],
-  ['POST', '/account/delete-request'],
-];
+const guarded: [string, string][] = [['GET', '/account']];
 
 describe('Access control on the form journeys', () => {
   test.each(guarded)('a_signed_out_%s_to_%s_should_be_redirected_to_sign_in', async (method, path) => {
@@ -109,6 +104,16 @@ describe('Access control on the form journeys', () => {
     const agent = await signedIn();
 
     await agent.get('/account/welcome').expect(res => expect(res.status).to.equal(404));
+  });
+
+  test('deleting_a_request_should_not_be_possible_even_when_signed_in', async () => {
+    const agent = await signedIn();
+
+    await agent
+      .post('/account/delete-request')
+      .type('form')
+      .send({ reference: 'PCR-2026-IPCOC1', type: 'PRODUCTION' })
+      .expect(res => expect(res.status).to.equal(404));
   });
 
   test('sign_in_itself_should_stay_reachable_when_signed_out', async () => {
