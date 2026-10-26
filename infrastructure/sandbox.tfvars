@@ -1,1 +1,1 @@
-vault_name = "apim-sbox"
+vault_name = "amp-sbox"

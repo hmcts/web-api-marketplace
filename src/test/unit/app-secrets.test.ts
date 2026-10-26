@@ -20,7 +20,7 @@ describe('Secrets mounted from Key Vault', () => {
       fs.mkdirSync(path.join(mount, name));
       Object.entries(secrets).forEach(([key, value]) => fs.writeFileSync(path.join(mount, name, key), value));
     };
-    vault('apim-sbox', { SESSION_SECRET: 'a-mounted-session-secret' });
+    vault('amp-sbox', { SESSION_SECRET: 'a-mounted-session-secret' });
     vault('kvspsextidsbox', { ENTRA_CLIENT_ID: 'a-mounted-client-id' });
 
     delete process.env.ENTRA_CLIENT_ID;
