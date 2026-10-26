@@ -10,17 +10,17 @@ nodejs:
   # silently ignored.
   autoscaling:
     enabled: false
-  image: 'hmctsprod.azurecr.io/apim/marketplace-web:latest'
-  ingressHost: apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net
+  image: 'hmctsprod.azurecr.io/amp/marketplace-web:latest'
+  ingressHost: amp-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net
   # AMP-1031: App Insights is stubbed for initial onboarding — there is no
-  # azurerm_application_insights resource for the apim product yet, and the
-  # apim-{env} vault holds only the marketplace-POSTGRES-* secrets. Add
+  # azurerm_application_insights resource for the amp product yet, and the
+  # amp-{env} vault holds only the marketplace-POSTGRES-* secrets. Add
   # aadIdentityName + keyVaults here once a connection string exists in the vault
   # AND the managed identity has Key Vault Secrets User on it.
   environment:
     APPLICATIONINSIGHTS_ENABLED: 'false'
-    # In-cluster address of service-api-marketplace (release apim-marketplace, type java).
-    API_URL: http://apim-marketplace-java
+    # In-cluster address of service-api-marketplace (release amp-marketplace, type java).
+    API_URL: http://amp-marketplace-java
     # Sign in is Microsoft Entra External ID. Deployed environments have no Entra defaults:
     # ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET and ENTRA_TENANT_ID are mounted from the tenant's
     # own key vault (kvspsextidsbox in sbox), where hmcts/external-entra-id writes them. The
@@ -30,8 +30,8 @@ nodejs:
     # The endpoints follow from ENTRA_TENANT_ID. Both URIs
     # below must be registered on the app registration (web-api-marketplace in
     # external-entra-id) exactly as written, or Entra refuses them.
-    ENTRA_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
-    ENTRA_POST_LOGOUT_REDIRECT_URI: https://apim-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/
+    ENTRA_REDIRECT_URI: https://amp-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
+    ENTRA_POST_LOGOUT_REDIRECT_URI: https://amp-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/
     # Picks this environment's API addresses (apiEndpoints in config/default.json) for the
     # instructions on an application's page. One with no address there leaves them out.
     PLATFORM_ENVIRONMENT: '{{ .Values.global.environment }}'
