@@ -1,11 +1,5 @@
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
-import {
-  addLocalRequest,
-  deleteLocalRequest,
-  getLocalRequest,
-  listLocalRequests,
-  statusText,
-} from '../../../main/services/LocalRequests';
+import { addLocalRequest, getLocalRequest, statusText } from '../../../main/services/LocalRequests';
 
 describe('LocalRequests', () => {
   beforeEach(() => useDataStore(new MemoryStore()));
@@ -21,15 +15,6 @@ describe('LocalRequests', () => {
 
     expect(await getLocalRequest('a@example.com', request.reference)).toMatchObject({ status: 'SUBMITTED' });
     expect(await getLocalRequest('b@example.com', request.reference)).toBeUndefined();
-    expect(await deleteLocalRequest('b@example.com', request.reference)).toBe(false);
-  });
-
-  test('deleting_should_remove_only_that_request', async () => {
-    const first = await addLocalRequest('a@example.com', 'NEW_API', []);
-    const second = await addLocalRequest('a@example.com', 'NEW_API', []);
-
-    expect(await deleteLocalRequest('a@example.com', first.reference)).toBe(true);
-    expect((await listLocalRequests('a@example.com')).map(request => request.reference)).toEqual([second.reference]);
   });
 
   test.each([

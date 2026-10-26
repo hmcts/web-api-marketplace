@@ -1,19 +1,15 @@
-import { SessionData } from 'express-session';
-
 import AccountController from '../../../main/controllers/AccountController';
 import { mockRequest } from '../mocks/mockRequest';
 import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/Requests', () => ({
   getRequestsFor: jest.fn(),
-  deleteRequest: jest.fn(),
-  isRequestType: (value: unknown) => value === 'SUBSCRIPTION' || value === 'PUBLISH',
 }));
 
 jest.mock('../../../main/services/ProductionRequests', () => ({ listProductionRequests: jest.fn() }));
 
 const { listProductionRequests } = require('../../../main/services/ProductionRequests');
-const { getRequestsFor, deleteRequest } = require('../../../main/services/Requests');
+const { getRequestsFor } = require('../../../main/services/Requests');
 
 const content = { heading: 'Your account', signOutButton: 'Sign out' };
 
@@ -30,8 +26,6 @@ describe('AccountController', () => {
   beforeEach(() => {
     (getRequestsFor as jest.Mock).mockReset();
     (getRequestsFor as jest.Mock).mockResolvedValue({ ok: true, requests: [] });
-    (deleteRequest as jest.Mock).mockReset();
-    (deleteRequest as jest.Mock).mockResolvedValue(true);
     (listProductionRequests as jest.Mock).mockReset();
     (listProductionRequests as jest.Mock).mockResolvedValue([]);
   });
@@ -107,92 +101,9 @@ describe('AccountController', () => {
     expect(res.data?.couldNotLoad).toBe(true);
   });
 
-  describe('deleting a request', () => {
-    const deleting = (body: Record<string, unknown>, session: Partial<SessionData> = { user }) => {
-      const req = mockRequest({ account: content }, session);
-      req.body = body;
-      return req;
-    };
-
-    test('a_signed_out_visitor_should_be_redirected_to_sign_in_rather_than_deleting', async () => {
-      const res = mockResponse();
-
-      await new AccountController().remove(deleting({ reference: request.reference, type: 'SUBSCRIPTION' }, {}), res);
-
-      expect(res.redirected).toBe('/sign-in');
-      expect(deleteRequest).not.toHaveBeenCalled();
-    });
-
-    test('deleting_should_use_the_signed_in_user_and_not_an_id_from_the_form', async () => {
-      const res = mockResponse();
-
-      await new AccountController().remove(
-        deleting({ reference: request.reference, type: 'SUBSCRIPTION', userId: '99' }),
-        res
-      );
-
-      expect(deleteRequest).toHaveBeenCalledWith(user.id, 'SUBSCRIPTION', request.reference);
-      expect(res.redirected).toBe('/account');
-    });
-
-    test('deleting_a_publication_request_should_pass_its_own_type_through', async () => {
-      const res = mockResponse();
-
-      await new AccountController().remove(deleting({ reference: 'PR-2026-E9PDKA', type: 'PUBLISH' }), res);
-
-      expect(deleteRequest).toHaveBeenCalledWith(user.id, 'PUBLISH', 'PR-2026-E9PDKA');
-    });
-
-    test('a_successful_delete_should_be_announced_once_on_the_page_that_follows', async () => {
-      const req = deleting({ reference: request.reference, type: 'SUBSCRIPTION' });
-      const res = mockResponse();
-
-      await new AccountController().remove(req, res);
-      expect(req.session.requestNotice).toBe('deleted');
-
-      const next = mockResponse();
-      await new AccountController().get(req, next);
-
-      expect(next.data?.deleted).toBe(true);
-      // Cleared on the way out, so a refresh does not keep announcing it.
-      expect(req.session.requestNotice).toBeUndefined();
-    });
-
-    test('a_failed_delete_should_say_so_rather_than_claiming_it_worked', async () => {
-      (deleteRequest as jest.Mock).mockResolvedValue(false);
-      const req = deleting({ reference: request.reference, type: 'SUBSCRIPTION' });
-      const res = mockResponse();
-
-      await new AccountController().remove(req, res);
-
-      const next = mockResponse();
-      await new AccountController().get(req, next);
-
-      expect(next.data?.deleteFailed).toBe(true);
-      expect(next.data?.deleted).toBe(false);
-    });
-
-    test('a_missing_reference_should_not_reach_the_backend', async () => {
-      const res = mockResponse();
-
-      await new AccountController().remove(deleting({ type: 'SUBSCRIPTION' }), res);
-
-      expect(deleteRequest).not.toHaveBeenCalled();
-      expect(res.redirected).toBe('/account');
-    });
-
-    test('an_unknown_type_should_not_reach_the_backend', async () => {
-      const res = mockResponse();
-
-      await new AccountController().remove(deleting({ reference: request.reference, type: 'SUPPORT' }), res);
-
-      expect(deleteRequest).not.toHaveBeenCalled();
-    });
-  });
-
   describe('requests held by this service', () => {
     const { MemoryStore, useDataStore } = require('../../../main/modules/store');
-    const { addLocalRequest, listLocalRequests } = require('../../../main/services/LocalRequests');
+    const { addLocalRequest } = require('../../../main/services/LocalRequests');
 
     beforeEach(() => useDataStore(new MemoryStore()));
 
@@ -246,28 +157,6 @@ describe('AccountController', () => {
 
       expect(getRequestsFor).not.toHaveBeenCalled();
       expect(res.data?.couldNotLoad).toBe(false);
-    });
-
-    test('deleting_one_should_remove_it_here_without_asking_the_backend', async () => {
-      const held = await addLocalRequest(user.email, 'NEW_API', []);
-      const req = mockRequest({ account: content }, { user: user as never });
-      req.body = { reference: held.reference, type: 'NEW_API' };
-
-      await new AccountController().remove(req, mockResponse());
-
-      expect(req.session.requestNotice).toBe('deleted');
-      expect(deleteRequest).not.toHaveBeenCalled();
-      expect(await listLocalRequests(user.email)).toEqual([]);
-    });
-
-    test('an_account_registered_here_should_never_delete_through_the_backend', async () => {
-      const req = mockRequest({ account: content }, { user: { ...user, local: true } as never });
-      req.body = { reference: 'AR-2026-IPCOC1', type: 'SUBSCRIPTION' };
-
-      await new AccountController().remove(req, mockResponse());
-
-      expect(req.session.requestNotice).toBe('deleteFailed');
-      expect(deleteRequest).not.toHaveBeenCalled();
     });
   });
 });

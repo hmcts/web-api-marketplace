@@ -96,59 +96,16 @@ describe('Account page', () => {
     expect(html).not.toContain('You have not submitted any requests yet');
   });
 
-  test('each_listed_request_should_offer_a_delete_that_posts_its_reference_and_type', () => {
+  test('a_listed_request_should_have_no_delete_button_and_the_table_no_action_column', () => {
     const myRequests = [
-      { reference: 'AR-2026-IPCOC1', type: 'SUBSCRIPTION', submittedOn: '3 September 2026', status: 'NEW' },
-      { reference: 'PR-2026-E9PDKA', type: 'PUBLISH', submittedOn: '2 September 2026', status: 'NEW' },
+      { reference: 'PCR-2026-IPCOC1', type: 'PRODUCTION', submittedOn: '3 September 2026', status: 'Submitted' },
     ];
 
     const html = env.render('account.njk', { ...i18n, user, myRequests });
 
-    expect(html).toContain('<form method="post" action="/account/delete-request"');
-    expect(html).toContain('name="reference" value="AR-2026-IPCOC1"');
-    expect(html).toContain('name="type" value="SUBSCRIPTION"');
-    expect(html).toContain('name="reference" value="PR-2026-E9PDKA"');
-    expect(html).toContain('name="type" value="PUBLISH"');
-    expect(html).toContain('id="delete-1"');
-    expect(html).toContain('id="delete-2"');
-  });
-
-  test('a_delete_button_should_name_the_reference_for_a_screen_reader', () => {
-    const myRequests = [
-      { reference: 'AR-2026-IPCOC1', type: 'SUBSCRIPTION', submittedOn: '3 September 2026', status: 'NEW' },
-    ];
-
-    const html = env.render('account.njk', { ...i18n, user, myRequests });
-
-    // "Delete" alone is the same label on every row, so the reference goes with it.
-    expect(html).toContain('<span class="govuk-visually-hidden"> AR-2026-IPCOC1</span>');
-  });
-
-  test('a_page_with_no_requests_should_offer_nothing_to_delete', () => {
-    const html = env.render('account.njk', { ...i18n, user });
-
+    expect(html).toContain('PCR-2026-IPCOC1');
     expect(html).not.toContain('/account/delete-request');
-  });
-
-  test('a_deleted_request_should_be_confirmed_in_a_banner', () => {
-    const html = env.render('account.njk', { ...i18n, user, deleted: true });
-
-    expect(html).toContain('id="request-deleted"');
-    expect(html).toContain(i18n.requests.deleted);
-    expect(html).not.toContain('id="request-delete-failed"');
-  });
-
-  test('a_failed_delete_should_be_reported_rather_than_passing_silently', () => {
-    const html = env.render('account.njk', { ...i18n, user, deleteFailed: true });
-
-    expect(html).toContain('id="request-delete-failed"');
-    expect(html).toContain(i18n.requests.deleteFailed);
-    expect(html).not.toContain('id="request-deleted"');
-  });
-
-  test('an_ordinary_visit_should_show_no_banner_at_all', () => {
-    const html = env.render('account.njk', { ...i18n, user });
-
-    expect(html).not.toContain('govuk-notification-banner');
+    expect(html).not.toContain('govuk-button--warning');
+    expect(html).not.toContain('>Action<');
   });
 });
