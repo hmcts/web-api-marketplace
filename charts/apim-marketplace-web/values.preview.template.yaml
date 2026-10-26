@@ -4,7 +4,7 @@ nodejs:
   # in is unavailable, rather than refusing to start for want of ENTRA_* settings.
   environment:
     ENTRA_ENABLED: 'false'
-    AMP_BASE_URL: https://sps-api-mgmt.preview.api.hmcts.net
+    APIM_BASE_URL: https://sps-api-mgmt.preview.api.hmcts.net
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}

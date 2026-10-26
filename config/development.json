@@ -7,6 +7,6 @@
     "postLogoutRedirectUri": "https://localhost:3344/"
   },
   "apiEndpoints": {
-    "ampBaseUrl": "https://sps-api-mgmt.sandbox.api.hmcts.net"
+    "apimBaseUrl": "https://sps-api-mgmt.sandbox.api.hmcts.net"
   }
 }
