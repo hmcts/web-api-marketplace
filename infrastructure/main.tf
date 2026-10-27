@@ -8,8 +8,9 @@ locals {
     tomap({ "Team Contact" = var.team_contact })
   )
 
+  # Vault and resource group are created by service-api-marketplace, which must apply first.
   vault_name           = var.vault_name != "" ? var.vault_name : "${var.product}-${var.env}"
-  vault_resource_group = "${var.product}-shared-${var.env}"
+  vault_resource_group = "${var.product}-marketplace-${var.env}"
 }
 
 module "redis_cache" {
