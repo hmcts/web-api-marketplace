@@ -1,4 +1,7 @@
 nodejs:
+  # Entra will not take a wildcard redirect URI, so no preview address can be registered.
+  environment:
+    ENTRA_ENABLED: 'false'
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}
