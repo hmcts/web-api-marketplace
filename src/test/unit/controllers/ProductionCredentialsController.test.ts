@@ -13,10 +13,15 @@ jest.mock('../../../main/services/Applications', () => ({
 jest.mock('../../../main/services/ProductionRequests', () => ({
   submitProductionRequest: jest.fn(),
   getProductionRequest: jest.fn(),
+  listProductionRequests: jest.fn(),
 }));
 
 const { listApplications } = require('../../../main/services/Applications');
-const { submitProductionRequest, getProductionRequest } = require('../../../main/services/ProductionRequests');
+const {
+  submitProductionRequest,
+  getProductionRequest,
+  listProductionRequests,
+} = require('../../../main/services/ProductionRequests');
 
 const STORED = {
   reference: 'PCR-ABCD2345',
@@ -67,6 +72,7 @@ describe('ProductionCredentialsController', () => {
   beforeEach(() => {
     useDataStore(new MemoryStore());
     (listApplications as jest.Mock).mockReset().mockResolvedValue([APPLICATION]);
+    (listProductionRequests as jest.Mock).mockReset().mockResolvedValue([]);
     applicationId = APPLICATION.id;
   });
 
@@ -137,6 +143,71 @@ describe('ProductionCredentialsController', () => {
 
     expect(res.statusCode).toBe(400);
     expect(Object.values(res.data?.errorFor as object).join(' ')).toContain(message);
+  });
+
+  describe('one request per application', () => {
+    const EXISTING = { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '', clientId: 'client-1' };
+
+    test('an_application_that_already_has_a_request_should_not_be_offered', async () => {
+      (listProductionRequests as jest.Mock).mockResolvedValue([EXISTING]);
+      const res = mockResponse();
+
+      await controller().form(asUser(), res);
+
+      expect(res.data?.applicationItems).toEqual([]);
+    });
+
+    test('a_request_for_an_application_that_was_deleted_should_not_hide_anything', async () => {
+      (listProductionRequests as jest.Mock).mockResolvedValue([{ ...EXISTING, clientId: null }]);
+      const res = mockResponse();
+
+      await controller().form(asUser(), res);
+
+      expect(res.data?.applicationItems).toHaveLength(1);
+    });
+
+    test('asking_again_from_a_stale_page_should_be_refused_by_name', async () => {
+      (listProductionRequests as jest.Mock).mockResolvedValue([EXISTING]);
+      const res = mockResponse();
+
+      await controller().save(asUser({ body: answers(applicationId) }), res);
+
+      expect(res.statusCode).toBe(400);
+      expect((res.data?.errorFor as Record<string, string>).application).toBe(
+        'Tracker already has a production access request'
+      );
+    });
+
+    test('requests_that_cannot_be_read_should_leave_the_form_usable_rather_than_block_it', async () => {
+      (listProductionRequests as jest.Mock).mockRejectedValue(new Error('down'));
+      const res = mockResponse();
+
+      await controller().form(asUser(), res);
+
+      expect(res.data?.applicationItems).toHaveLength(1);
+    });
+
+    test('a_duplicate_the_backend_catches_should_say_so_rather_than_invite_a_retry', async () => {
+      (submitProductionRequest as jest.Mock).mockRejectedValue(
+        new BackendError('Tracker already has a production access request.', 409)
+      );
+      const res = mockResponse();
+
+      await controller().submit(asUser({ session: { productionDraft: answers(applicationId) } }), res);
+
+      expect(res.statusCode).toBe(409);
+      expect(res.data?.error).toBe('Tracker already has a production access request.');
+    });
+
+    test('a_backend_that_is_down_should_still_invite_a_retry', async () => {
+      (submitProductionRequest as jest.Mock).mockRejectedValue(new BackendError('Could not reach the backend'));
+      const res = mockResponse();
+
+      await controller().submit(asUser({ session: { productionDraft: answers(applicationId) } }), res);
+
+      expect(res.statusCode).toBe(502);
+      expect(res.data?.error).toContain('Try again in a few minutes');
+    });
   });
 
   test('valid_answers_should_be_held_and_shown_for_checking', async () => {

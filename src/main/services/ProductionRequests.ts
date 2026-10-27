@@ -4,11 +4,12 @@ export interface ProductionRequestSummary {
   reference: string;
   status: string;
   submittedAt: string;
+  /** Null once the application it was made for has been deleted. */
+  clientId: string | null;
+  applicationName: string;
 }
 
 export interface ProductionRequestDetail extends ProductionRequestSummary {
-  applicationName: string;
-  clientId: string | null;
   organisation: string;
   goLiveDate: string;
   callVolume: string;

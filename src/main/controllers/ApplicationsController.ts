@@ -25,6 +25,7 @@ import {
   validateApis,
   validateName,
 } from '../services/Applications';
+import { ProductionRequestSummary, listProductionRequests } from '../services/ProductionRequests';
 import { SignedInUser } from '../services/SignIn';
 import { FieldError, toAnswerList, toAnswerText } from '../services/answers';
 
@@ -203,6 +204,7 @@ export default class ApplicationsController {
     res.render('applications/detail', {
       application,
       maskedSecret: maskSecret(application.secretHint),
+      productionRequest: await this.productionRequestFor(req, application),
       notice: takeNotice(req),
       ...this.accessData(),
       ...(await instructionsFor(application)),
@@ -394,6 +396,23 @@ export default class ApplicationsController {
     }
     logger.error(`Applications backend call failed: ${(error as Error).message}`);
     res.status(503).render('applications/unavailable');
+  }
+
+  /**
+   * The production access request this application already has, if any. One per application, so
+   * the page offers to show that one rather than to ask again.
+   */
+  private async productionRequestFor(
+    req: AppRequest,
+    application: Application
+  ): Promise<ProductionRequestSummary | undefined> {
+    try {
+      const requests = await listProductionRequests(this.owner(req));
+      return requests.find(request => request.clientId === application.clientId);
+    } catch (error) {
+      logger.error(`Could not look for a production request: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   private accessData(): Record<string, unknown> {

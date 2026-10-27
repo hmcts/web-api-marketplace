@@ -4,13 +4,14 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
-import { Application, listApplications, ownerOf } from '../services/Applications';
+import { Application, BackendError, listApplications, ownerOf } from '../services/Applications';
 import { statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import {
   ProductionRequestDetail,
   ProductionRequestSubmission,
   getProductionRequest,
+  listProductionRequests,
   submitProductionRequest,
 } from '../services/ProductionRequests';
 import { SignedInUser } from '../services/SignIn';
@@ -65,11 +66,14 @@ export default class ProductionCredentialsController {
 
     const user = req.session.user as SignedInUser;
     const applications = await this.applications(user);
+    const requested = await this.alreadyRequested(user);
     const answers = this.toAnswers(req.body as Record<string, unknown>);
-    const errors = this.validate(answers, applications);
+    const errors = this.validate(answers, applications, requested);
 
     if (errors.length) {
-      res.status(400).render('production-credentials/form', await this.formData(user, answers, errors, applications));
+      res
+        .status(400)
+        .render('production-credentials/form', await this.formData(user, answers, errors, applications, requested));
       return;
     }
 
@@ -105,10 +109,11 @@ export default class ProductionCredentialsController {
 
     const user = req.session.user as SignedInUser;
     const applications = await this.applications(user);
+    const requested = await this.alreadyRequested(user);
     const draft = req.session.productionDraft;
 
-    // Checked again: the application chosen may have been deleted since in another tab.
-    if (!draft || this.validate(draft, applications).length) {
+    // Checked again: the application chosen may have been deleted, or asked for in another tab.
+    if (!draft || this.validate(draft, applications, requested).length) {
       res.redirect('/account/production-credentials');
       return;
     }
@@ -134,9 +139,14 @@ export default class ProductionCredentialsController {
       req.session.save(() => res.render('production-credentials/confirmation', { reference: request.reference }));
     } catch (error) {
       logger.error(`Production credentials request could not be stored: ${(error as Error).message}`);
-      res.status(502).render('production-credentials/check-answers', {
+      // A request made since this one was drafted, in another tab or by a colleague: saying
+      // "try again in a few minutes" would send them round a loop that cannot end.
+      const duplicate = error instanceof BackendError && error.status === 409;
+      res.status(duplicate ? 409 : 502).render('production-credentials/check-answers', {
         rows,
-        error: 'Your request could not be submitted. Try again in a few minutes.',
+        error: duplicate
+          ? (error as BackendError).message
+          : 'Your request could not be submitted. Try again in a few minutes.',
       });
     }
   }
@@ -177,12 +187,18 @@ export default class ProductionCredentialsController {
     };
   }
 
-  private validate(answers: Answers, applications: Application[]): FieldError[] {
+  private validate(answers: Answers, applications: Application[], requested: Set<string>): FieldError[] {
     const errors: FieldError[] = [];
     const text = (name: string) => (typeof answers[name] === 'string' ? (answers[name] as string) : '');
 
-    if (!applications.some(application => application.id === text('application'))) {
+    const chosen = applications.find(application => application.id === text('application'));
+    if (!chosen) {
       errors.push({ name: 'application', text: 'Select the application you need production credentials for' });
+    } else if (requested.has(chosen.clientId)) {
+      errors.push({
+        name: 'application',
+        text: `${chosen.name} already has a production access request`,
+      });
     }
     if (!text('organisation')) {
       errors.push({ name: 'organisation', text: 'Enter your organisation or team name' });
@@ -235,6 +251,20 @@ export default class ProductionCredentialsController {
     } catch (error) {
       logger.error(`Could not list the applications for the form: ${(error as Error).message}`);
       return [];
+    }
+  }
+
+  /**
+   * The applications that already have a request, by client id. One request per application, so
+   * these cannot be asked for again - the form leaves them out and validation refuses them.
+   */
+  private async alreadyRequested(user: SignedInUser): Promise<Set<string>> {
+    try {
+      const requests = await listProductionRequests(ownerOf(user));
+      return new Set(requests.map(request => request.clientId).filter((id): id is string => !!id));
+    } catch (error) {
+      logger.error(`Could not list the production requests for the form: ${(error as Error).message}`);
+      return new Set();
     }
   }
 
@@ -314,15 +344,18 @@ export default class ProductionCredentialsController {
     user: SignedInUser,
     answers: Answers,
     errors: FieldError[],
-    applications?: Application[]
+    applications?: Application[],
+    requested?: Set<string>
   ): Promise<Record<string, unknown>> {
     const owned = applications ?? (await this.applications(user));
+    const alreadyRequested = requested ?? (await this.alreadyRequested(user));
+    const offered = owned.filter(application => !alreadyRequested.has(application.clientId));
 
     return {
       answers,
       errors,
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      applicationItems: owned.map(application => ({
+      applicationItems: offered.map(application => ({
         value: application.id,
         text: application.name,
         hint: {
