@@ -18,6 +18,7 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
 jest.mock('../../../main/services/Applications', () => ({
   ...jest.requireActual('../../../main/services/Applications'),
   listApplications: jest.fn(),
+  getAllowance: jest.fn(),
   getApplication: jest.fn(),
   createApplication: jest.fn(),
   grantAccess: jest.fn(),
@@ -31,6 +32,9 @@ const Applications = require('../../../main/services/Applications');
 
 const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
 const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
+const AT_LIMIT = { maxPerUser: 5, count: 5, canCreate: false };
+const LIMIT_MESSAGE =
+  'You can have up to 5 applications. Delete an application you no longer need before you add another.';
 const APPLICATION: Application = {
   id: 'client-1',
   clientId: 'client-1',
@@ -61,6 +65,7 @@ describe('ApplicationsController', () => {
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
     (listedApiNames as jest.Mock).mockReturnValue([]);
     Applications.getApplication.mockResolvedValue(APPLICATION);
+    Applications.getAllowance.mockResolvedValue({ maxPerUser: 5, count: 1, canCreate: true });
   });
 
   describe('signed out', () => {
@@ -104,6 +109,27 @@ describe('ApplicationsController', () => {
       expect(req.session.notice).toBeUndefined();
     });
 
+    test('at_the_limit_the_list_should_say_so_in_place_of_the_add_button', async () => {
+      Applications.listApplications.mockResolvedValue([APPLICATION]);
+      Applications.getAllowance.mockResolvedValue(AT_LIMIT);
+      const res = mockResponse();
+
+      await controller().list(asUser(), res);
+
+      expect(res.data?.atLimit).toBe(LIMIT_MESSAGE);
+    });
+
+    test('an_allowance_the_backend_cannot_give_should_still_list_and_offer_the_button', async () => {
+      Applications.listApplications.mockResolvedValue([APPLICATION]);
+      Applications.getAllowance.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+
+      await controller().list(asUser(), res);
+
+      expect(res.view).toBe('applications/index');
+      expect(res.data?.atLimit).toBeUndefined();
+    });
+
     test('a_backend_that_cannot_be_reached_should_say_so', async () => {
       Applications.listApplications.mockRejectedValue(new BackendError('down'));
       const res = mockResponse();
@@ -127,13 +153,28 @@ describe('ApplicationsController', () => {
   });
 
   describe('creating', () => {
-    test('the_intro_should_clear_any_earlier_answers', () => {
+    test('the_intro_should_clear_any_earlier_answers', async () => {
       const req = asUser({ session: { applicationDraft: DRAFT } });
 
-      controller().intro(req, mockResponse());
+      await controller().intro(req, mockResponse());
 
       expect(req.session.applicationDraft).toBeUndefined();
     });
+
+    test.each(['intro', 'details'] as const)(
+      'at_the_limit_%s_should_send_back_to_the_list_with_the_message',
+      async page => {
+        Applications.getAllowance.mockResolvedValue(AT_LIMIT);
+        const res = mockResponse();
+        const req = asUser();
+
+        await controller()[page](req, res);
+
+        expect(res.view).toBeUndefined();
+        expect(res.redirected).toBe('/account/applications');
+        expect(req.session.notice).toEqual({ success: false, title: 'Important', text: LIMIT_MESSAGE });
+      }
+    );
 
     test('a_name_that_breaks_the_rules_should_be_shown_again_with_the_error', () => {
       const res = mockResponse();
@@ -276,6 +317,18 @@ describe('ApplicationsController', () => {
       expect(res.statusCode).toBe(400);
       expect(res.view).toBe('applications/new/details');
       expect(res.data?.errorFor).toEqual({ name: shown });
+      expect(req.session.applicationDraft).toEqual(DRAFT);
+    });
+
+    test('a_403_from_the_backend_should_send_back_to_the_list_with_its_message', async () => {
+      Applications.createApplication.mockRejectedValue(new BackendError(LIMIT_MESSAGE, 403));
+      const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
+
+      await controller().create(req, res);
+
+      expect(res.redirected).toBe('/account/applications');
+      expect(req.session.notice).toEqual({ success: false, title: 'Important', text: LIMIT_MESSAGE });
       expect(req.session.applicationDraft).toEqual(DRAFT);
     });
 

@@ -100,6 +100,21 @@ export function maskSecret(hint: string): string {
   return `${hint}****`;
 }
 
+export interface Allowance {
+  maxPerUser: number;
+  count: number;
+  canCreate: boolean;
+}
+
+export function atLimitMessage(maxPerUser: number): string {
+  return `You can have up to ${maxPerUser} applications. Delete an application you no longer need before you add another.`;
+}
+
+/** The backend refuses a create past the cap regardless; this lets the pages say so before anyone starts. */
+export async function getAllowance(owner: Owner): Promise<Allowance> {
+  return callBackend<Allowance>(owner, { method: 'GET', url: '/applications/allowance' });
+}
+
 export async function listApplications(owner: Owner): Promise<Application[]> {
   const found = await callBackend<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
   return Promise.all(found.map(withLinks));

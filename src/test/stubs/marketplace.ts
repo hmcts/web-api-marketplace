@@ -78,6 +78,8 @@ export interface StubMarketplace {
   refuseRoles(status: number): void;
   /** Subscription keys cannot be created, as when APIM is unreachable. */
   failSubscriptions(status: number): void;
+  /** The most applications one user may hold, as applications.max-per-user sets it. 5 unless changed. */
+  limitApplications(maxPerUser: number): void;
   reset(): void;
 }
 
@@ -97,6 +99,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
   let notAssignable = 0;
   let refuseRolesWith: number | undefined;
   let failSubscriptionsWith: number | undefined;
+  let maxPerUser = 5;
 
   const state: StubMarketplace = {
     applications,
@@ -105,6 +108,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     roleNotAssignableFor: times => (notAssignable = times),
     refuseRoles: status => (refuseRolesWith = status),
     failSubscriptions: status => (failSubscriptionsWith = status),
+    limitApplications: max => (maxPerUser = max),
     reset: () => {
       applications.clear();
       productionRequests.clear();
@@ -112,6 +116,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       notAssignable = 0;
       refuseRolesWith = undefined;
       failSubscriptionsWith = undefined;
+      maxPerUser = 5;
     },
   };
 
@@ -209,8 +214,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       const [, clientId, roles] = applicationPath;
       const owned = clientId ? applications.get(decodeURIComponent(clientId)) : undefined;
       const mine = owned?.owner === user ? owned : undefined;
+      const held = [...applications.values()].filter(application => application.owner === user).length;
 
-      if (!clientId && method === 'GET') {
+      if (clientId === 'allowance' && !roles && method === 'GET') {
+        json(200, { maxPerUser, count: held, canCreate: held < maxPerUser });
+      } else if (!clientId && method === 'GET') {
         json(200, [...applications.values()].filter(application => application.owner === user).map(view));
       } else if (!clientId && method === 'POST') {
         const request = JSON.parse(body || '{}') as { name?: string; apis?: string[] };
@@ -220,6 +228,10 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
           json(400, { error: 'Use letters, digits and spaces only, 8 to 50 characters.' });
         } else if ([...applications.values()].some(a => a.owner === user && a.appname === appname)) {
           json(409, { error: `You already have an application called ${name}.` });
+        } else if (held >= maxPerUser) {
+          json(403, {
+            error: `You can have up to ${maxPerUser} applications. Delete an application you no longer need before you add another.`,
+          });
         } else {
           const secret = `${crypto.randomBytes(2).toString('hex').slice(0, 3)}8Q~${crypto.randomBytes(30).toString('base64url').slice(0, 34)}`;
           const created: StubApplication = {

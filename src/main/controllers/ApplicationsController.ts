@@ -13,8 +13,10 @@ import {
   ApplicationDraft,
   BackendError,
   Owner,
+  atLimitMessage,
   createApplication,
   deleteApplication,
+  getAllowance,
   getApplication,
   grantAccess,
   listApplications,
@@ -46,15 +48,15 @@ export default class ApplicationsController {
       this.backendFailed(req, res, error);
       return;
     }
-    res.render('applications/index', { notice: takeNotice(req), applications });
+    res.render('applications/index', { notice: takeNotice(req), applications, atLimit: await this.atLimit(req) });
   }
 
   // Registered before /:id, so "new" is never taken for a client ID.
 
   @route('/new')
   @GET()
-  public intro(req: AppRequest, res: Response): void {
-    if (!requireSignIn(req, res)) {
+  public async intro(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res) || (await this.refusedAtLimit(req, res))) {
       return;
     }
     delete req.session.applicationDraft;
@@ -63,8 +65,8 @@ export default class ApplicationsController {
 
   @route('/new/details')
   @GET()
-  public details(req: AppRequest, res: Response): void {
-    if (!requireSignIn(req, res)) {
+  public async details(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res) || (await this.refusedAtLimit(req, res))) {
       return;
     }
     res.render('applications/new/details', this.detailsData(req.session.applicationDraft ?? {}, []));
@@ -174,6 +176,10 @@ export default class ApplicationsController {
     try {
       created = await createApplication(this.owner(req), draft as Required<ApplicationDraft>, catalogue);
     } catch (error) {
+      if (error instanceof BackendError && error.status === 403) {
+        this.sendBackAtLimit(req, res, error.message);
+        return;
+      }
       if (error instanceof BackendError && (error.status === 400 || error.status === 409)) {
         const message = error.status === 409 ? `You already have an application called ${draft.name}` : error.message;
         res.status(400).render('applications/new/details', this.detailsData(draft, [{ name: 'name', text: message }]));
@@ -385,6 +391,30 @@ export default class ApplicationsController {
       this.backendFailed(req, res, error);
       return undefined;
     }
+  }
+
+  /** The cap message when the caller has reached it. Undefined below it, or when the backend cannot say: it enforces the cap on create anyway. */
+  private async atLimit(req: AppRequest): Promise<string | undefined> {
+    try {
+      const allowance = await getAllowance(this.owner(req));
+      return allowance.canCreate ? undefined : atLimitMessage(allowance.maxPerUser);
+    } catch (error) {
+      logger.warn(`Could not read the application allowance: ${(error as Error).message}`);
+      return undefined;
+    }
+  }
+
+  private async refusedAtLimit(req: AppRequest, res: Response): Promise<boolean> {
+    const message = await this.atLimit(req);
+    if (message) {
+      this.sendBackAtLimit(req, res, message);
+    }
+    return Boolean(message);
+  }
+
+  private sendBackAtLimit(req: AppRequest, res: Response, text: string): void {
+    req.session.notice = { success: false, title: 'Important', text };
+    req.session.save(() => res.redirect('/account/applications'));
   }
 
   private backendFailed(req: AppRequest, res: Response, error: unknown): void {

@@ -196,6 +196,23 @@ describe('Consumer onboarding journey', () => {
       expect(stubEntra().marketplace.applications.size).to.equal(1);
     });
 
+    test('at_the_limit_the_journey_should_be_closed_with_the_reason', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+      stubEntra().marketplace.limitApplications(2);
+      await createdApplication(agent, 'Case tracker');
+      await createdApplication(agent, 'Court lists');
+      const reason =
+        'You can have up to 2 applications. Delete an application you no longer need before you add another.';
+
+      await agent.get('/account/applications').expect(res => {
+        expect(res.text).to.contain(reason);
+        expect(res.text).not.to.contain('id="add-application"');
+      });
+      await agent.get('/account/applications/new').expect(302).expect('Location', '/account/applications');
+      await agent.get('/account/applications').expect(res => expect(res.text).to.contain('id="notice"'));
+      expect(stubEntra().marketplace.applications.size).to.equal(2);
+    });
+
     test('access_should_be_retried_until_entra_can_assign_the_role', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);

@@ -4,8 +4,10 @@ import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import {
   Application,
   BackendError,
+  atLimitMessage,
   createApplication,
   deleteApplication,
+  getAllowance,
   getApplication,
   grantAccess,
   listApplications,
@@ -204,6 +206,19 @@ describe('Applications', () => {
   });
 
   describe('reading', () => {
+    test('the_allowance_should_come_from_the_backend_for_the_caller', async () => {
+      answer({ 'GET /applications/allowance': () => ok({ maxPerUser: 5, count: 2, canCreate: true }) });
+
+      expect(await getAllowance(OWNER)).toEqual({ maxPerUser: 5, count: 2, canCreate: true });
+      expect(call(0).headers).toEqual({ requestingUserId: OWNER.oid });
+    });
+
+    test('the_limit_message_should_name_the_cap', () => {
+      expect(atLimitMessage(3)).toBe(
+        'You can have up to 3 applications. Delete an application you no longer need before you add another.'
+      );
+    });
+
     test('the_list_should_carry_the_apis_kept_for_each_application', async () => {
       answer({
         'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
