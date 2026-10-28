@@ -7,7 +7,7 @@ const logger = Logger.getLogger('api-catalogue');
 
 // The feed is read from raw.githubusercontent.com rather than hmcts.github.io, because the
 // cluster egress firewall resets connections to hmcts.github.io.
-// TODO: fetch the catalogue from the developer portal instead of the amp-catalog repository.
+// Fetch the catalogue from the developer portal instead of the amp-catalog repository.
 export const catalogueUrl: string = process.env.CATALOGUE_URL || config.get('catalogue.url');
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
