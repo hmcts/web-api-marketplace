@@ -37,7 +37,7 @@ describe('cookie-preferences bundle', () => {
 
     expect(manager.init).toHaveBeenCalledWith(
       expect.objectContaining({
-        userPreferences: { cookieName: 'amp-cookie-preferences' },
+        userPreferences: { cookieName: 'apim-cookie-preferences' },
         cookieManifest: expect.arrayContaining([
           expect.objectContaining({
             categoryName: 'essential',
