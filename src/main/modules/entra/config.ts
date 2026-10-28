@@ -106,9 +106,10 @@ export function assertEntraConfigured(): void {
     [
       `Cannot start: ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not set.`,
       '',
-      'Locally only the secret is needed — everything else defaults to the HMCTS sandbox tenant:',
+      'Locally the client ID and the secret are needed; the endpoints default to the sandbox tenant:',
       '',
-      '  export ENTRA_CLIENT_SECRET=...   # from the Entra app registration',
+      '  export ENTRA_CLIENT_ID=...       # the app registration the secret belongs to',
+      '  export ENTRA_CLIENT_SECRET=...   # its secret value, not the secret ID',
       '',
       'Or read it from Key Vault: set ENTRA_KEY_VAULT and ENTRA_KEY_VAULT_SECRET.',
       '',

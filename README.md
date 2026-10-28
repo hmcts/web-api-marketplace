@@ -58,15 +58,17 @@ nothing is written to a file:
 
 ```bash
 az login   # once; you must be a reader of the secret
+export ENTRA_CLIENT_ID=...   # the app registration the secret belongs to
 export ENTRA_KEY_VAULT=kvspsextidsbox
 export ENTRA_KEY_VAULT_SECRET=entra-app-web-api-marketplace-secret
 yarn start:dev
 ```
 
-`config/development.json` signs in as `web-api-marketplace` (`8d56b09c-…`), the app
-registration hmcts/external-entra-id manages in the sandbox tenant and whose secret that is.
-The client ID and the secret must belong to the same app registration, or Entra answers
-`AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
+`ENTRA_CLIENT_ID` has no default: give the app registration the secret belongs to. The two
+must be from the same registration, or Entra answers `AADSTS7000215` (invalid client secret),
+naming the client ID rather than the secret. The registrations are managed in
+hmcts/external-entra-id (`tenants/sbox/config/apps.yaml`); the sandbox deployment reads both
+from `kvspsextidsbox`. An `ENTRA_CLIENT_SECRET` that is already set wins.
 
 The server refuses to start without `ENTRA_CLIENT_SECRET`, unless `BYPASS_ENTRA` is on.
 Export it; do not put it in a file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
@@ -220,7 +222,7 @@ These are known gaps from the initial AMP-1031 onboarding, not oversights:
   no `azurerm_application_insights` resource for the `apim` product, and the `apim-{env}`
   vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
   the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
-  and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
+  and `keyVaults` back to `charts/amp-marketplace-web/values.yaml`.
 - **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`):
   `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
   where hmcts/external-entra-id writes them, and read with the pod's workload identity

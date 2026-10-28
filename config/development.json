@@ -1,6 +1,5 @@
 {
   "entra": {
-    "clientId": "8d56b09c-7e56-4bbb-8aa7-b26e1fc67969",
     "authorizeEndpoint": "https://hmctsextsbox.ciamlogin.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/authorize",
     "tokenEndpoint": "https://hmctsextsbox.ciamlogin.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/token",
     "redirectUri": "https://localhost:3344/auth/callback",
