@@ -42,7 +42,7 @@
     }
   },
   "catalogue": {
-    "url": "https://hmcts.github.io/amp-catalog/apis.json",
+    "url": "https://raw.githubusercontent.com/hmcts/amp-catalog/main/docs/apis.json",
     "listedApis": ["api-cp-crime-schedulingandlisting-courtschedule", "api-cp-refdata-courthearing-courthouses"]
   },
   "apiEndpoints": {
