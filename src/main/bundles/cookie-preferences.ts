@@ -40,7 +40,7 @@ cookieManager.on('UserPreferencesSaved', preferences => {
 
 const config = {
   userPreferences: {
-    cookieName: 'amp-cookie-preferences',
+    cookieName: 'apim-cookie-preferences',
   },
   cookieManifest: [
     {
