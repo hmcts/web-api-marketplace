@@ -29,18 +29,31 @@ export interface Instructions {
   slc?: SlcInstructions;
 }
 
+/** Where SLC sits on the API Management gateway. */
+const SLC_PATH = '/amp/try/slc';
+
 /**
- * Which platform environment this is: sandbox, aat, demo or prod. Read on every use, as
- * entraConfig is, since NODE_ENV is production in all of them and cannot tell them apart.
+ * Which platform environment this is: sandbox, preview, aat, demo or prod. The chart sets
+ * PLATFORM_ENVIRONMENT from global.environment. Read on every use, as entraConfig is, since
+ * NODE_ENV is production in all of them and cannot tell them apart.
  */
 function platformEnvironment(): string {
   return process.env.PLATFORM_ENVIRONMENT || config.get<string>('apiEndpoints.environment');
 }
 
-/** Where SLC is called in this environment, or undefined where it has no address yet. */
+/**
+ * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
+ * from apiEndpoints.apimBaseUrls, or undefined where it has none yet. The gateways are written
+ * without a trailing slash, so each API's path can be appended as it is.
+ */
+function apimBaseUrl(): string | undefined {
+  return config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()] || undefined;
+}
+
+/** Where SLC is called in this environment, or undefined where it has no gateway yet. */
 export function slcBaseUrl(): string | undefined {
-  const urls = config.get<Record<string, string>>('apiEndpoints.slcBaseUrls');
-  return urls[platformEnvironment()] || undefined;
+  const gateway = apimBaseUrl();
+  return gateway ? `${gateway}${SLC_PATH}` : undefined;
 }
 
 /**
