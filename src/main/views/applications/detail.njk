@@ -83,9 +83,16 @@
     </div>
 
     <h2 class="govuk-heading-m">Going live</h2>
-    <p class="govuk-body">
-      When this application has been tested, <a class="govuk-link" href="/account/production-credentials?application={{ application.id }}">request production credentials</a> for it.
-    </p>
+    {% if productionRequest %}
+      <p class="govuk-body" id="production-request">
+        You have asked for production credentials for this application.
+        <a class="govuk-link" href="/account/production-credentials/{{ productionRequest.reference }}">View production request {{ productionRequest.reference }}</a>.
+      </p>
+    {% else %}
+      <p class="govuk-body">
+        When this application has been tested, <a class="govuk-link" href="/account/production-credentials?application={{ application.id }}">request production credentials</a> for it.
+      </p>
+    {% endif %}
 
     <h2 class="govuk-heading-m">Delete this application</h2>
     <p class="govuk-body">Its client ID, secret and subscription keys stop working straight away.</p>

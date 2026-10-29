@@ -15,6 +15,10 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
   }),
 }));
 
+jest.mock('../../../main/services/ProductionRequests', () => ({
+  listProductionRequests: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock('../../../main/services/Applications', () => ({
   ...jest.requireActual('../../../main/services/Applications'),
   listApplications: jest.fn(),
@@ -28,6 +32,7 @@ jest.mock('../../../main/services/Applications', () => ({
 
 const { listedApiNames, getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const Applications = require('../../../main/services/Applications');
+const { listProductionRequests } = require('../../../main/services/ProductionRequests');
 
 const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
 const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
@@ -386,6 +391,28 @@ describe('ApplicationsController', () => {
       expect(Applications.getApplication).toHaveBeenCalledWith(OWNER, 'client-1');
       expect(res.view).toBe('applications/detail');
       expect(res.data).toMatchObject({ maskedSecret: 'Uc6****', accessAttempts: 8, accessRetrySeconds: 15 });
+    });
+
+    test('an_application_that_already_has_a_production_request_should_offer_to_show_it', async () => {
+      (listProductionRequests as jest.Mock).mockResolvedValueOnce([
+        { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '', clientId: 'client-1' },
+      ]);
+      const res = mockResponse();
+
+      await controller().detail(forId(), res, jest.fn());
+
+      expect(res.data?.productionRequest).toMatchObject({ reference: 'PCR-ABCD2345' });
+    });
+
+    test('a_request_for_another_application_should_leave_this_one_asking', async () => {
+      (listProductionRequests as jest.Mock).mockResolvedValueOnce([
+        { reference: 'PCR-OTHER123', status: 'SUBMITTED', submittedAt: '', clientId: 'someone-elses' },
+      ]);
+      const res = mockResponse();
+
+      await controller().detail(forId(), res, jest.fn());
+
+      expect(res.data?.productionRequest).toBeUndefined();
     });
 
     test('the_detail_page_should_carry_the_token_instructions_for_the_application', async () => {
