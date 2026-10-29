@@ -4,12 +4,15 @@ import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import {
   Application,
   BackendError,
+  atLimitMessage,
   createApplication,
   deleteApplication,
   getApplication,
   grantAccess,
+  limitReached,
   listApplications,
   maskSecret,
+  maxApplicationsPerUser,
   ownerOf,
   setApis,
   shortCodeFor,
@@ -93,6 +96,36 @@ describe('Applications', () => {
       expect(shortCodeFor('api-one')).toBe('one');
       expect(shortCodeFor('api-not-in-the-marketplace')).toBeUndefined();
       expect(maskSecret('Uc6')).toBe('Uc6****');
+    });
+  });
+
+  describe('the limit on applications', () => {
+    test('the_limit_should_default_to_5', () => {
+      expect(maxApplicationsPerUser()).toBe(5);
+    });
+
+    test('the_limit_should_be_reached_at_the_maximum_and_not_before', () => {
+      expect(limitReached(4)).toBeUndefined();
+      expect(limitReached(5)).toBe(
+        'You can have up to 5 applications. Delete an application you no longer need before you add another.'
+      );
+      expect(limitReached(6)).toBe(atLimitMessage(5));
+    });
+
+    test('a_limit_of_one_should_be_said_in_the_singular', () => {
+      expect(atLimitMessage(1)).toBe(
+        'You can have up to 1 application. Delete an application you no longer need before you add another.'
+      );
+    });
+
+    test('a_limit_set_by_an_environment_variable_should_be_read_as_a_number', () => {
+      expect(maxApplicationsPerUser('20')).toBe(20);
+    });
+
+    test.each([0, -1, 2.5, 'five'])('a_limit_of_%p_should_be_refused_rather_than_ignored', value => {
+      expect(() => maxApplicationsPerUser(value)).toThrow(
+        'applications.maxPerUser must be a whole number of at least 1'
+      );
     });
   });
 

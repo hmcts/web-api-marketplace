@@ -56,7 +56,11 @@ const APPLICATION: Application = {
   accessGranted: false,
 };
 
+const AT_LIMIT = 'You can have up to 5 applications. Delete an application you no longer need before you add another.';
+
 const controller = () => new ApplicationsController();
+const applications = (count: number): Application[] =>
+  Array.from({ length: count }, (_, i) => ({ ...APPLICATION, id: `client-${i}`, clientId: `client-${i}` }));
 const withAccept = (req: ReturnType<typeof asUser>, type: 'json' | 'html') =>
   Object.assign(req, { accepts: jest.fn(() => type) });
 
@@ -66,6 +70,7 @@ describe('ApplicationsController', () => {
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
     (listedApiNames as jest.Mock).mockReturnValue([]);
     Applications.getApplication.mockResolvedValue(APPLICATION);
+    Applications.listApplications.mockResolvedValue([]);
   });
 
   describe('signed out', () => {
@@ -105,8 +110,26 @@ describe('ApplicationsController', () => {
 
       expect(Applications.listApplications).toHaveBeenCalledWith(OWNER);
       expect(res.view).toBe('applications/index');
-      expect(res.data).toEqual({ notice, applications: [APPLICATION] });
+      expect(res.data).toEqual({ notice, applications: [APPLICATION], atLimit: undefined });
       expect(req.session.notice).toBeUndefined();
+    });
+
+    test('at_the_limit_the_list_should_say_why_in_place_of_the_add_button', async () => {
+      Applications.listApplications.mockResolvedValue(applications(5));
+      const res = mockResponse();
+
+      await controller().list(asUser(), res);
+
+      expect(res.data?.atLimit).toBe(AT_LIMIT);
+    });
+
+    test('below_the_limit_the_list_should_offer_to_add_one', async () => {
+      Applications.listApplications.mockResolvedValue(applications(4));
+      const res = mockResponse();
+
+      await controller().list(asUser(), res);
+
+      expect(res.data?.atLimit).toBeUndefined();
     });
 
     test('a_backend_that_cannot_be_reached_should_say_so', async () => {
@@ -132,12 +155,36 @@ describe('ApplicationsController', () => {
   });
 
   describe('creating', () => {
-    test('the_intro_should_clear_any_earlier_answers', () => {
+    test('the_intro_should_clear_any_earlier_answers', async () => {
       const req = asUser({ session: { applicationDraft: DRAFT } });
 
-      controller().intro(req, mockResponse());
+      await controller().intro(req, mockResponse());
 
       expect(req.session.applicationDraft).toBeUndefined();
+    });
+
+    test.each(['intro', 'details'] as const)(
+      'at_the_limit_the_%s_should_send_the_user_back_to_the_list_with_the_reason',
+      async page => {
+        Applications.listApplications.mockResolvedValue(applications(5));
+        const res = mockResponse();
+        const req = asUser();
+
+        await controller()[page](req, res);
+
+        expect(Applications.listApplications).toHaveBeenCalledWith(OWNER);
+        expect(res.redirected).toBe('/account/applications');
+        expect(req.session.notice).toEqual({ success: false, title: 'Important', text: AT_LIMIT });
+      }
+    );
+
+    test('applications_that_cannot_be_counted_should_not_close_the_start_of_the_journey', async () => {
+      Applications.listApplications.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+
+      await controller().intro(asUser(), res);
+
+      expect(res.view).toBe('applications/new/index');
     });
 
     test('a_name_that_breaks_the_rules_should_be_shown_again_with_the_error', () => {
@@ -257,6 +304,31 @@ describe('ApplicationsController', () => {
         publisherId: SLC_RESOURCE_APP_ID,
       });
       expect(req.session.applicationDraft).toBeUndefined();
+    });
+
+    test('reaching_the_limit_while_part_way_through_should_refuse_the_create_and_keep_the_answers', async () => {
+      Applications.listApplications.mockResolvedValue(applications(5));
+      const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
+
+      await controller().create(req, res);
+
+      expect(Applications.createApplication).not.toHaveBeenCalled();
+      expect(res.redirected).toBe('/account/applications');
+      expect(req.session.notice).toEqual({ success: false, title: 'Important', text: AT_LIMIT });
+      expect(req.session.applicationDraft).toEqual(DRAFT);
+    });
+
+    test('applications_that_cannot_be_counted_should_stop_the_create', async () => {
+      Applications.listApplications.mockRejectedValue(new BackendError('down'));
+      const res = mockResponse();
+      const req = asUser({ session: { applicationDraft: DRAFT } });
+
+      await controller().create(req, res);
+
+      expect(Applications.createApplication).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(503);
+      expect(req.session.applicationDraft).toEqual(DRAFT);
     });
 
     test('creating_with_no_draft_should_go_to_the_list', async () => {
