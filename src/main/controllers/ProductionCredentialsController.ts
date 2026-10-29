@@ -26,7 +26,7 @@ const CALL_VOLUMES = [
 ];
 
 /** The two questions about the data being requested and what comes out of using it. */
-export const DATA_ANSWER_MAX_LENGTH = 1000;
+export const DATA_ANSWER_MAX_LENGTH = 2000;
 
 type Answers = Record<string, string | string[]>;
 
