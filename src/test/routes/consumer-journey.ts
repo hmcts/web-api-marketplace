@@ -461,6 +461,15 @@ describe('Consumer onboarding journey', () => {
 
       const stranger = await signedInConsumer('charles@example.com');
       await stranger.get(`/account/production-credentials/${reference}`).expect(404);
+
+      await agent.get(`/account/applications/${id}`).expect(res => {
+        expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);
+        expect(res.text).to.contain('View production request');
+        expect(res.text).to.not.contain('request production credentials');
+      });
+      await agent.get('/account/production-credentials').expect(res => {
+        expect(res.text).to.contain('You need an application that has been tested');
+      });
     });
 
     test('a_go_live_date_in_the_past_should_be_refused', async () => {

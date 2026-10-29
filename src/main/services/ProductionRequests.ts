@@ -4,11 +4,11 @@ export interface ProductionRequestSummary {
   reference: string;
   status: string;
   submittedAt: string;
+  clientId: string | null;
+  applicationName: string;
 }
 
 export interface ProductionRequestDetail extends ProductionRequestSummary {
-  applicationName: string;
-  clientId: string | null;
   organisation: string;
   goLiveDate: string;
   callVolume: string;

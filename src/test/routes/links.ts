@@ -48,6 +48,8 @@ describe('Links', () => {
     const agent = await signedInConsumer('ada@example.com');
     const id = await createdApplication(agent);
     await submitProductionRequest(agent, id);
+    // A second application keeps the form reachable.
+    await createdApplication(agent, 'Case viewer');
 
     const visited = await crawl(agent, false);
 
