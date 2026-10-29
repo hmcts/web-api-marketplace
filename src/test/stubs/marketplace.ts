@@ -165,7 +165,6 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     if (!application || application.owner !== user) {
       json(400, { error: `No application with client id ${text('clientId')}.` });
     } else if (requested) {
-      // One request per application: a second is a duplicate ask, not a second thing being asked for.
       json(409, { error: `${application.name} already has a production access request.` });
     } else if (!text('organisation')) {
       json(400, { error: "Enter the organisation's legal name." });

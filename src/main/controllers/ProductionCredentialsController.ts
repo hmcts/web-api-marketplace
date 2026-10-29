@@ -112,7 +112,6 @@ export default class ProductionCredentialsController {
     const requested = await this.alreadyRequested(user);
     const draft = req.session.productionDraft;
 
-    // Checked again: the application chosen may have been deleted, or asked for in another tab.
     if (!draft || this.validate(draft, applications, requested).length) {
       res.redirect('/account/production-credentials');
       return;
@@ -139,8 +138,7 @@ export default class ProductionCredentialsController {
       req.session.save(() => res.render('production-credentials/confirmation', { reference: request.reference }));
     } catch (error) {
       logger.error(`Production credentials request could not be stored: ${(error as Error).message}`);
-      // A request made since this one was drafted, in another tab or by a colleague: saying
-      // "try again in a few minutes" would send them round a loop that cannot end.
+      // Inviting a retry would send them round a loop that cannot end.
       const duplicate = error instanceof BackendError && error.status === 409;
       res.status(duplicate ? 409 : 502).render('production-credentials/check-answers', {
         rows,
@@ -254,10 +252,7 @@ export default class ProductionCredentialsController {
     }
   }
 
-  /**
-   * The applications that already have a request, by client id. One request per application, so
-   * these cannot be asked for again - the form leaves them out and validation refuses them.
-   */
+  /** The applications that already have a request, by client id. */
   private async alreadyRequested(user: SignedInUser): Promise<Set<string>> {
     try {
       const requests = await listProductionRequests(ownerOf(user));
@@ -349,13 +344,13 @@ export default class ProductionCredentialsController {
   ): Promise<Record<string, unknown>> {
     const owned = applications ?? (await this.applications(user));
     const alreadyRequested = requested ?? (await this.alreadyRequested(user));
-    const offered = owned.filter(application => !alreadyRequested.has(application.clientId));
+    const withoutARequest = owned.filter(application => !alreadyRequested.has(application.clientId));
 
     return {
       answers,
       errors,
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
-      applicationItems: offered.map(application => ({
+      applicationItems: withoutARequest.map(application => ({
         value: application.id,
         text: application.name,
         hint: {

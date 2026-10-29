@@ -398,10 +398,6 @@ export default class ApplicationsController {
     res.status(503).render('applications/unavailable');
   }
 
-  /**
-   * The production access request this application already has, if any. One per application, so
-   * the page offers to show that one rather than to ask again.
-   */
   private async productionRequestFor(
     req: AppRequest,
     application: Application

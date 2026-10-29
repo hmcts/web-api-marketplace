@@ -439,8 +439,6 @@ describe('Consumer onboarding journey', () => {
       const stranger = await signedInConsumer('charles@example.com');
       await stranger.get(`/account/production-credentials/${reference}`).expect(404);
 
-      // One request per application: the application now offers to show it rather than ask again,
-      // and it is no longer one of the applications the form offers.
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);
         expect(res.text).to.contain('View production request');
