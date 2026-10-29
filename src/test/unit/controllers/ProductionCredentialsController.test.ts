@@ -127,8 +127,8 @@ describe('ProductionCredentialsController', () => {
     [{ 'go-live-day': '31', 'go-live-month': '2' }, 'Enter a real go-live date'],
     [{ 'go-live-year': '2020' }, 'must be in the future'],
     [{ 'go-live-year': '99' }, 'Enter a real go-live date'],
-    [{ 'data-request': 'x'.repeat(1001) }, '1000 characters or fewer'],
-    [{ 'proposed-outputs': 'x'.repeat(1001) }, '1000 characters or fewer'],
+    [{ 'data-request': 'x'.repeat(2001) }, '2000 characters or fewer'],
+    [{ 'proposed-outputs': 'x'.repeat(2001) }, '2000 characters or fewer'],
     [{ application: 'not-mine' }, 'Select the application'],
   ])('the_answer_%j_should_be_refused', async (change, message) => {
     const res = mockResponse();
@@ -137,6 +137,15 @@ describe('ProductionCredentialsController', () => {
 
     expect(res.statusCode).toBe(400);
     expect(Object.values(res.data?.errorFor as object).join(' ')).toContain(message);
+  });
+
+  test('the_long_answers_should_take_two_thousand_characters', async () => {
+    const res = mockResponse();
+    const full = { 'data-request': 'x'.repeat(2000), 'proposed-outputs': 'y'.repeat(2000) };
+
+    await controller().save(asUser({ body: answers(applicationId, full) }), res);
+
+    expect(res.redirected).toBe('/account/production-credentials/check-answers');
   });
 
   test('valid_answers_should_be_held_and_shown_for_checking', async () => {
