@@ -17,6 +17,7 @@ import {
   deleteApplication,
   getApplication,
   grantAccess,
+  limitReached,
   listApplications,
   maskSecret,
   ownerOf,
@@ -46,15 +47,19 @@ export default class ApplicationsController {
       this.backendFailed(req, res, error);
       return;
     }
-    res.render('applications/index', { notice: takeNotice(req), applications });
+    res.render('applications/index', {
+      notice: takeNotice(req),
+      applications,
+      atLimit: limitReached(applications.length),
+    });
   }
 
   // Registered before /:id, so "new" is never taken for a client ID.
 
   @route('/new')
   @GET()
-  public intro(req: AppRequest, res: Response): void {
-    if (!requireSignIn(req, res)) {
+  public async intro(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res) || (await this.refusedAtLimit(req, res))) {
       return;
     }
     delete req.session.applicationDraft;
@@ -63,8 +68,8 @@ export default class ApplicationsController {
 
   @route('/new/details')
   @GET()
-  public details(req: AppRequest, res: Response): void {
-    if (!requireSignIn(req, res)) {
+  public async details(req: AppRequest, res: Response): Promise<void> {
+    if (!requireSignIn(req, res) || (await this.refusedAtLimit(req, res))) {
       return;
     }
     res.render('applications/new/details', this.detailsData(req.session.applicationDraft ?? {}, []));
@@ -167,6 +172,20 @@ export default class ApplicationsController {
 
     if (!draft?.name || errors.length) {
       res.redirect(draft?.name ? '/account/applications/new/details' : '/account/applications');
+      return;
+    }
+
+    // Counted again here: the user may have added another application, in another tab, since
+    // they started. The draft is kept, so nothing is lost if they delete one and come back.
+    let atLimit;
+    try {
+      atLimit = limitReached((await listApplications(this.owner(req))).length);
+    } catch (error) {
+      this.backendFailed(req, res, error);
+      return;
+    }
+    if (atLimit) {
+      this.sendBackAtLimit(req, res, atLimit);
       return;
     }
 
@@ -385,6 +404,30 @@ export default class ApplicationsController {
       this.backendFailed(req, res, error);
       return undefined;
     }
+  }
+
+  /**
+   * Closes the journey to a user who already holds the most applications they may. If their
+   * applications cannot be counted, the journey carries on: the count is taken again before
+   * anything is created, and that one does not carry on without it.
+   */
+  private async refusedAtLimit(req: AppRequest, res: Response): Promise<boolean> {
+    let atLimit;
+    try {
+      atLimit = limitReached((await listApplications(this.owner(req))).length);
+    } catch (error) {
+      logger.warn(`Could not count the user's applications: ${(error as Error).message}`);
+      return false;
+    }
+    if (atLimit) {
+      this.sendBackAtLimit(req, res, atLimit);
+    }
+    return Boolean(atLimit);
+  }
+
+  private sendBackAtLimit(req: AppRequest, res: Response, text: string): void {
+    req.session.notice = { success: false, title: 'Important', text };
+    req.session.save(() => res.redirect('/account/applications'));
   }
 
   private backendFailed(req: AppRequest, res: Response, error: unknown): void {

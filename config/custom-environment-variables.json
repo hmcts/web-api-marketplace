@@ -43,6 +43,10 @@
     }
   },
   "applications": {
-    "role": "APPLICATIONS_ROLE"
+    "role": "APPLICATIONS_ROLE",
+    "maxPerUser": {
+      "__name": "APPLICATIONS_MAX_PER_USER",
+      "__format": "json"
+    }
   }
 }

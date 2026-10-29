@@ -71,6 +71,7 @@
     "postLogoutRedirectUri": ""
   },
   "applications": {
+    "maxPerUser": 5,
     "shortCodes": {
       "api-cp-crime-schedulingandlisting-courtschedule": "slc",
       "api-cp-refdata-courthearing-courthouses": "rcc"

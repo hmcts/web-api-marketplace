@@ -100,6 +100,30 @@ export function maskSecret(hint: string): string {
   return `${hint}****`;
 }
 
+/**
+ * The most applications one user may hold: applications.maxPerUser, which an environment
+ * overrides with APPLICATIONS_MAX_PER_USER. Only this app enforces it, by counting the user's
+ * applications before they start the journey and again before it creates one.
+ */
+export function maxApplicationsPerUser(configured: unknown = config.get('applications.maxPerUser')): number {
+  const max = Number(configured);
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error(`applications.maxPerUser must be a whole number of at least 1, not ${max}`);
+  }
+  return max;
+}
+
+/** Why a user at the limit cannot add another application, and what they can do about it. */
+export function atLimitMessage(max: number): string {
+  return `You can have up to ${max} ${max === 1 ? 'application' : 'applications'}. Delete an application you no longer need before you add another.`;
+}
+
+/** The message for an owner holding this many applications, or undefined while they can add another. */
+export function limitReached(held: number): string | undefined {
+  const max = maxApplicationsPerUser();
+  return held >= max ? atLimitMessage(max) : undefined;
+}
+
 export async function listApplications(owner: Owner): Promise<Application[]> {
   const found = await callBackend<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
   return Promise.all(found.map(withLinks));
