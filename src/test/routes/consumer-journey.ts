@@ -146,6 +146,11 @@ describe('Consumer onboarding journey', () => {
       await agent.get('/account/applications/new/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
         expect(res.text).to.contain('CP Crime Hearing API, Defendant Details');
+        // Creating takes seconds in Entra and APIM: the button cannot be pressed twice, and the
+        // message it reveals is empty until JavaScript fills it in.
+        expect(res.text).to.match(/data-prevent-double-click="true"[^>]*id="create-application"/);
+        expect(res.text).to.match(/id="create-status"[^>]*hidden/);
+        expect(res.text).to.contain('id="create-status-dots" aria-hidden="true"');
       });
 
       const created = await agent.post('/account/applications/new/check-answers').expect(200);
