@@ -165,9 +165,9 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       json(400, { error: 'Enter a go live date.' });
     } else if (!['low', 'medium', 'high'].includes(text('callVolume'))) {
       json(400, { error: 'Call volume must be low, medium or high.' });
-    } else if (!text('dataRequest') || text('dataRequest').length > 1000) {
+    } else if (!text('dataRequest') || text('dataRequest').length > 2000) {
       json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
-    } else if (!text('proposedOutputs') || text('proposedOutputs').length > 1000) {
+    } else if (!text('proposedOutputs') || text('proposedOutputs').length > 2000) {
       json(400, { error: 'Describe the proposed outputs from this data use.' });
     } else {
       const stored: StubProductionRequest = {

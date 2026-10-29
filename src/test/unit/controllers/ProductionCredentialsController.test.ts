@@ -127,8 +127,8 @@ describe('ProductionCredentialsController', () => {
     [{ 'go-live-day': '31', 'go-live-month': '2' }, 'Enter a real go-live date'],
     [{ 'go-live-year': '2020' }, 'must be in the future'],
     [{ 'go-live-year': '99' }, 'Enter a real go-live date'],
-    [{ 'data-request': 'x'.repeat(1001) }, '1000 characters or fewer'],
-    [{ 'proposed-outputs': 'x'.repeat(1001) }, '1000 characters or fewer'],
+    [{ 'data-request': 'x'.repeat(2001) }, '2000 characters or fewer'],
+    [{ 'proposed-outputs': 'x'.repeat(2001) }, '2000 characters or fewer'],
     [{ application: 'not-mine' }, 'Select the application'],
   ])('the_answer_%j_should_be_refused', async (change, message) => {
     const res = mockResponse();
