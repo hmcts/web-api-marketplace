@@ -48,11 +48,11 @@
   "apiEndpoints": {
     "publisherId": "30288840-e345-4543-99ee-f9253d789339",
     "environment": "",
-    "slcBaseUrls": {
-      "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc",
-      "preview": "https://sps-api-mgmt.preview.api.hmcts.net/amp/try/slc",
-      "aat": "https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc",
-      "demo": "https://sps-api-mgmt.sandbox.demo.hmcts.net/amp/try/slc"
+    "apimBaseUrls": {
+      "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net",
+      "preview": "https://sps-api-mgmt.preview.api.hmcts.net",
+      "aat": "https://sps-api-mgmt.aat.api.hmcts.net",
+      "demo": "https://sps-api-mgmt.demo.hmcts.net"
     }
   },
   "marketplaceSite": {
