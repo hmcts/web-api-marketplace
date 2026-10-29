@@ -128,16 +128,16 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     createdAt,
   });
 
-  const summary = ({ reference, status, submittedAt }: StubProductionRequest) => ({
-    reference,
-    status,
-    submittedAt,
+  const summary = (request: StubProductionRequest) => ({
+    reference: request.reference,
+    status: request.status,
+    submittedAt: request.submittedAt,
+    applicationName: request.applicationName,
+    clientId: applications.has(request.clientId) ? request.clientId : null,
   });
 
   const detail = (request: StubProductionRequest) => ({
     ...summary(request),
-    applicationName: request.applicationName,
-    clientId: applications.has(request.clientId) ? request.clientId : null,
     organisation: request.organisation,
     goLiveDate: request.goLiveDate,
     callVolume: request.callVolume,
@@ -160,8 +160,12 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     const text = (name: string) => String(request[name] ?? '').trim();
     const application = applications.get(text('clientId'));
 
+    const requested = [...productionRequests.values()].find(held => held.clientId === text('clientId'));
+
     if (!application || application.owner !== user) {
       json(400, { error: `No application with client id ${text('clientId')}.` });
+    } else if (requested) {
+      json(409, { error: `${application.name} already has a production access request.` });
     } else if (!text('organisation')) {
       json(400, { error: "Enter the organisation's legal name." });
     } else if (!/^\d{4}-\d{2}-\d{2}$/.test(text('goLiveDate'))) {
