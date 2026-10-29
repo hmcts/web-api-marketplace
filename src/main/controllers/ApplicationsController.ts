@@ -175,8 +175,6 @@ export default class ApplicationsController {
       return;
     }
 
-    // Counted again here: the user may have added another application, in another tab, since
-    // they started. The draft is kept, so nothing is lost if they delete one and come back.
     let atLimit;
     try {
       atLimit = limitReached((await listApplications(this.owner(req))).length);
@@ -406,11 +404,6 @@ export default class ApplicationsController {
     }
   }
 
-  /**
-   * Closes the journey to a user who already holds the most applications they may. If their
-   * applications cannot be counted, the journey carries on: the count is taken again before
-   * anything is created, and that one does not carry on without it.
-   */
   private async refusedAtLimit(req: AppRequest, res: Response): Promise<boolean> {
     let atLimit;
     try {

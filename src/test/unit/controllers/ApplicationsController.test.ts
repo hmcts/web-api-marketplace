@@ -54,7 +54,6 @@ const APPLICATION: Application = {
 const AT_LIMIT = 'You can have up to 5 applications. Delete an application you no longer need before you add another.';
 
 const controller = () => new ApplicationsController();
-/** As many applications as config/default.json allows one user. */
 const applications = (count: number): Application[] =>
   Array.from({ length: count }, (_, i) => ({ ...APPLICATION, id: `client-${i}`, clientId: `client-${i}` }));
 const withAccept = (req: ReturnType<typeof asUser>, type: 'json' | 'html') =>
