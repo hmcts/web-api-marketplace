@@ -1,6 +1,9 @@
 import crypto from 'node:crypto';
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
+
+/** What the backend accepts for the two long production request answers. */
+const ANSWER_MAX_LENGTH = 2000;
 /** Every application is registered in the one tenant the backend is configured with. */
 export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 
@@ -165,9 +168,9 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       json(400, { error: 'Enter a go live date.' });
     } else if (!['low', 'medium', 'high'].includes(text('callVolume'))) {
       json(400, { error: 'Call volume must be low, medium or high.' });
-    } else if (!text('dataRequest') || text('dataRequest').length > 1000) {
+    } else if (!text('dataRequest') || text('dataRequest').length > ANSWER_MAX_LENGTH) {
       json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
-    } else if (!text('proposedOutputs') || text('proposedOutputs').length > 1000) {
+    } else if (!text('proposedOutputs') || text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
       json(400, { error: 'Describe the proposed outputs from this data use.' });
     } else {
       const stored: StubProductionRequest = {

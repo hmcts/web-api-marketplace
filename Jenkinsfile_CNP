@@ -3,7 +3,7 @@
 @Library("Infrastructure@2.4.8")
 
 def type = "nodejs"
-def product = "apim"
+def product = "amp"
 def component = "marketplace-web"
 
 def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)

@@ -1,7 +1,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: apim-marketplace-web
+  name: amp-marketplace-web
   description: "Public frontend for the HMCTS API Marketplace"
   annotations:
     jenkins.io/job-full-name: "cft:HMCTS_j_to_z/web-api-marketplace"
@@ -14,6 +14,6 @@ metadata:
       icon: chat
 spec:
   type: service
-  system: apim
+  system: amp
   lifecycle: experimental
   owner: group:dts-api-marketplace

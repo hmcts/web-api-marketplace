@@ -8,8 +8,14 @@ locals {
     tomap({ "Team Contact" = var.team_contact })
   )
 
-  vault_name           = var.vault_name != "" ? var.vault_name : "${var.product}-${var.env}"
-  vault_resource_group = "${var.product}-shared-${var.env}"
+  # Vault and resource group are created by service-api-marketplace, which must apply first.
+  #
+  # "marketplace" is hardcoded rather than var.component on purpose: this component is
+  # "marketplace-web", so "${var.product}-${var.component}-${var.env}" would resolve to a second
+  # vault, amp-marketplace-web-{env}, that nothing creates. The redis and session secrets below
+  # belong in the service's vault, which is why the resource group below already names it.
+  vault_name           = var.vault_name != "" ? var.vault_name : "${var.product}-marketplace-${var.env}"
+  vault_resource_group = "${var.product}-marketplace-${var.env}"
 }
 
 module "redis_cache" {

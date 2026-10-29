@@ -10,8 +10,8 @@ export class AppInsights {
     let appInsightsConnectionString: string | undefined;
     if (process.env.APP_INSIGHTS_CONNECTION_STRING) {
       appInsightsConnectionString = process.env.APP_INSIGHTS_CONNECTION_STRING;
-    } else if (config.get('secrets.apim.APP_INSIGHTS_CONNECTION_STRING')) {
-      appInsightsConnectionString = config.get('secrets.apim.APP_INSIGHTS_CONNECTION_STRING');
+    } else if (config.get('secrets.amp.APP_INSIGHTS_CONNECTION_STRING')) {
+      appInsightsConnectionString = config.get('secrets.amp.APP_INSIGHTS_CONNECTION_STRING');
     }
 
     if (appInsightsConnectionString) {
