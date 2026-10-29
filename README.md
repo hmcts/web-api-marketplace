@@ -174,11 +174,14 @@ tenant the backend returns (`tenantId`), and the scope is the Publisher ID follo
 `/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
 registration in Entra, the same for every API.
 
-The calls go to the address in `apiEndpoints.slcBaseUrls` for this environment: the API
-Management base up to `/amp/try/slc`, to which the page adds `/case/{case_urn}/courtschedule`
-and `/scenarios`. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
-`global.environment`, and `sandbox` locally. Sandbox, preview, AAT and demo have addresses; an
-environment with none (prod, for now) leaves the calls out and shows only the token request.
+The calls go to the environment's API Management gateway (e.g.
+`https://sps-api-mgmt.sandbox.api.hmcts.net`). The page adds SLC's path, `/amp/try/slc`, then
+`/case/{case_urn}/courtschedule` or `/scenarios`. The gateways are in
+`apiEndpoints.apimBaseUrls` in `config/default.json`, one per environment, and nothing is set
+in cnp-flux-config. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
+`global.environment`; locally it is `sandbox`, from `config/development.json`. Changing a
+gateway, or adding one for a new environment, needs a release. An environment with no gateway
+leaves the calls out and shows only the token request.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
