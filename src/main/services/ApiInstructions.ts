@@ -43,11 +43,11 @@ function platformEnvironment(): string {
 
 /**
  * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
- * from apiEndpoints.apimBaseUrls, or undefined where it has none yet.
+ * from apiEndpoints.apimBaseUrls, or undefined where it has none yet. The gateways are written
+ * without a trailing slash, so each API's path can be appended as it is.
  */
 function apimBaseUrl(): string | undefined {
-  const url = config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()];
-  return url ? url.replace(/\/+$/, '') : undefined;
+  return config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()] || undefined;
 }
 
 /** Where SLC is called in this environment, or undefined where it has no gateway yet. */
