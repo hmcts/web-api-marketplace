@@ -8836,15 +8836,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"express-rate-limit@npm:8.6.2":
-  version: 8.6.2
-  resolution: "express-rate-limit@npm:8.6.2"
+"express-rate-limit@npm:8.7.1":
+  version: 8.7.1
+  resolution: "express-rate-limit@npm:8.7.1"
   dependencies:
     debug: "npm:^4.4.3"
     ip-address: "npm:^10.2.0"
   peerDependencies:
     express: ">= 4.11"
-  checksum: 10/cf9d2a286821a650890366ed14f3d582293175b6f540e3f64b5fd276201cacef6c1e218448dd54f4a1e860de48c395e3d8ddda4d4a032812266a19d8d947208a
+  checksum: 10/64c27b98d5ed0f3dcf6625c319c9118415d6cfd51638d7b847f6166c5ca738379fcc880bc620332624a78b31e90918304cc4f74b050fd06745c06e1a4e9bbcad
   languageName: node
   linkType: hard
 
@@ -15811,7 +15811,7 @@ __metadata:
     eslint-plugin-jest: "npm:29.17.0"
     eslint-plugin-playwright: "npm:2.12.1"
     express: "npm:5.3.0"
-    express-rate-limit: "npm:8.6.2"
+    express-rate-limit: "npm:8.7.1"
     express-session: "npm:^1.19.0"
     get-port: "npm:^7.2.0"
     glob: "npm:13.0.6"
