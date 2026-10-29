@@ -29,18 +29,24 @@ export interface Instructions {
   slc?: SlcInstructions;
 }
 
+/** Where SLC sits on the API Management gateway. */
+const SLC_PATH = '/amp/try/slc';
+
 /**
- * Which platform environment this is: sandbox, aat, demo or prod. Read on every use, as
- * entraConfig is, since NODE_ENV is production in all of them and cannot tell them apart.
+ * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
+ * or undefined where it has none yet. Each environment sets APIM_BASE_URL in cnp-flux-config;
+ * apiEndpoints.apimBaseUrl is the fallback, empty everywhere but local development. Read on
+ * every use, as entraConfig is.
  */
-function platformEnvironment(): string {
-  return process.env.PLATFORM_ENVIRONMENT || config.get<string>('apiEndpoints.environment');
+function apimBaseUrl(): string | undefined {
+  const url = process.env.APIM_BASE_URL || config.get<string>('apiEndpoints.apimBaseUrl');
+  return url ? url.replace(/\/+$/, '') : undefined;
 }
 
-/** Where SLC is called in this environment, or undefined where it has no address yet. */
+/** Where SLC is called in this environment, or undefined where it has no gateway yet. */
 export function slcBaseUrl(): string | undefined {
-  const urls = config.get<Record<string, string>>('apiEndpoints.slcBaseUrls');
-  return urls[platformEnvironment()] || undefined;
+  const gateway = apimBaseUrl();
+  return gateway ? `${gateway}${SLC_PATH}` : undefined;
 }
 
 /**

@@ -26,6 +26,7 @@ nodejs:
     # Both must be registered on the web-api-marketplace app registration exactly as written.
     ENTRA_REDIRECT_URI: https://amp-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/auth/callback
     ENTRA_POST_LOGOUT_REDIRECT_URI: https://amp-marketplace-web.{{ .Values.global.environment }}.platform.hmcts.net/
-    # Picks this environment's API addresses (apiEndpoints in config/default.json) for the
-    # instructions on an application's page. One with no address there leaves them out.
-    PLATFORM_ENVIRONMENT: '{{ .Values.global.environment }}'
+    # APIM_BASE_URL, the API Management gateway the example calls on an application's page go
+    # to (the app adds each API's path, e.g. /amp/try/slc), is set per environment: in
+    # cnp-flux-config for flux releases and in values.<env>.template.yaml for the pipeline's.
+    # Without it the page shows no API calls.
