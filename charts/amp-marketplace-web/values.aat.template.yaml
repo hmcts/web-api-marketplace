@@ -1,6 +1,4 @@
 nodejs:
-  environment:
-    APIM_BASE_URL: https://sps-api-mgmt.aat.api.hmcts.net
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}

@@ -47,7 +47,13 @@
   },
   "apiEndpoints": {
     "publisherId": "30288840-e345-4543-99ee-f9253d789339",
-    "apimBaseUrl": ""
+    "environment": "",
+    "apimBaseUrls": {
+      "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net",
+      "preview": "https://sps-api-mgmt.preview.api.hmcts.net",
+      "aat": "https://sps-api-mgmt.aat.api.hmcts.net",
+      "demo": "https://sps-api-mgmt.demo.hmcts.net"
+    }
   },
   "marketplaceSite": {
     "url": "/"

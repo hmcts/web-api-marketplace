@@ -2,7 +2,6 @@ nodejs:
   # Entra will not take a wildcard redirect URI, so no preview address can be registered.
   environment:
     ENTRA_ENABLED: 'false'
-    APIM_BASE_URL: https://sps-api-mgmt.preview.api.hmcts.net
   # Don't modify below here
   image: ${IMAGE_NAME}
   ingressHost: ${SERVICE_FQDN}

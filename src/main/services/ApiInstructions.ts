@@ -33,13 +33,20 @@ export interface Instructions {
 const SLC_PATH = '/amp/try/slc';
 
 /**
+ * Which platform environment this is: sandbox, preview, aat, demo or prod. The chart sets
+ * PLATFORM_ENVIRONMENT from global.environment. Read on every use, as entraConfig is, since
+ * NODE_ENV is production in all of them and cannot tell them apart.
+ */
+function platformEnvironment(): string {
+  return process.env.PLATFORM_ENVIRONMENT || config.get<string>('apiEndpoints.environment');
+}
+
+/**
  * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
- * or undefined where it has none yet. Each environment sets APIM_BASE_URL in cnp-flux-config;
- * apiEndpoints.apimBaseUrl is the fallback, empty everywhere but local development. Read on
- * every use, as entraConfig is.
+ * from apiEndpoints.apimBaseUrls, or undefined where it has none yet.
  */
 function apimBaseUrl(): string | undefined {
-  const url = process.env.APIM_BASE_URL || config.get<string>('apiEndpoints.apimBaseUrl');
+  const url = config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()];
   return url ? url.replace(/\/+$/, '') : undefined;
 }
 

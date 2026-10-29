@@ -147,15 +147,14 @@ tenant the backend returns (`tenantId`), and the scope is the Publisher ID follo
 `/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
 registration in Entra, the same for every API.
 
-The calls go to the environment's API Management gateway, `APIM_BASE_URL` (e.g.
+The calls go to the environment's API Management gateway (e.g.
 `https://sps-api-mgmt.sandbox.api.hmcts.net`). The page adds SLC's path, `/amp/try/slc`, then
-`/case/{case_urn}/courtschedule` or `/scenarios`. Each environment sets `APIM_BASE_URL`, in
-cnp-flux-config (`apps/amp/amp-marketplace-web`) for flux releases and in
-`charts/amp-marketplace-web/values.<env>.template.yaml` for the pipeline's preview and AAT
-deploys, so changing it needs no release. Without it the app falls back to
-`apiEndpoints.apimBaseUrl`, which is empty except in `config/development.json` (the sandbox
-gateway, for running locally). An environment with no gateway leaves the calls out and shows
-only the token request.
+`/case/{case_urn}/courtschedule` or `/scenarios`. The gateways are in
+`apiEndpoints.apimBaseUrls` in `config/default.json`, one per environment, and nothing is set
+in cnp-flux-config. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
+`global.environment`; locally it is `sandbox`, from `config/development.json`. Changing a
+gateway, or adding one for a new environment, needs a release. An environment with no gateway
+leaves the calls out and shows only the token request.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
