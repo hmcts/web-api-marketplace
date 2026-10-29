@@ -140,6 +140,13 @@ a JSON array; empty means every API in the feed), in the catalogue and for appli
 The page of an API outside the list is not found. An application that already has one keeps
 seeing it on its "change APIs" page, so saving does not revoke it.
 
+A user can hold at most `applications.maxPerUser` applications (`APPLICATIONS_MAX_PER_USER`,
+default 5; set it in an environment's cnp-flux-config values to change it there, e.g. prod). At
+the limit, the list page says so in place of "Add new application", and the start of the journey
+sends the user back to it with the reason. The count is taken again before an application is
+created, so one started in another tab cannot go over. Only this app enforces the limit: it counts
+the user's applications from the backend's list.
+
 On an application's page, the Scheduling and Listing Court Schedule row has a collapsible panel
 right under it, "How to get an access token and call an API". It shows the Publisher ID (scope),
 then curl commands to get a token and to call SLC and its scenarios. The token endpoint uses the

@@ -100,6 +100,23 @@ export function maskSecret(hint: string): string {
   return `${hint}****`;
 }
 
+export function maxApplicationsPerUser(configured: unknown = config.get('applications.maxPerUser')): number {
+  const max = Number(configured);
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error(`applications.maxPerUser must be a whole number of at least 1, not ${max}`);
+  }
+  return max;
+}
+
+export function atLimitMessage(max: number): string {
+  return `You can have up to ${max} ${max === 1 ? 'application' : 'applications'}. Delete an application you no longer need before you add another.`;
+}
+
+export function limitReached(held: number): string | undefined {
+  const max = maxApplicationsPerUser();
+  return held >= max ? atLimitMessage(max) : undefined;
+}
+
 export async function listApplications(owner: Owner): Promise<Application[]> {
   const found = await callBackend<BackendApplication[]>(owner, { method: 'GET', url: '/applications' });
   return Promise.all(found.map(withLinks));
