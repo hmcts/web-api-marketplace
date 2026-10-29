@@ -9608,10 +9608,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:17.11.0":
-  version: 17.11.0
-  resolution: "globals@npm:17.11.0"
-  checksum: 10/9cff5b8099b585862ab0d31e8b93dc1c3e7b59239dc58b59447a38709715751df8794ee0d28f434f8e421b01aee3cc10051e2455b5c967d960e79f882e68aa0f
+"globals@npm:17.13.0":
+  version: 17.13.0
+  resolution: "globals@npm:17.13.0"
+  checksum: 10/f723714cfb07bcf3163d44661d63b2a6076d93fd2f3724622b22084c62bcbbdb3ea3c601ec39635f1430d5cdf60bbf6fd7e458f12b5381ed422ed355c699537b
   languageName: node
   linkType: hard
 
@@ -15815,7 +15815,7 @@ __metadata:
     express-session: "npm:^1.19.0"
     get-port: "npm:^7.2.0"
     glob: "npm:13.0.6"
-    globals: "npm:17.11.0"
+    globals: "npm:17.13.0"
     govuk-frontend: "npm:5.14.0"
     helmet: "npm:8.3.0"
     html-webpack-plugin: "npm:5.6.8"
