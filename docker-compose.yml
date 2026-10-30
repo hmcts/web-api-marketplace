@@ -1,11 +1,5 @@
 version: '2.1'
 
-# Shared by marketplace-api and db, which read them under different variable names
-x-database:
-  name: &db-name marketplace
-  user: &db-user postgres
-  password: &db-password postgres
-
 services:
   marketplace-web:
     build:
@@ -49,12 +43,9 @@ services:
 
   marketplace-api:
     image: hmctsprod.azurecr.io/amp/marketplace:latest
+    # The service's own defaults name the database and user, and db trusts local connections
     environment:
       POSTGRES_HOST: db
-      POSTGRES_PORT: '5432'
-      POSTGRES_DATABASE: *db-name
-      POSTGRES_USER: *db-user
-      POSTGRES_PASS: *db-password
       ENTRA_BYPASS: 'true'
     depends_on:
       db:
@@ -63,10 +54,10 @@ services:
   db:
     image: postgres:18-alpine
     environment:
-      POSTGRES_DB: *db-name
-      POSTGRES_USER: *db-user
-      POSTGRES_PASSWORD: *db-password
+      POSTGRES_DB: marketplace
+      # Reachable only on this compose network, and only for local use
+      POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d marketplace']
       interval: 5s
       retries: 10
