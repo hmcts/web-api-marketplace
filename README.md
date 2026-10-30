@@ -8,11 +8,11 @@ remains the reference for the module and testing patterns used here.
 
 |                     |                                                         |
 | ------------------- | ------------------------------------------------------- |
-| Product / component | `apim` / `frontend`                                     |
-| Helm chart          | `apim-marketplace-web`                                  |
-| Image               | `hmctsprod.azurecr.io/apim/marketplace-web`             |
+| Product / component | `amp` / `marketplace-web`                               |
+| Helm chart          | `amp-marketplace-web`                                   |
+| Image               | `hmctsprod.azurecr.io/amp/marketplace-web`              |
 | Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic) |
-| Key vault           | `apim-{env}` — shared with `service-api-marketplace`    |
+| Key vault           | `amp-{env}` — created by `service-api-marketplace`      |
 | Local port          | 3344 (HTTPS in development)                             |
 
 ## Running locally
@@ -227,15 +227,16 @@ set, otherwise memory for that one process.
 These are known gaps from the initial AMP-1031 onboarding, not oversights:
 
 - **App Insights is stubbed.** `APPLICATIONINSIGHTS_ENABLED: 'false'` in the chart. There is
-  no `azurerm_application_insights` resource for the `apim` product, and the `apim-{env}`
+  no `azurerm_application_insights` resource for the `amp` product, and the `amp-{env}`
   vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
   the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
-  and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
-- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`):
-  `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
-  where hmcts/external-entra-id writes them, and read with the pod's workload identity
-  (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`). `modules/properties-volume` maps them into
-  the Entra config.
+  and `keyVaults` back to `charts/amp-marketplace-web/values.yaml`.
+- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`,
+  still under `apim` until the Flux move lands): `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and
+  `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`, where hmcts/external-entra-id writes them,
+  and read with the pod's workload identity (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`;
+  `amp-sandbox-mi`, with a new client ID, once Flux moves). `modules/properties-volume` maps them
+  into the Entra config.
 - **Entra in AAT and demo** is switched off (`ENTRA_ENABLED=false` in cnp-flux-config's
   `aat.yaml` and `demo.yaml`, and in `values.aat.template.yaml` for the pipeline's AAT deploy),
   so sign in there says it is unavailable. Switching it on needs a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and

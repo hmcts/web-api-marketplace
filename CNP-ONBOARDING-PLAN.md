@@ -1,8 +1,8 @@
-# CNP Onboarding Plan — apim/marketplace-web
+# CNP Onboarding Plan — amp/marketplace-web
 
 Service: `web-api-marketplace`
-Product: `apim` · Component: `marketplace-web`
-Ticket: AMP-1031
+Product: `amp` · Component: `marketplace-web`
+Ticket: AMP-1031 (onboarding), AMP-1244 (move from `apim` to `amp`)
 
 Status: ✅ done · ⏳ waiting on someone else · ○ to do · ⚠️ check first
 
@@ -10,33 +10,38 @@ Status: ✅ done · ⏳ waiting on someone else · ○ to do · ⚠️ check fir
 
 ## Names reference
 
-All deployment names derive from `{product}-{component}` = `apim-marketplace-web`.
+> **Moved from `apim` to `amp` (AMP-1244).** The names reference below is current. The phases
+> record the original onboarding under `apim`, so the names in them are the `apim` ones. The
+> `cnp-flux-config` overlays are still under `apps/apim/` until the Flux move lands, and the
+> public DNS and Front Door entries in Phase 5 are for the `apim-` hosts. The vault's resource
+> group is `amp-marketplace-{env}`.
+
+All deployment names derive from `{product}-{component}` = `amp-marketplace-web`.
 The repo name is deliberately different — it follows the team's `{type}-{name}` convention,
 matching `service-api-marketplace`.
 
-| What                            | Name                                                         |
-| ------------------------------- | ------------------------------------------------------------ |
-| **GitHub repo**                 | `web-api-marketplace`                                        |
-| **GitHub topic**                | `jenkins-cft-j-z`                                            |
-| **Jenkins job path**            | `HMCTS_j_to_z/web-api-marketplace`                           |
-| **Jenkins product / component** | `apim` / `marketplace-web`                                   |
-| **Kubernetes namespace**        | `apim` (shared with `service-api-marketplace`)               |
-| **Helm chart / release**        | `apim-marketplace-web`                                       |
-| **Docker image**                | `hmctsprod.azurecr.io/apim/marketplace-web`                  |
-| **Flux config path**            | `apps/apim/apim-marketplace-web/`                            |
-| **Azure Key Vault**             | `apim-{env}` (shared — created by `service-api-marketplace`) |
-| **Managed identity**            | `apim-{env}-mi`                                              |
-| **Ingress (AAT)**               | `apim-marketplace-web.aat.platform.hmcts.net`                |
-| **Preview**                     | `apim-marketplace-web-pr-{N}.preview.platform.hmcts.net`     |
-| **AAD group / Backstage owner** | `DTS API Marketplace` / `group:dts-api-marketplace`          |
-| **Slack**                       | `#api-marketplace-tech`                                      |
-| **Sonar key**                   | `web-api-marketplace`                                        |
+| What                            | Name                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| **GitHub repo**                 | `web-api-marketplace`                                                     |
+| **GitHub topic**                | `jenkins-cft-j-z`                                                         |
+| **Jenkins job path**            | `HMCTS_j_to_z/web-api-marketplace`                                        |
+| **Jenkins product / component** | `amp` / `marketplace-web`                                                 |
+| **Kubernetes namespace**        | `amp` (shared with `service-api-marketplace`)                             |
+| **Helm chart / release**        | `amp-marketplace-web`                                                     |
+| **Docker image**                | `hmctsprod.azurecr.io/amp/marketplace-web`                                |
+| **Flux config path**            | `apps/amp/amp-marketplace-web/`                                           |
+| **Azure Key Vault**             | `amp-{env}` (`amp-sbox` in sandbox), created by `service-api-marketplace` |
+| **Managed identity**            | `amp-{env}-mi`, created by try-slc                                        |
+| **Ingress (AAT)**               | `amp-marketplace-web.aat.platform.hmcts.net`                              |
+| **Preview**                     | `amp-marketplace-web-pr-{N}.preview.platform.hmcts.net`                   |
+| **AAD group / Backstage owner** | `DTS API Marketplace` / `group:dts-api-marketplace`                       |
+| **Slack**                       | `#api-marketplace-tech`                                                   |
+| **Sonar key**                   | `web-api-marketplace`                                                     |
 
 > **Why `marketplace-web` and not `frontend`:** `apim-frontend` reads as "a frontend for
 > Azure APIM", which is a real and unhelpful collision. Keeping `marketplace` in the
-> component name disambiguates. The `apim` product prefix itself is fixed — it is the
-> existing CNP product, namespace and vault shared with the backend, and changing it would
-> mean migrating a live service.
+> component name disambiguates. The product itself has since moved from `apim` to `amp`
+> (AMP-1244), for the same reason.
 
 ---
 
@@ -51,10 +56,9 @@ Nothing to do here. Recorded because it is why this onboarding is unusually shor
 | 0.3 | `apps/apim/automation` registered in `apps/flux-system/automation`                               | ✅     |
 | 0.4 | Key vault `apim-{env}`, RG `apim-shared-{env}`, managed identity `apim-{env}-mi`                 | ✅     |
 
-**No Terraform is needed in this repo.** There is no `infrastructure/` directory, so the
-pipeline runs no Terraform stage and no `terraform-infra-approvals` file is required. The
-vault already exists and predates this service, which also avoids the bootstrap deadlock —
-`withPipeline` only runs `terraform apply` on master, so a vault created by this repo's own
+**This repo's Terraform does not create the vault.** `infrastructure/` creates the Redis cache
+and writes its secrets into the vault that `service-api-marketplace` creates. Not owning the
+vault avoids the bootstrap deadlock — `withPipeline` only runs `terraform apply` on master, so a vault created by this repo's own
 Terraform would not exist during PR builds and mounts would fail with `Init:0/1`.
 
 ---
@@ -276,14 +280,14 @@ internal demo or for the work above.
 Deliberately deferred to get the service deploying. Each needs a product decision, not
 just code.
 
-| #   | Item                | Notes                                                                                                                                                                                                                                                                                                                                                                                             |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.1 | App Insights        | Stubbed with `APPLICATIONINSIGHTS_ENABLED: 'false'`. There is **no** `azurerm_application_insights` resource for the `apim` product, and the vault holds only `marketplace-POSTGRES-*`. Needs the resource created and a secret added — and that Terraform currently lives in `service-api-marketplace/infrastructure/`, which is the trigger to consider extracting `apim-shared-infrastructure` |
-| 6.2 | Welsh translations  | Decided: English only. The toggle, the `cy` locale and `?lng=` detection are removed                                                                                                                                                                                                                                                                                                              |
-| 6.3 | Feedback survey     | Phase banner links to `#`                                                                                                                                                                                                                                                                                                                                                                         |
-| 6.4 | Analytics / RUM     | `analytics.gtmContainerId` and all `dynatrace.jstags` are empty, so neither script renders. FACT's own GTM container and Dynatrace tags were deliberately removed rather than reused — populate with this service's own identifiers                                                                                                                                                               |
-| 6.5 | Backend integration | FACT's `requests/`, `schemas/` and `services/` were removed with its court domain. FACT's `axiosConfig.ts` is the reference for the app-registration bearer-token pattern, which needs two Entra ID registrations                                                                                                                                                                                 |
-| 6.6 | Sessions            | `express-session` removed — nothing read `req.session` and an in-memory store would not survive multiple replicas. A journey needing state means Redis, which becomes component-level Terraform in this repo                                                                                                                                                                                      |
+| #   | Item                | Notes                                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 | App Insights        | Stubbed with `APPLICATIONINSIGHTS_ENABLED: 'false'`. There is **no** `azurerm_application_insights` resource for the `amp` product, and the vault holds only `marketplace-POSTGRES-*`. Needs the resource created and a secret added — and that Terraform currently lives in `service-api-marketplace/infrastructure/`, which is the trigger to consider extracting `amp-shared-infrastructure` |
+| 6.2 | Welsh translations  | Decided: English only. The toggle, the `cy` locale and `?lng=` detection are removed                                                                                                                                                                                                                                                                                                            |
+| 6.3 | Feedback survey     | Phase banner links to `#`                                                                                                                                                                                                                                                                                                                                                                       |
+| 6.4 | Analytics / RUM     | `analytics.gtmContainerId` and all `dynatrace.jstags` are empty, so neither script renders. FACT's own GTM container and Dynatrace tags were deliberately removed rather than reused — populate with this service's own identifiers                                                                                                                                                             |
+| 6.5 | Backend integration | FACT's `requests/`, `schemas/` and `services/` were removed with its court domain. FACT's `axiosConfig.ts` is the reference for the app-registration bearer-token pattern, which needs two Entra ID registrations                                                                                                                                                                               |
+| 6.6 | Sessions            | `express-session` removed — nothing read `req.session` and an in-memory store would not survive multiple replicas. A journey needing state means Redis, which becomes component-level Terraform in this repo                                                                                                                                                                                    |
 
 ---
 
