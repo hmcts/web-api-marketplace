@@ -1,4 +1,10 @@
-version: '2'
+version: '2.1'
+
+# Shared by marketplace-api and db, which read them under different variable names
+x-database:
+  name: &db-name marketplace
+  user: &db-user postgres
+  password: &db-password postgres
 
 services:
   marketplace-web:
@@ -8,5 +14,59 @@ services:
         - http_proxy
         - https_proxy
         - no_proxy
+        - PUPPETEER_SKIP_DOWNLOAD=true
+        - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+    # Shares the mock's network, so the browser and this server both reach it at localhost:4600
+    network_mode: service:entra-mock
+    environment:
+      PORT: '3344'
+      API_URL: http://marketplace-api:8080
+      SESSION_SECRET: local-session-secret
+      ENTRA_CLIENT_ID: local-web-api-marketplace
+      ENTRA_CLIENT_SECRET: local-mock-only
+      ENTRA_TENANT_ID: 00000000-0000-4000-8000-00000000c1a0
+      ENTRA_AUTHORIZE_ENDPOINT: http://localhost:4600/00000000-0000-4000-8000-00000000c1a0/authorize
+      ENTRA_TOKEN_ENDPOINT: http://localhost:4600/00000000-0000-4000-8000-00000000c1a0/token
+      ENTRA_DISCOVERY_ENDPOINT: http://localhost:4600/00000000-0000-4000-8000-00000000c1a0/.well-known/openid-configuration
+      ENTRA_REDIRECT_URI: http://localhost:3344/auth/callback
+      ENTRA_POST_LOGOUT_REDIRECT_URI: http://localhost:3344/
+    depends_on:
+      entra-mock:
+        condition: service_started
+      marketplace-api:
+        condition: service_started
+
+  entra-mock:
+    image: ghcr.io/navikt/mock-oauth2-server:6.0.3
+    environment:
+      SERVER_PORT: '4600'
+      JSON_CONFIG_PATH: /config/entra-mock.json
+    volumes:
+      - ./docker/entra-mock.json:/config/entra-mock.json:ro
     ports:
+      - '4600:4600'
       - '3344:3344'
+
+  marketplace-api:
+    image: hmctsprod.azurecr.io/amp/marketplace:latest
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: '5432'
+      POSTGRES_DATABASE: *db-name
+      POSTGRES_USER: *db-user
+      POSTGRES_PASS: *db-password
+      ENTRA_BYPASS: 'true'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: *db-name
+      POSTGRES_USER: *db-user
+      POSTGRES_PASSWORD: *db-password
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      retries: 10
