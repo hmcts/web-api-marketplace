@@ -57,11 +57,14 @@ You need Docker Desktop running and the Azure CLI signed in (`az login`).
 3. Open <http://localhost:3344>, choose **Sign in** and enter `local@amp.com` as the username.
    There is no password.
 
-| Username        | Signs in as                         |
-| --------------- | ----------------------------------- |
-| `local@amp.com` | Local User                          |
-| `test@amp.com`  | Test User                           |
-| Anything else   | A new user named after the username |
+| Username        | Signs in as |
+| --------------- | ----------- |
+| `local@amp.com` | Local User  |
+| `test@amp.com`  | Test User   |
+
+To add a user, give it a mapping with a GUID `oid` in `docker/entra-mock.json`, then run
+`docker compose restart entra-mock marketplace-web`. Any other username is refused, because the
+service only accepts a GUID as an object ID.
 
 To run the smoke and functional tests against it:
 
