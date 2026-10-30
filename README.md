@@ -27,6 +27,69 @@ yarn start:dev
 Then <https://localhost:3344>. The development server uses a self-signed certificate,
 so expect a browser warning.
 
+### Running the whole marketplace with Docker
+
+`docker-compose.yml` runs the web app with everything it needs, so nothing in Azure is used
+once the images are pulled:
+
+| Service         | Address                                  | Source                                                                                                            |
+| --------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| marketplace-web | <http://localhost:3344>                  | Built from this repo                                                                                              |
+| marketplace-api | Internal only, at `marketplace-api:8080` | `hmctsprod.azurecr.io/amp/marketplace:latest`, the newest service build that passed AAT, with `ENTRA_BYPASS=true` |
+| db              | Internal only                            | `postgres:18-alpine`                                                                                              |
+| entra-mock      | <http://localhost:4600>                  | [mock-oauth2-server](https://github.com/navikt/mock-oauth2-server) with `docker/entra-mock.json`                  |
+
+You need Docker Desktop running and the Azure CLI signed in (`az login`).
+
+1. Log in to the HMCTS registry, which holds the Node base image and the service image. The
+   login lasts about 3 hours.
+
+   ```bash
+   az acr login --name hmctsprod
+   ```
+
+2. Build the web image and start everything. The first build takes a few minutes.
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Open <http://localhost:3344>, choose **Sign in** and enter `local@amp.com` as the username.
+   There is no password.
+
+| Username        | Signs in as |
+| --------------- | ----------- |
+| `local@amp.com` | Local User  |
+| `test@amp.com`  | Test User   |
+
+To add a user, give it a mapping with a GUID `oid` in `docker/entra-mock.json`, then run
+`docker compose restart entra-mock marketplace-web`. Any other username is refused, because the
+service only accepts a GUID as an object ID.
+
+To run the smoke and functional tests against it:
+
+```bash
+TEST_URL=http://localhost:3344 yarn test:smoke --project=chrome
+TEST_URL=http://localhost:3344 yarn test:functional --project=chrome
+```
+
+| Task                         | Command                                     |
+| ---------------------------- | ------------------------------------------- |
+| Rebuild after a code change  | `docker compose up --build marketplace-web` |
+| Get the newest service image | `docker compose pull marketplace-api`       |
+| Follow the web app's logs    | `docker compose logs -f marketplace-web`    |
+| Stop everything              | `docker compose down`                       |
+
+To test against service changes that aren't on `master` yet, run the API from
+service-api-marketplace's own `docker-compose.yml` instead.
+
+| Problem                                          | Fix                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `401 Unauthorized` from `hmctsprod.azurecr.io`   | Run `az acr login --name hmctsprod` again                                          |
+| Port 3344 or 4600 already allocated              | Stop whatever else uses it, such as `yarn start:dev`                               |
+| Web unreachable after restarting the mock        | `docker compose restart entra-mock marketplace-web`: web shares the mock's network |
+| The API is slow to start on an Apple silicon Mac | Expected: the service image is amd64 and runs under emulation                      |
+
 ### Without Entra
 
 To work on the pages behind sign in without setting Entra up at all:
