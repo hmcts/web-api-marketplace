@@ -18,6 +18,7 @@
     "test:coverage": "jest --coverage",
     "test:routes": "jest -c jest.routes.config.js",
     "test:smoke": "yarn playwright test --grep '@smoke'",
+    "test:e2e": "yarn playwright test --grep '@smoke' --project=chrome",
     "cichecks": "yarn install && yarn build && yarn lint && yarn test && yarn test:routes",
     "prepare": "husky install",
     "test:functional": "NODE_OPTIONS=--no-deprecation yarn playwright test --grep-invert='@smoke'",

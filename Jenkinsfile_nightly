@@ -14,8 +14,18 @@ def type = "nodejs"
 def product = "amp"
 def component = "marketplace-web"
 
+def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
+
 withNightlyPipeline(type, product, component) {
   env.TEST_URL = params.URL_TO_TEST
+
+  // AAT runs the newest promoted image of both web and service, so the smoke set run here catches
+  // a change to either breaking the other, without the service knowing anything about web
+  enableE2eTest()
+  before('E2eTest') {
+    yarnBuilder.yarn('playwright install chrome')
+  }
+
   // The app's own cookies, added to the scan's ignore list. Set here because the library does not
   // pass enableSecurityScan's cookieIgnoreList on to the scan script
   env.CUSTOM_COOKIES = 'amp-cookie-preferences,connect.sid,_csrf,i18next'
