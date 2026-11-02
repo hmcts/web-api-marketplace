@@ -32,8 +32,8 @@
     "test:functional:debug": "playwright test --debug"
   },
   "dependencies": {
-    "@azure/identity": "4.14.0",
-    "@azure/keyvault-secrets": "4.11.2",
+    "@azure/identity": "4.14.1",
+    "@azure/keyvault-secrets": "4.12.0",
     "@grpc/grpc-js": "^1.14.4",
     "@hmcts/cookie-manager": "1.1.0",
     "@hmcts/info-provider": "1.4.0",
