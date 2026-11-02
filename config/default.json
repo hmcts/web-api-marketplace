@@ -52,7 +52,8 @@
       "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net",
       "preview": "https://sps-api-mgmt.preview.api.hmcts.net",
       "aat": "https://sps-api-mgmt.aat.api.hmcts.net",
-      "demo": "https://sps-api-mgmt.demo.hmcts.net"
+      "demo": "https://sps-api-mgmt.demo.hmcts.net",
+      "prod": "https://sps-api-mgmt.demo.hmcts.net"
     }
   },
   "marketplaceSite": {
