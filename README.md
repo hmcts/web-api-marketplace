@@ -57,10 +57,11 @@ You need Docker Desktop running and the Azure CLI signed in (`az login`).
 3. Open <http://localhost:3344>, choose **Sign in** and enter `local@amp.com` as the username.
    There is no password.
 
-| Username        | Signs in as |
-| --------------- | ----------- |
-| `local@amp.com` | Local User  |
-| `test@amp.com`  | Test User   |
+| Username             | Signs in as                                   |
+| -------------------- | --------------------------------------------- |
+| `local@amp.com`      | Local User                                    |
+| `test@amp.com`       | Test User                                     |
+| `functional@amp.com` | Functional Test, used by the functional tests |
 
 To add a user, give it a mapping with a GUID `oid` in `docker/entra-mock.json`, then run
 `docker compose restart entra-mock marketplace-web`. Any other username is refused, because the
@@ -72,6 +73,10 @@ To run the smoke and functional tests against it:
 TEST_URL=http://localhost:3344 yarn test:smoke --project=chrome
 TEST_URL=http://localhost:3344 yarn test:functional --project=chrome
 ```
+
+Use `chrome`, `edge` or `firefox` here. WebKit applies the app's `upgrade-insecure-requests` and
+HSTS headers to `localhost` too, so it asks for `https://localhost:3344` and can't load the pages.
+The signed-in journeys run in `chrome` and `edge` only, and are skipped wherever sign in is off.
 
 | Task                         | Command                                     |
 | ---------------------------- | ------------------------------------------- |
