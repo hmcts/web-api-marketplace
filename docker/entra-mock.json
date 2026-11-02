@@ -1,0 +1,44 @@
+{
+  "interactiveLogin": true,
+  "tokenCallbacks": [
+    {
+      "issuerId": "00000000-0000-4000-8000-00000000c1a0",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "subject",
+          "match": "local@amp.com",
+          "claims": {
+            "ver": "2.0",
+            "tid": "00000000-0000-4000-8000-00000000c1a0",
+            "oid": "11111111-1111-4111-8111-111111111111",
+            "email": "local@amp.com",
+            "name": "Local User"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "test@amp.com",
+          "claims": {
+            "ver": "2.0",
+            "tid": "00000000-0000-4000-8000-00000000c1a0",
+            "oid": "22222222-2222-4222-8222-222222222222",
+            "email": "test@amp.com",
+            "name": "Test User"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": ".*",
+          "claims": {
+            "ver": "2.0",
+            "tid": "00000000-0000-4000-8000-00000000c1a0",
+            "oid": "${subject}",
+            "email": "${subject}",
+            "name": "${subject}"
+          }
+        }
+      ]
+    }
+  ]
+}
