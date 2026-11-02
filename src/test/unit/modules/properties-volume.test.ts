@@ -34,6 +34,8 @@ describe('PropertiesVolume', () => {
   beforeEach(() => {
     delete store.secrets;
     store.session = { secret: '', redis: { host: '', port: '6380', key: '', tls: true } };
+    // Reset too, or a value set by an earlier test makes the next one pass without reading anything.
+    store.entra = { clientId: '', clientSecret: '', tenantId: '' };
   });
 
   test('secrets_mounted_from_the_sandbox_vault_should_reach_the_session_config', () => {
@@ -79,7 +81,22 @@ describe('PropertiesVolume', () => {
     expect(get(store, 'session.redis.host')).toBe('apim.redis.cache.windows.net');
   });
 
-  test.each(['kvspsextidsbox', 'kv-entra-stg', 'kv-entra-prod'])(
+  // The vault names moved with the apim-to-amp rename, and the old list named only the old ones.
+  // Nothing failed: the secrets were mounted, never read, and sessions silently fell back to
+  // process memory in every environment at once.
+  test.each(['amp-marketplace', 'amp-marketplace-sbox', 'a-vault-named-later'])(
+    'session_secrets_should_be_read_from_whichever_vault_is_mounted_%s',
+    vault => {
+      store.secrets = mounted(vault);
+
+      enable('demo');
+
+      expect(get(store, 'session.redis.host')).toBe('apim.redis.cache.windows.net');
+      expect(get(store, 'session.secret')).toBe('a-shared-secret');
+    }
+  );
+
+  test.each(['kvspsextidsbox', 'kv-entra-stg', 'kv-entra-prod', 'kvspsextidaat'])(
     'entra_credentials_mounted_from_the_external_tenants_vault_%s_should_reach_the_entra_config',
     vault => {
       store.secrets = {

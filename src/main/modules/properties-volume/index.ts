@@ -3,18 +3,23 @@ import config from 'config';
 import { Application } from 'express';
 import { get, set } from 'lodash';
 
-const VAULTS = ['amp', 'amp-sbox'];
-
-const ENTRA_VAULTS = ['kvspsextidsbox', 'kv-entra-stg', 'kv-entra-prod'];
-
 export class PropertiesVolume {
   enableFor(server: Application): void {
     if (server.locals.ENV !== 'development') {
       propertiesVolume.addTo(config);
       this.setSecret('secrets.amp.APP_INSIGHTS_CONNECTION_STRING', 'appInsights.app-insights-connection-string');
-      VAULTS.forEach(vault => this.setSessionSecrets(vault));
-      ENTRA_VAULTS.forEach(vault => this.setEntraSecrets(vault));
+      // Load whichever vaults the chart mounted
+      this.mountedVaults().forEach(vault => {
+        this.setSessionSecrets(vault);
+        this.setEntraSecrets(vault);
+      });
     }
+  }
+
+  /** Each mounted vault is a directory under /mnt/secrets, and properties-volume keys them by name. */
+  private mountedVaults(): string[] {
+    const secrets = get(config, 'secrets');
+    return secrets ? Object.keys(secrets) : [];
   }
 
   private setEntraSecrets(vault: string): void {
