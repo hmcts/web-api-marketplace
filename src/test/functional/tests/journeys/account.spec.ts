@@ -47,7 +47,12 @@ test.describe('Signed in', () => {
     await deleteTestApplication(page);
   });
 
-  test.afterEach(async ({ page }) => {
+  // Playwright runs afterEach for a test skipped in beforeEach, before appName is set, and a
+  // link named undefined matches every link on the page
+  test.afterEach(async ({ page }, testInfo) => {
+    if (testInfo.expectedStatus === 'skipped') {
+      return;
+    }
     await deleteTestApplication(page);
   });
 
