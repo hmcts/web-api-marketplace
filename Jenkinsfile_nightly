@@ -12,7 +12,7 @@ def product = "amp"
 def component = "marketplace-web"
 
 withNightlyPipeline(type, product, component) {
-  // Fortify on Demand, through the library's own runner. The vault holds the FoD credentials;
-  // the library's default, amp-aat, does not exist
+  // Fortify on Demand. The vault holds the FoD scan credentials; the library's default, amp-aat,
+  // is the vault from before the rename
   enableFortifyScan('amp-marketplace-aat')
 }
