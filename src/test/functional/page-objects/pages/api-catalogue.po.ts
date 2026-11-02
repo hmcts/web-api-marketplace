@@ -16,4 +16,10 @@ export class ApiCataloguePage extends Base {
   async expectAtLeastOneApi(): Promise<void> {
     await expect(this.apiLinks.first()).toBeVisible();
   }
+
+  async openFirstApi(): Promise<string> {
+    const title = (await this.apiLinks.first().innerText()).trim();
+    await this.apiLinks.first().click();
+    return title;
+  }
 }
