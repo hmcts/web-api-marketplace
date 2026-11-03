@@ -89,7 +89,7 @@ export class Helmet {
           defaultSrc: ["'none'"],
           // Signing out posts here and is redirected on to Entra's sign-out page, and
           // browsers hold a form's redirects to form-action as well as its own action.
-          formAction: [self, () => entraOrigin()],
+          formAction: [() => formActionSources()],
           manifestSrc: [self],
           fontSrc: [self, 'data:'],
           imgSrc: [self, googleAnalyticsDomain, azureBlobDomain],
@@ -118,8 +118,8 @@ export class Helmet {
   }
 }
 
-/** Where Entra's pages are, or only this service when sign in is not configured. */
-function entraOrigin(): string {
+/** This service, and Entra's pages when sign in is configured. */
+function formActionSources(): string {
   const endpoint = entraConfig.authorizeEndpoint;
-  return endpoint ? new URL(endpoint).origin : self;
+  return endpoint ? `${self} ${new URL(endpoint).origin}` : self;
 }
