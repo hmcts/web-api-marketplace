@@ -2,15 +2,35 @@
 
 properties([
 // H allow predefined but random minute see https://en.wikipedia.org/wiki/Cron#Non-standard_characters
-pipelineTriggers([cron('H 07 * * 1-5')])
+pipelineTriggers([cron('H 07 * * 1-5')]),
+parameters([
+  // The long-lived AAT release. The staging release only exists while a master build deploys
+  string(name: 'URL_TO_TEST', defaultValue: 'https://amp-marketplace-web.aat.platform.hmcts.net', description: 'The URL you want to run these tests against'),
+])
 ])
 
-@Library("Infrastructure@2.4.8")
+@Library("Infrastructure@2.13.4")
 
 def type = "nodejs"
 def product = "amp"
 def component = "marketplace-web"
 
-withNightlyPipeline(type, product, component) {
+def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
 
+withNightlyPipeline(type, product, component) {
+  env.TEST_URL = params.URL_TO_TEST
+
+  // AAT runs the newest promoted image of both web and service, so the smoke set run here catches
+  // a change to either breaking the other, without the service knowing anything about web
+  enableE2eTest()
+  before('E2eTest') {
+    yarnBuilder.yarn('playwright install chrome')
+  }
+
+  // The app's own cookies, added to the scan's ignore list. Set here because the library does not
+  // pass enableSecurityScan's cookieIgnoreList on to the scan script
+  env.CUSTOM_COOKIES = 'amp-cookie-preferences,connect.sid,_csrf,i18next'
+  enableSecurityScan(
+    urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$'"
+  )
 }
