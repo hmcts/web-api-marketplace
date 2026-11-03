@@ -6,14 +6,14 @@ Express 5 + TypeScript + Nunjucks + GOV.UK Frontend, deployed to CNP (CFT) by Je
 Derived from [fact-public-frontend](https://github.com/hmcts/fact-public-frontend), which
 remains the reference for the module and testing patterns used here.
 
-|                     |                                                         |
-| ------------------- | ------------------------------------------------------- |
-| Product / component | `apim` / `frontend`                                     |
-| Helm chart          | `apim-marketplace-web`                                  |
-| Image               | `hmctsprod.azurecr.io/apim/marketplace-web`             |
-| Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic) |
-| Key vault           | `apim-{env}` — shared with `service-api-marketplace`    |
-| Local port          | 3344 (HTTPS in development)                             |
+|                     |                                                                |
+| ------------------- | -------------------------------------------------------------- |
+| Product / component | `amp` / `marketplace-web`                                      |
+| Helm chart          | `amp-marketplace-web`                                          |
+| Image               | `hmctsprod.azurecr.io/amp/marketplace-web`                     |
+| Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic)        |
+| Key vault           | `amp-marketplace-{env}` — created by `service-api-marketplace` |
+| Local port          | 3344 (HTTPS in development)                                    |
 
 ## Running locally
 
@@ -295,14 +295,14 @@ set, otherwise memory for that one process.
 These are known gaps from the initial AMP-1031 onboarding, not oversights:
 
 - **App Insights is stubbed.** `APPLICATIONINSIGHTS_ENABLED: 'false'` in the chart. There is
-  no `azurerm_application_insights` resource for the `apim` product, and the `apim-{env}`
-  vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
-  the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
-  and `keyVaults` back to `charts/apim-marketplace-web/values.yaml`.
-- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`):
+  no `azurerm_application_insights` resource for the `amp` product, and the
+  `amp-marketplace-{env}` vault holds no connection string. Once one exists in the vault and
+  the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName` and
+  `keyVaults` back to `charts/amp-marketplace-web/values.yaml`.
+- **Entra in sandbox** is wired in cnp-flux-config (`apps/amp/amp-marketplace-web/sbox.yaml`):
   `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
   where hmcts/external-entra-id writes them, and read with the pod's workload identity
-  (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`). `modules/properties-volume` maps them into
+  (`workloadClientID` `fb098a2c-…`, `amp-sandbox-mi`). `modules/properties-volume` maps them into
   the Entra config.
 - **Entra in AAT and demo** is switched off (`ENTRA_ENABLED=false` in cnp-flux-config's
   `aat.yaml` and `demo.yaml`, and in `values.aat.template.yaml` for the pipeline's AAT deploy),
