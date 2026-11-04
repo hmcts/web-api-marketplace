@@ -104,7 +104,7 @@ describe('ApiCatalogue', () => {
         catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
         productId: 'try-it-now-cp-crime-schedulingandlisting',
         gatewayPath: 'amp/try/slc',
-        role: 'slc.read',
+        role: 'app.read',
         resourceAppId: 'aaaaaaaa-1111-2222-3333-444444444444',
       },
       {
@@ -113,7 +113,7 @@ describe('ApiCatalogue', () => {
         catalogueName: 'api-cp-refdata-courthearing-courthouses',
         productId: 'try-it-now-cp-refdata-courthearing',
         gatewayPath: 'amp/try/rcc',
-        role: 'rcc.read',
+        role: 'app.read',
         resourceAppId: 'bbbbbbbb-1111-2222-3333-444444444444',
       },
     ];
