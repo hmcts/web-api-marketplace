@@ -30,7 +30,12 @@ withNightlyPipeline(type, product, component) {
   // The app's own cookies, added to the scan's ignore list. Set here because the library does not
   // pass enableSecurityScan's cookieIgnoreList on to the scan script
   env.CUSTOM_COOKIES = 'amp-cookie-preferences,connect.sid,_csrf,i18next'
+  // ZAP skips an excluded URL only when its entry is enabled. The catalogue pages scanned are
+  // those of the APIs going to production, SLC and RCC
   enableSecurityScan(
-    urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$'"
+    urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$' " +
+      "-config globalexcludeurl.url_list.url\\(1\\).enabled=true " +
+      "-config globalexcludeurl.url_list.url\\(2\\).regex='^https?:\\/\\/.*\\/api-catalogue\\/(?!(api-cp-crime-schedulingandlisting-courtschedule|api-cp-refdata-courthearing-courthouses)\$).+\$' " +
+      "-config globalexcludeurl.url_list.url\\(2\\).enabled=true"
   )
 }
