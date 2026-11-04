@@ -37,10 +37,11 @@ jobs:
     services:
       postgres:
         image: postgres:18-alpine
+        # A database for this run only, reachable only from the runner, so it takes no password
         env:
           POSTGRES_DB: marketplace
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -107,18 +108,19 @@ jobs:
           ENTRA_POST_LOGOUT_REDIRECT_URI: http://localhost:3344/
         run: |
           corepack enable
-          yarn install --immutable
+          yarn install --immutable --mode=skip-build
           yarn build:prod
           nohup yarn start > ../web.log 2>&1 &
 
       - name: Wait for service and web
         run: |
           wait_for () {
+            local url="$1"
             for _ in $(seq 1 60); do
-              curl -fsS -o /dev/null "$1" && { echo "$1 is up"; return 0; }
+              curl -fsS -o /dev/null "$url" && { echo "$url is up"; return 0; }
               sleep 5
             done
-            echo "$1 did not come up within 5 minutes" >&2
+            echo "$url did not come up within 5 minutes" >&2
             return 1
           }
           wait_for http://localhost:8080/health/readiness
@@ -130,7 +132,7 @@ jobs:
           TEST_URL: http://localhost:3344
           PLAYWRIGHT_REPORTERS: list,html
         run: |
-          yarn playwright install --with-deps chrome
+          node_modules/.bin/playwright install --with-deps chrome
           yarn playwright test --project=chrome
 
       - name: Show the app logs
