@@ -1,6 +1,7 @@
 #!groovy
 
 @Library("Infrastructure@2.13.4")
+import uk.gov.hmcts.contino.AppPipelineDsl
 
 def type = "nodejs"
 def product = "amp"
@@ -12,6 +13,10 @@ withPipeline(type, product, component) {
   env.PLAYWRIGHT_WORKERS = 4
   env.PLAYWRIGHT_REPORTERS = 'list,odhin'
   env.PLAYWRIGHT_VIDEO_MODE = 'retain-on-failure'
+
+  // Publishes the contracts only. The deploy check (CONSUMER_DEPLOY_CHECK) follows once the service
+  // verifies them, as until then it would stop every deploy
+  enablePactAs([AppPipelineDsl.PactRoles.CONSUMER])
 
   onPR() {
     env.ENV = 'preview'
