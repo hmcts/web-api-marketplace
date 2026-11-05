@@ -215,21 +215,17 @@ sends the user back to it with the reason. The count is taken again before an ap
 created, so one started in another tab cannot go over. Only this app enforces the limit: it counts
 the user's applications from the backend's list.
 
-On an application's page, the Scheduling and Listing Court Schedule row has a collapsible panel
-right under it, "How to get an access token and call an API". It shows the Publisher ID (scope),
-then curl commands to get a token and to call SLC and its scenarios. The token endpoint uses the
-tenant the backend returns (`tenantId`), and the scope is the Publisher ID followed by
-`/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
-registration in Entra, the same for every API.
+On an application's page, each API in **APIs added** has a collapsible panel right under its
+row, "How to get an access token and call {API title}". It shows that API's Publisher ID
+(scope), then a curl command to get a token. The token endpoint uses the tenant the backend
+returns (`tenantId`), and the scope is the Publisher ID followed by `/.default`. The Publisher
+ID is the API's own Entra app (`resourceAppId` on the backend's `/products`). If the
+marketplace cannot be reached, SLC falls back to `apiEndpoints.publisherId` and any other API
+shows `{publisher_id}`.
 
-The calls go to the environment's API Management gateway (e.g.
-`https://sps-api-mgmt.sandbox.api.hmcts.net`). The page adds SLC's path, `/amp/try/slc`, then
-`/case/{case_urn}/courtschedule` or `/scenarios`. The gateways are in
-`apiEndpoints.apimBaseUrls` in `config/default.json`, one per environment, and nothing is set
-in cnp-flux-config. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
-`global.environment`; locally it is `sandbox`, from `config/development.json`. Changing a
-gateway, or adding one for a new environment, needs a release. An environment with no gateway
-leaves the calls out and shows only the token request.
+The panel does not list the API's endpoints. Under "Run try it now in developer portal" it links
+to "{API title} API reference", the API's page at `https://hmcts.github.io/<api-name>/`, the same link as on the catalogue page,
+so the endpoints are documented in one place.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.

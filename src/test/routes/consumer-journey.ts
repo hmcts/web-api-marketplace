@@ -315,6 +315,10 @@ describe('Consumer onboarding journey', () => {
         expect(slcPanel).to.not.contain('11111111-1111-1111-1111-111111111111');
         expect(hearingPanel).to.contain('scope=11111111-1111-1111-1111-111111111111/.default');
         expect(hearingPanel).to.not.contain('33333333-3333-3333-3333-333333333333');
+        // Each panel shows the token request alone and sends the consumer to that API's own reference.
+        expect(slcPanel).to.contain(`href="https://hmcts.github.io/${SLC.name}/"`);
+        expect(hearingPanel).to.contain(`href="https://hmcts.github.io/${CATALOGUE[0].name}/"`);
+        expect(slcPanel).to.not.contain('curl --request GET');
       });
     });
 

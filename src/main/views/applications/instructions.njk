@@ -1,4 +1,4 @@
-{#- How to use this application's credentials with one API (i), as curl commands: the token request, then the API's own calls and its test scenarios. -#}
+{#- How to use this application's credentials with one API (i): the token request as a curl command, then a link to try the API in the developer portal. -#}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {{ govukSummaryList({
   rows: [
@@ -16,26 +16,5 @@
   --data 'client_secret={{ i.token.clientSecret }}' \
   --data scope={{ i.token.scope }}</code></pre>
 
-{% for call in i.calls %}
-  <h3 class="govuk-heading-s">{{ call.title }}</h3>
-  {% if loop.first %}<p class="govuk-body">Send the access token with each request:</p>{% endif %}
-  <pre class="apim-code" id="call-request-{{ i.apiName }}-{{ loop.index }}"><code>curl --request GET \
-  --url {{ call.url }} \
-  --header 'Accept: application/json' \
-  --header 'Authorization: Bearer &lt;token&gt;' \
-  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'</code></pre>
-{% endfor %}
-
-{% if i.scenariosUrl %}
-  {% if i.placeholders.length %}
-    <h3 class="govuk-heading-s">Find a {{ i.placeholders | join(" and ") }} to try</h3>
-    <p class="govuk-body">List the test scenarios to get {{ "a " + i.placeholders[0] if i.placeholders.length == 1 else "values" }} to use in the {{ "request" if i.calls.length == 1 else "requests" }} above:</p>
-  {% else %}
-    <h3 class="govuk-heading-s">Try the test scenarios</h3>
-    <p class="govuk-body">List the requests you can try:</p>
-  {% endif %}
-  <pre class="apim-code" id="scenarios-request-{{ i.apiName }}"><code>curl --request GET \
-  --url {{ i.scenariosUrl }} \
-  --header 'Accept: application/json' \
-  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'</code></pre>
-{% endif %}
+<h3 class="govuk-heading-s">Run try it now in developer portal</h3>
+<p class="govuk-body"><a class="govuk-link" id="api-reference-{{ i.apiName }}" href="{{ i.docsUrl }}" rel="noreferrer noopener" target="_blank">{{ i.apiTitle }} API reference (opens in new tab)</a></p>

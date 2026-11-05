@@ -14,7 +14,6 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
     'api-cp-crime-schedulingandlisting-courtschedule': 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
     'api-one': '11111111-1111-1111-1111-111111111111/.default',
   }),
-  productFor: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../../main/services/ProductionRequests', () => ({
@@ -422,9 +421,13 @@ describe('ApplicationsController', () => {
 
       await controller().detail(forId(), res, jest.fn());
 
-      const instructions = res.data?.instructions as Record<string, { apiTitle: string; token: object }>;
+      const instructions = res.data?.instructions as Record<
+        string,
+        { apiTitle: string; token: object; docsUrl: string }
+      >;
       expect(Object.keys(instructions)).toEqual(['api-one']);
       expect(instructions['api-one'].apiTitle).toBe('API one');
+      expect(instructions['api-one'].docsUrl).toBe('https://hmcts.github.io/api-one/');
       expect(instructions['api-one'].token).toEqual({
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',
