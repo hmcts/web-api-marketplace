@@ -177,9 +177,10 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        // Neither API is SLC, so there are no instructions, Publisher ID included, to fold away.
-        expect(res.text).to.not.contain('id="publisher-id"');
-        expect(res.text).to.not.contain('id="api-instructions"');
+        // Each API has its own instructions, with its own Publisher ID.
+        expect(res.text).to.contain(`id="publisher-id-${CATALOGUE[0].name}">11111111-1111-1111-1111-111111111111<`);
+        expect(res.text).to.contain(`id="publisher-id-${CATALOGUE[1].name}">22222222-2222-2222-2222-222222222222<`);
+        expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
       });
 
       await agent.post('/account/applications/new/check-answers').expect(302);
@@ -280,7 +281,7 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('the_instructions_should_fold_away_right_under_the_slc_row_and_no_other', async () => {
+    test('each_apis_instructions_should_fold_away_right_under_its_own_row', async () => {
       (getCatalogueApis as jest.Mock).mockResolvedValue([...CATALOGUE, SLC]);
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Court tracker' });
@@ -294,19 +295,30 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         const rows = res.text.split('<tr class="govuk-table__row">').slice(2);
         const slcRow = rows.findIndex(row => row.includes(`>${SLC.title}<`));
+        const hearingRow = rows.findIndex(row => row.includes(`>${CATALOGUE[0].title}<`));
+        const slcPanel = rows[slcRow + 1];
+        const hearingPanel = rows[hearingRow + 1];
 
-        expect(res.text.match(/id="api-instructions"/g)).to.have.length(1);
-        expect(rows[slcRow + 1]).to.match(/colspan="2"[\s\S]*id="api-instructions"/);
-        expect(rows[slcRow + 1]).to.match(/<summary[\s\S]*?How to get an access token and call an API/);
-        expect(rows[slcRow + 1]).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
-        expect(rows[slcRow + 1]).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
-        // The Publisher ID is at the top of the panel, before the token request, and nowhere else.
-        expect(rows[slcRow + 1]).to.match(
-          /id="publisher-id">33333333-3333-3333-3333-333333333333<[\s\S]*id="token-request"/
+        expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
+        expect(slcPanel).to.match(new RegExp(`colspan="2"[\\s\\S]*id="api-instructions-${SLC.name}"`));
+        expect(slcPanel).to.match(new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${SLC.title}`));
+        expect(hearingPanel).to.match(
+          new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${CATALOGUE[0].title}`)
         );
-        expect(res.text.match(/id="publisher-id"/g)).to.have.length(1);
-        expect(rows[slcRow + 1]).to.contain('client_secret=&lt;client_secret&gt;');
-        expect(rows.filter(row => row.includes('id="api-instructions"'))).to.have.length(1);
+        expect(slcPanel).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
+        expect(slcPanel).to.contain('client_secret=&lt;client_secret&gt;');
+        // Each panel has its own Publisher ID at the top, before its token request, and not the other's.
+        expect(slcPanel).to.match(
+          new RegExp(`id="publisher-id-${SLC.name}">33333333-3333-3333-3333-333333333333<[\\s\\S]*id="token-request-`)
+        );
+        expect(slcPanel).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
+        expect(slcPanel).to.not.contain('11111111-1111-1111-1111-111111111111');
+        expect(hearingPanel).to.contain('scope=11111111-1111-1111-1111-111111111111/.default');
+        expect(hearingPanel).to.not.contain('33333333-3333-3333-3333-333333333333');
+        // Each panel shows the token request alone and sends the consumer to that API's own reference.
+        expect(slcPanel).to.contain(`href="https://hmcts.github.io/${SLC.name}/"`);
+        expect(hearingPanel).to.contain(`href="https://hmcts.github.io/${CATALOGUE[0].name}/"`);
+        expect(slcPanel).to.not.contain('curl --request GET');
       });
     });
 

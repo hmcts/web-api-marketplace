@@ -224,7 +224,7 @@ export default class ApplicationsController {
       productionRequest: await this.productionRequestFor(req, application),
       notice: takeNotice(req),
       ...this.accessData(),
-      ...(await instructionsFor(application)),
+      instructions: await instructionsFor(application),
     });
   }
 
