@@ -33,6 +33,8 @@ export interface ApiProduct {
   role: string;
   tenantId?: string;
   resourceAppId?: string;
+  /** The requests a consumer is shown after the token request, each a path under gatewayPath. */
+  exampleCalls?: { title: string; path: string }[];
 }
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
@@ -88,6 +90,11 @@ export async function getApiProducts(): Promise<ApiProduct[]> {
     logger.error(`Could not load the API products from ${url}: ${detail}`);
     return products?.all ?? [];
   }
+}
+
+/** The product for an API, by the catalogue name the application pages hold. */
+export async function productFor(apiName: string): Promise<ApiProduct | undefined> {
+  return (await getApiProducts()).find(product => product.catalogueName === apiName);
 }
 
 /** The token scope for each API, by the catalogue name the application pages hold. */

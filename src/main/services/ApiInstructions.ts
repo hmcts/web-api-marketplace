@@ -1,9 +1,9 @@
 import config from 'config';
 
-import { tokenScopes } from './ApiCatalogue';
-import { Application } from './Applications';
+import { productFor, tokenScopes } from './ApiCatalogue';
+import { ApiSubscription, Application } from './Applications';
 
-/** Scheduling and Listing Court Schedule, the API the call and scenario instructions are for. */
+/** Scheduling and Listing Court Schedule, the API the configured fallback Publisher ID belongs to. */
 export const SLC_API_NAME = 'api-cp-crime-schedulingandlisting-courtschedule';
 
 export interface TokenInstructions {
@@ -16,21 +16,25 @@ export interface TokenInstructions {
   scope: string;
 }
 
-export interface SlcInstructions {
-  courtScheduleUrl: string;
-  scenariosUrl: string;
+export interface CallInstructions {
+  title: string;
+  url: string;
 }
 
 export interface Instructions {
   /** The API they are shown under, folded away below its row. */
   apiName: string;
+  apiTitle: string;
   token: TokenInstructions;
-  /** Only for an application with SLC, in an environment that has an SLC address. */
-  slc?: SlcInstructions;
+  /** The API's own requests, in order. Empty where this environment has no gateway or none are held. */
+  calls: CallInstructions[];
+  /** The {placeholders} the calls need, in order of first use: what the scenarios supply. */
+  placeholders: string[];
+  /** Only in an environment with a gateway for the API. */
+  scenariosUrl?: string;
 }
 
-/** Where SLC sits on the API Management gateway. */
-const SLC_PATH = '/amp/try/slc';
+const PUBLISHER_PLACEHOLDER = '{publisher_id}';
 
 /**
  * Which platform environment this is: sandbox, preview, aat, demo or prod. The chart sets
@@ -50,48 +54,52 @@ function apimBaseUrl(): string | undefined {
   return config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()] || undefined;
 }
 
-/** Where SLC is called in this environment, or undefined where it has no gateway yet. */
-export function slcBaseUrl(): string | undefined {
-  const gateway = apimBaseUrl();
-  return gateway ? `${gateway}${SLC_PATH}` : undefined;
-}
-
 /**
  * The Entra application an API's roles belong to, which is what a consumer asks for a token on.
- * Each API has its own, so it is read from the marketplace rather than configured here;
- * apiEndpoints.publisherId stands in only when the marketplace cannot be reached.
+ * Each API has its own, so it is read from the marketplace rather than configured here.
+ * apiEndpoints.publisherId is SLC's and stands in for SLC alone when the marketplace cannot be
+ * reached; any other API gets a placeholder rather than another API's ID.
  */
 export async function publisherId(apiName: string = SLC_API_NAME): Promise<string> {
   const scope = (await tokenScopes())[apiName];
-  return scope ? scope.replace(/\/\.default$/, '') : config.get<string>('apiEndpoints.publisherId');
+  if (scope) {
+    return scope.replace(/\/\.default$/, '');
+  }
+  return apiName === SLC_API_NAME ? config.get<string>('apiEndpoints.publisherId') : PUBLISHER_PLACEHOLDER;
 }
 
 /**
- * How a consumer gets a token for this application and calls SLC with it. Values the page
- * knows are filled in; the secret, the token and the case URN stay as placeholders.
+ * How a consumer gets a token for this application and calls each of its APIs with it, by API
+ * name. Values the page knows are filled in; the secret, the token and the path values stay as
+ * placeholders.
  */
-export async function instructionsFor(application: Application): Promise<Instructions> {
-  const slc = application.apis.find(api => api.apiName === SLC_API_NAME);
-  const tenant = application.tenantId || '{tenant_id}';
-  const base = slc ? slcBaseUrl() : undefined;
-  const resourceAppId = await publisherId(SLC_API_NAME);
+export async function instructionsFor(application: Application): Promise<Record<string, Instructions>> {
+  const all: Record<string, Instructions> = {};
+  for (const api of application.apis) {
+    all[api.apiName] = await instructionsForApi(application, api);
+  }
+  return all;
+}
+
+async function instructionsForApi(application: Application, api: ApiSubscription): Promise<Instructions> {
+  const product = await productFor(api.apiName);
+  const resourceAppId = await publisherId(api.apiName);
+  const gateway = apimBaseUrl();
+  const base = gateway && product?.gatewayPath ? `${gateway}/${product.gatewayPath.replace(/^\/+/, '')}` : undefined;
+  const examples = base ? (product?.exampleCalls ?? []) : [];
 
   return {
-    apiName: SLC_API_NAME,
+    apiName: api.apiName,
+    apiTitle: api.apiTitle,
     token: {
-      url: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+      url: `https://login.microsoftonline.com/${application.tenantId || '{tenant_id}'}/oauth2/v2.0/token`,
       clientId: application.clientId,
       clientSecret: '<client_secret>',
       publisherId: resourceAppId,
       scope: `${resourceAppId}/.default`,
     },
-    ...(base
-      ? {
-          slc: {
-            courtScheduleUrl: `${base}/case/{case_urn}/courtschedule`,
-            scenariosUrl: `${base}/scenarios`,
-          },
-        }
-      : {}),
+    calls: examples.map(call => ({ title: call.title, url: `${base}${call.path}` })),
+    placeholders: [...new Set(examples.flatMap(call => [...call.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1])))],
+    ...(base ? { scenariosUrl: `${base}/scenarios` } : {}),
   };
 }

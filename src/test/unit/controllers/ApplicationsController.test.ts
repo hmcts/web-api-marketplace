@@ -12,7 +12,9 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
   listedApiNames: jest.fn(),
   tokenScopes: jest.fn().mockResolvedValue({
     'api-cp-crime-schedulingandlisting-courtschedule': 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
+    'api-one': '11111111-1111-1111-1111-111111111111/.default',
   }),
+  productFor: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../../main/services/ProductionRequests', () => ({
@@ -415,18 +417,21 @@ describe('ApplicationsController', () => {
       expect(res.data?.productionRequest).toBeUndefined();
     });
 
-    test('the_detail_page_should_carry_the_token_instructions_for_the_application', async () => {
+    test('the_detail_page_should_carry_instructions_for_each_api_with_its_own_scope', async () => {
       const res = mockResponse();
 
       await controller().detail(forId(), res, jest.fn());
 
-      expect(res.data?.token).toMatchObject({
+      const instructions = res.data?.instructions as Record<string, { apiTitle: string; token: object }>;
+      expect(Object.keys(instructions)).toEqual(['api-one']);
+      expect(instructions['api-one'].apiTitle).toBe('API one');
+      expect(instructions['api-one'].token).toEqual({
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',
         clientSecret: '<client_secret>',
-        scope: `${SLC_RESOURCE_APP_ID}/.default`,
+        publisherId: '11111111-1111-1111-1111-111111111111',
+        scope: '11111111-1111-1111-1111-111111111111/.default',
       });
-      expect(res.data?.slc).toBeUndefined();
     });
 
     test.each([[{ state: 'granted' }], [{ state: 'pending' }], [{ state: 'failed', message: 'Graph refused.' }]])(

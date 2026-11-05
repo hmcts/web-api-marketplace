@@ -54,12 +54,13 @@
           { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
         ]), rows) %}
         {#- Part of that API's row: a full-width row right under it, folded away. -#}
-        {% if api.apiName == apiName %}
+        {% set i = instructions[api.apiName] %}
+        {% if i %}
           {% set instructionsHtml %}{% include "applications/instructions.njk" %}{% endset %}
           {% set detailsHtml %}
             {{- govukDetails({
-              id: "api-instructions",
-              summaryText: "How to get an access token and call an API",
+              id: "api-instructions-" + api.apiName,
+              summaryText: "How to get an access token and call " + api.apiTitle,
               html: instructionsHtml,
               classes: "govuk-!-margin-bottom-0"
             }) -}}
