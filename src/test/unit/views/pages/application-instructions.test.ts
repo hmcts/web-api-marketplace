@@ -2,86 +2,82 @@ import { describe, expect, test } from '@jest/globals';
 
 import { env } from '../helpers/nunjucksEnv';
 
-const token = {
-  url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
-  clientId: 'client-1',
-  clientSecret: '<client_secret>',
-  publisherId: '30288840-e345-4543-99ee-f9253d789339',
-  scope: '30288840-e345-4543-99ee-f9253d789339/.default',
+const RCC = 'api-cp-refdata-courthearing-courthouses';
+
+const rcc = {
+  apiName: RCC,
+  apiTitle: 'Refdata Court Hearing Courthouses',
+  token: {
+    url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
+    clientId: 'client-1',
+    clientSecret: '<client_secret>',
+    publisherId: '97c20454-55c1-45b0-88cd-268db572f615',
+    scope: '97c20454-55c1-45b0-88cd-268db572f615/.default',
+  },
+  docsUrl: `https://hmcts.github.io/${RCC}/`,
 };
 
 /** The text of the code block with this id. */
 const block = (html: string, id: string) => new RegExp(`id="${id}"><code>([\\s\\S]*?)</code>`).exec(html)?.[1] ?? '';
 
-const slc = {
-  courtScheduleUrl: 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc/case/{case_urn}/courtschedule',
-  scenariosUrl: 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc/scenarios',
-};
-
 describe('Application instructions', () => {
-  const render = (context: Record<string, unknown>) => env.render('applications/instructions.njk', context);
+  const render = (i: Record<string, unknown>) => env.render('applications/instructions.njk', { i });
 
-  test('the_publisher_id_should_come_first_above_the_token_request', () => {
-    const html = render({ token });
-    const publisherId = html.indexOf('id="publisher-id">30288840-e345-4543-99ee-f9253d789339<');
+  test('the_publisher_id_should_be_the_apis_own_and_come_first_above_the_token_request', () => {
+    const html = render(rcc);
+    const publisherId = html.indexOf(`id="publisher-id-${RCC}">97c20454-55c1-45b0-88cd-268db572f615<`);
 
     expect(html.indexOf('Publisher ID (scope)')).toBeGreaterThan(-1);
     expect(publisherId).toBeGreaterThan(-1);
     expect(publisherId).toBeLessThan(html.indexOf('Get an access token'));
   });
 
-  test('the_token_request_should_be_a_curl_command_with_the_known_values', () => {
-    const html = render({ token });
-
-    expect(block(html, 'token-request')).toBe(
+  test('the_token_request_should_be_a_curl_command_with_the_apis_own_scope', () => {
+    expect(block(render(rcc), `token-request-${RCC}`)).toBe(
       [
         'curl --request POST \\',
-        `  --url ${token.url} \\`,
+        '  --url https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token \\',
         "  --header 'Content-Type: application/x-www-form-urlencoded' \\",
         '  --data grant_type=client_credentials \\',
         '  --data client_id=client-1 \\',
         "  --data 'client_secret=<client_secret>' \\",
-        '  --data scope=30288840-e345-4543-99ee-f9253d789339/.default',
-      ].join('\n')
-    );
-    expect(html).not.toContain('Request body');
-  });
-
-  test('with_slc_the_call_and_the_scenarios_should_be_curl_commands_too', () => {
-    const html = render({ token, slc });
-
-    expect(block(html, 'slc-request')).toBe(
-      [
-        'curl --request GET \\',
-        `  --url ${slc.courtScheduleUrl} \\`,
-        "  --header 'Accept: application/json' \\",
-        "  --header 'Authorization: Bearer &lt;token&gt;' \\",
-        "  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'",
-      ].join('\n')
-    );
-    expect(block(html, 'scenarios-request')).toBe(
-      [
-        'curl --request GET \\',
-        `  --url ${slc.scenariosUrl} \\`,
-        "  --header 'Accept: application/json' \\",
-        "  --header 'Ocp-Apim-Subscription-Key: &lt;apim_subscription_key&gt;'",
+        '  --data scope=97c20454-55c1-45b0-88cd-268db572f615/.default',
       ].join('\n')
     );
   });
 
-  test('without_slc_only_the_token_request_should_show', () => {
-    const html = render({ token });
+  test('the_token_request_should_be_the_only_curl_command', () => {
+    const html = render(rcc);
 
-    expect(html).not.toContain('id="slc-request"');
-    expect(html).not.toContain('id="scenarios-request"');
+    expect(html.match(/<pre/g)).toHaveLength(1);
+    expect(html).not.toContain('curl --request GET');
+  });
+
+  test('the_developer_portal_should_be_a_link_named_after_the_api_opening_in_a_new_tab_after_the_token_request', () => {
+    const html = render(rcc);
+    const link = new RegExp(`<a [^>]*id="api-reference-${RCC}"[^>]*>([^<]*)</a>`).exec(html);
+
+    expect(html).toContain('>Run try it now in developer portal</h3>');
+    expect(link?.[0]).toContain(`href="https://hmcts.github.io/${RCC}/"`);
+    expect(link?.[0]).toContain('target="_blank"');
+    expect(link?.[0]).toContain('rel="noreferrer noopener"');
+    expect(link?.[1]).toBe('Refdata Court Hearing Courthouses API reference (opens in new tab)');
+    expect(html.indexOf(`id="api-reference-${RCC}"`)).toBeGreaterThan(html.indexOf(`id="token-request-${RCC}"`));
+  });
+
+  test('the_developer_portal_link_should_stand_alone_without_header_guidance', () => {
+    const html = render(rcc);
+
+    expect(html).not.toContain('Call the API');
+    expect(html).not.toContain('Ocp-Apim-Subscription-Key');
+    expect(html).not.toContain('Authorization: Bearer');
   });
 
   test('the_requests_should_stand_without_lists_explaining_their_parameters', () => {
-    const html = render({ token, slc });
+    const html = render(rcc);
 
     expect(html).not.toContain('<ul');
     expect(html).not.toContain('is this application');
     expect(html).not.toContain('The access_token in the response');
-    expect(html).not.toContain('is the unique reference number of the case');
   });
 });
