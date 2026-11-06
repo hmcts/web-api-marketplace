@@ -224,8 +224,15 @@ marketplace cannot be reached, SLC falls back to `apiEndpoints.publisherId` and 
 shows `{publisher_id}`.
 
 The panel does not list the API's endpoints. Under "Run try it now in developer portal" it links
-to "{API title} API reference", the API's page at `https://hmcts.github.io/<api-name>/`, the same link as on the catalogue page,
-so the endpoints are documented in one place.
+to "{API title} API reference", the API's page in the APIM developer portal (for example
+`https://amp-portal.sandbox.api.hmcts.net/api-details#api=<apim-name>`). The backend builds that
+link from `DEVELOPER_PORTAL_URL` and the API's APIM name, and returns it as `portalUrl` on
+`/catalogue/{shortCode}`. That endpoint reads the portal on every call, so this app caches each
+link for 10 minutes. Where the backend returns no link, or can't be reached, the panel leaves the
+portal section out.
+
+The "Application created" page shows the client ID and the secret, which is shown only there.
+The Publisher ID and subscription keys are on the application's page.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
