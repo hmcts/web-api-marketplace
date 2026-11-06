@@ -37,6 +37,7 @@ export interface ApiProduct {
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
 let products: { all: ApiProduct[]; fetchedAt: number } | null = null;
+let portalPages: Record<string, { url: string | undefined; fetchedAt: number }> = {};
 
 /**
  * The published API catalogue, used to fill the "Which API do you need access to?" list.
@@ -87,6 +88,35 @@ export async function getApiProducts(): Promise<ApiProduct[]> {
     const detail = error instanceof Error ? error.message : 'Unknown error';
     logger.error(`Could not load the API products from ${url}: ${detail}`);
     return products?.all ?? [];
+  }
+}
+
+/**
+ * The API's page in the developer portal, by the catalogue name the application pages hold.
+ * The backend builds it from the portal address and the API's APIM name, and answers it on
+ * /catalogue/{shortCode}. That endpoint reads the portal each time, so the answer is cached.
+ * Undefined where the backend holds no page for the API, or cannot be reached.
+ */
+export async function portalUrlFor(apiName: string): Promise<string | undefined> {
+  const product = (await getApiProducts()).find(candidate => candidate.catalogueName === apiName);
+  if (!product) {
+    return undefined;
+  }
+
+  const cached = portalPages[product.shortCode];
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.url;
+  }
+
+  const url = `${process.env.API_URL || config.get<string>('backend.url')}/catalogue/${encodeURIComponent(product.shortCode)}`;
+  try {
+    const response = await axios.get<{ portalUrl?: string }>(url, { timeout: 5000 });
+    portalPages[product.shortCode] = { url: response.data?.portalUrl || undefined, fetchedAt: Date.now() };
+    return portalPages[product.shortCode].url;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`Could not load the developer portal page from ${url}: ${detail}`);
+    return cached?.url;
   }
 }
 
@@ -165,6 +195,7 @@ export function platformOf(name: string): string {
 export function clearCatalogueCache(): void {
   cache = null;
   products = null;
+  portalPages = {};
 }
 
 function toApis(feed: CatalogueFeed): CatalogueApi[] {

@@ -1,4 +1,4 @@
-{#- How to use this application's credentials with one API (i): the token request as a curl command, then a link to try the API in the developer portal. -#}
+{#- How to use this application's credentials with one API (i): the token request as a curl command, then a link to try the API in the developer portal if it has a page there. -#}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {{ govukSummaryList({
   rows: [
@@ -16,5 +16,7 @@
   --data 'client_secret={{ i.token.clientSecret }}' \
   --data scope={{ i.token.scope }}</code></pre>
 
-<h3 class="govuk-heading-s">Run try it now in developer portal</h3>
-<p class="govuk-body"><a class="govuk-link" id="api-reference-{{ i.apiName }}" href="{{ i.docsUrl }}" rel="noreferrer noopener" target="_blank">{{ i.apiTitle }} API reference (opens in new tab)</a></p>
+{% if i.portalUrl %}
+  <h3 class="govuk-heading-s">Run try it now in developer portal</h3>
+  <p class="govuk-body"><a class="govuk-link" id="api-reference-{{ i.apiName }}" href="{{ i.portalUrl }}" rel="noreferrer noopener" target="_blank">{{ i.apiTitle }} API reference (opens in new tab)</a></p>
+{% endif %}
