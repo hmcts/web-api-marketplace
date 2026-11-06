@@ -41,14 +41,6 @@
       "tls": true
     }
   },
-  "catalogue": {
-    "url": "https://raw.githubusercontent.com/hmcts/amp-catalog/main/docs/apis.json",
-    "listedApis": [
-      "api-cp-crime-schedulingandlisting-courtschedule",
-      "api-cp-refdata-courthearing-courthouses",
-      "api-cp-crime-prosecution-case-details"
-    ]
-  },
   "apiEndpoints": {
     "publisherId": "30288840-e345-4543-99ee-f9253d789339",
     "environment": "",
@@ -75,11 +67,6 @@
     "postLogoutRedirectUri": ""
   },
   "applications": {
-    "maxPerUser": 5,
-    "shortCodes": {
-      "api-cp-crime-schedulingandlisting-courtschedule": "slc",
-      "api-cp-refdata-courthearing-courthouses": "rcc",
-      "api-cp-crime-prosecution-case-details": "pcd"
-    }
+    "maxPerUser": 5
   }
 }

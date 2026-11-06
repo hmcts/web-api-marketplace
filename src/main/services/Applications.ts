@@ -12,14 +12,13 @@ import { FieldError } from './answers';
 
 const logger = Logger.getLogger('applications');
 
-const SHORT_CODES: Record<string, string> = config.get('applications.shortCodes');
 export const ACCESS_ATTEMPTS = 8;
 export const ACCESS_RETRY_SECONDS = 15;
 
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ]{6,48}[A-Za-z0-9]$/;
 
 export interface ApiSubscription {
-  apiName: string;
+  shortCode: string;
   apiTitle: string;
   publisherId: string;
   subscriptionName: string;
@@ -91,11 +90,6 @@ interface Links {
 
 const linksKey = (clientId: string) => `application:${clientId}`;
 
-/** The short code the marketplace knows an API by. Undefined for an API it holds no row for. */
-export function shortCodeFor(apiName: string): string | undefined {
-  return SHORT_CODES[apiName];
-}
-
 export function maskSecret(hint: string): string {
   return `${hint}****`;
 }
@@ -150,14 +144,14 @@ export function validateName(name: string | undefined): FieldError[] {
 }
 
 export function validateApis(selected: string[], catalogue: CatalogueApi[]): FieldError[] {
-  if (!selected.length || !selected.every(name => catalogue.some(api => api.name === name))) {
+  if (!selected.length || !selected.every(code => catalogue.some(api => api.shortCode === code))) {
     return [{ name: 'apis', text: 'Select at least one API' }];
   }
   return [];
 }
 
 export interface IssuedKey {
-  apiName: string;
+  shortCode: string;
   apiTitle: string;
   publisherId: string;
   subscriptionKey: string;
@@ -184,19 +178,19 @@ export async function createApplication(
   const keys: IssuedKey[] = [];
   const failedApis: string[] = [];
   const apis: ApiSubscription[] = [];
-  for (const apiName of draft.apis) {
+  for (const shortCode of draft.apis) {
     try {
-      const { subscription, key } = await subscribe(owner, created.clientId, apiName, catalogue);
+      const { subscription, key } = await subscribe(owner, created.clientId, shortCode, catalogue);
       apis.push(subscription);
       keys.push({
-        apiName,
+        shortCode,
         apiTitle: subscription.apiTitle,
         publisherId: subscription.publisherId,
         subscriptionKey: key,
       });
     } catch (error) {
-      logger.error(`Could not subscribe ${created.clientId} to ${apiName}: ${(error as Error).message}`);
-      failedApis.push(titleOf(apiName, catalogue));
+      logger.error(`Could not subscribe ${created.clientId} to ${shortCode}: ${(error as Error).message}`);
+      failedApis.push(titleOf(shortCode, catalogue));
     }
   }
 
@@ -223,7 +217,7 @@ export async function grantAccess(owner: Owner, application: Application): Promi
     return { state: 'granted' };
   }
   try {
-    for (const shortCode of application.apis.map(api => shortCodeFor(api.apiName)).filter(Boolean)) {
+    for (const { shortCode } of application.apis) {
       await callBackend(owner, {
         method: 'POST',
         url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
@@ -255,27 +249,27 @@ export async function setApis(
   selected: string[],
   catalogue: CatalogueApi[]
 ): Promise<ApiChanges> {
-  const current = application.apis.map(api => api.apiName);
+  const current = application.apis.map(api => api.shortCode);
   const changes: ApiChanges = { added: [], removed: [], failed: [] };
   let apis = [...application.apis];
 
-  for (const subscription of application.apis.filter(api => !selected.includes(api.apiName))) {
+  for (const subscription of application.apis.filter(api => !selected.includes(api.shortCode))) {
     try {
       await revoke(owner, subscription.subscriptionName);
       apis = apis.filter(api => api !== subscription);
-      changes.removed.push(subscription.apiName);
+      changes.removed.push(subscription.shortCode);
     } catch (error) {
       logger.error(`Could not revoke ${subscription.subscriptionName}: ${(error as Error).message}`);
       changes.failed.push(subscription.apiTitle);
     }
   }
-  for (const apiName of selected.filter(name => !current.includes(name))) {
+  for (const shortCode of selected.filter(code => !current.includes(code))) {
     try {
-      apis.push((await subscribe(owner, application.clientId, apiName, catalogue)).subscription);
-      changes.added.push(apiName);
+      apis.push((await subscribe(owner, application.clientId, shortCode, catalogue)).subscription);
+      changes.added.push(shortCode);
     } catch (error) {
-      logger.error(`Could not subscribe ${application.clientId} to ${apiName}: ${(error as Error).message}`);
-      changes.failed.push(titleOf(apiName, catalogue));
+      logger.error(`Could not subscribe ${application.clientId} to ${shortCode}: ${(error as Error).message}`);
+      changes.failed.push(titleOf(shortCode, catalogue));
     }
   }
 
@@ -303,14 +297,9 @@ export async function deleteApplication(owner: Owner, application: Application):
 async function subscribe(
   owner: Owner,
   clientId: string,
-  apiName: string,
+  shortCode: string,
   catalogue: CatalogueApi[]
 ): Promise<{ subscription: ApiSubscription; key: string }> {
-  const shortCode = shortCodeFor(apiName);
-  if (!shortCode) {
-    throw new BackendError(`The marketplace does not offer ${titleOf(apiName, catalogue)}.`);
-  }
-
   const created = await callBackend<BackendSubscription>(owner, {
     method: 'POST',
     url: '/apim/subscription-keys',
@@ -318,8 +307,8 @@ async function subscribe(
   });
   return {
     subscription: {
-      apiName,
-      apiTitle: created.title || titleOf(apiName, catalogue),
+      shortCode,
+      apiTitle: created.title || titleOf(shortCode, catalogue),
       publisherId: created.productId,
       subscriptionName: created.subscriptionName,
       subscribedAt: new Date().toISOString(),
@@ -383,6 +372,6 @@ async function saveLinks(clientId: string, links: Links): Promise<void> {
   await dataStore().set(linksKey(clientId), links);
 }
 
-function titleOf(apiName: string, catalogue: CatalogueApi[]): string {
-  return catalogue.find(api => api.name === apiName)?.title ?? apiName;
+function titleOf(shortCode: string, catalogue: CatalogueApi[]): string {
+  return catalogue.find(api => api.shortCode === shortCode)?.title ?? shortCode;
 }

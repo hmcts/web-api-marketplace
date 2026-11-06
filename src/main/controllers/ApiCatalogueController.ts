@@ -1,42 +1,23 @@
 import { GET, route } from 'awilix-express';
 import { NextFunction, Request, Response } from 'express';
 
-import {
-  CatalogueApi,
-  domainOf,
-  getCatalogueApis,
-  linksFor,
-  listedApiNames,
-  offeredApis,
-  platformOf,
-} from '../services/ApiCatalogue';
-import { getSpecDescription, paragraphsOf } from '../services/ApiSpecs';
+import { CatalogueApi, getCatalogueApi, getCatalogueApis, paragraphsOf } from '../services/ApiCatalogue';
 
 const ALPHABET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 
 /**
- * Shown as every API's owning team for now. The feed's team is the slug of the GitHub team
- * in the repository's CODEOWNERS (api-marketplace), which is not the owning team in the
- * sense the page means. Only two APIs are listed, so this is fixed here until there is a
- * source for the real owning team, and then it should be read from that instead.
- */
-const OWNING_TEAM = 'Crime - Scheduling and Listing';
-
-/**
- * The API catalogue, migrated from the GitHub Pages site.
+ * The API catalogue, read from the marketplace backend.
  *
- * The prototype fetched the feed in the browser and filtered it with JavaScript. Here the
- * feed is fetched on the server — the CSP's connect-src only permits this origin — and the
- * search is an ordinary GET form, so the catalogue works with JavaScript unavailable and a
- * search can be bookmarked or shared.
+ * The search is an ordinary GET form rather than filtering in the browser, so the catalogue
+ * works with JavaScript unavailable and a search can be bookmarked or shared.
  */
 @route('/api-catalogue')
 export default class ApiCatalogueController {
   @GET()
   public async list(req: Request, res: Response): Promise<void> {
-    const apis = await listedApis();
+    const apis = await getCatalogueApis();
     const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    const results = (query ? apis.filter(api => matches(api, query)) : apis).map(withTags);
+    const results = query ? apis.filter(api => matches(api, query)) : apis;
     const groups = query ? [] : byLetter(results);
 
     res.render('api-catalogue/index', {
@@ -47,52 +28,38 @@ export default class ApiCatalogueController {
       // added, but only letters with APIs under them are links.
       groups,
       letters: ALPHABET.map(letter => ({ letter, present: groups.some(group => group.letter === letter) })),
-      // An empty feed with no search means the feed could not be read, not that nothing
-      // is published — say so rather than show an empty catalogue as if it were true.
+      // An empty catalogue with no search means it could not be read, not that nothing is
+      // published — say so rather than show an empty catalogue as if it were true.
       unavailable: apis.length === 0,
     });
   }
 
   /**
-   * Hands on to the next route for a name the catalogue does not list, rather than
+   * Hands on to the next route for a short code the catalogue does not list, rather than
    * answering 404 itself, so the app's own not found page answers.
    */
-  @route('/:name')
+  @route('/:shortCode')
   @GET()
   public async detail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const api = (await listedApis()).find(candidate => candidate.name === req.params.name);
+    const api = await getCatalogueApi(String(req.params.shortCode));
 
     if (!api) {
       next();
       return;
     }
 
-    // The full description from the API's own spec; the feed's short summary if that cannot be had.
-    const description = (await getSpecDescription(api.name)) ?? api.description;
+    const description = api.description ?? api.summary;
 
     res.render('api-catalogue/detail', {
-      api: withTags(api),
+      api,
       descriptionParagraphs: description ? paragraphsOf(description) : [],
-      owningTeam: OWNING_TEAM,
-      ...linksFor(api.name),
     });
   }
 }
 
-/** The feed's APIs that this site lists: see listedApiNames. */
-async function listedApis(): Promise<CatalogueApi[]> {
-  return offeredApis(await getCatalogueApis(), listedApiNames());
-}
-
-type TaggedApi = CatalogueApi & { domain: string; platform: string };
-
-function withTags(api: CatalogueApi): TaggedApi {
-  return { ...api, domain: domainOf(api.name), platform: platformOf(api.name) };
-}
-
 function matches(api: CatalogueApi, query: string): boolean {
   const needle = query.toLowerCase();
-  return [api.name, api.title, api.description, api.team, domainOf(api.name), platformOf(api.name)].some(field =>
+  return [api.shortCode, api.title, api.summary, api.team, api.domain, api.platform].some(field =>
     field?.toLowerCase().includes(needle)
   );
 }
@@ -104,8 +71,8 @@ function letterOrder(letter: string): number {
 }
 
 /** The APIs under the first letter of their title; anything not A to Z goes under "#", last. */
-function byLetter(apis: TaggedApi[]): { letter: string; apis: TaggedApi[] }[] {
-  const groups = new Map<string, TaggedApi[]>();
+function byLetter(apis: CatalogueApi[]): { letter: string; apis: CatalogueApi[] }[] {
+  const groups = new Map<string, CatalogueApi[]>();
 
   for (const api of apis) {
     const first = api.title.charAt(0).toUpperCase();
