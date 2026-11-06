@@ -4,7 +4,7 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn, takeNotice } from '../modules/session';
-import { CatalogueApi, getCatalogueApis, listedApiNames, offeredApis } from '../services/ApiCatalogue';
+import { CatalogueApi, getCatalogueApis, includingSubscribed } from '../services/ApiCatalogue';
 import { instructionsFor, publisherId } from '../services/ApiInstructions';
 import {
   ACCESS_ATTEMPTS,
@@ -112,7 +112,7 @@ export default class ApplicationsController {
     }
     res.render(
       'applications/new/apis',
-      this.apisData(req.session.applicationDraft.apis ?? [], [], await this.offered())
+      this.apisData(req.session.applicationDraft.apis ?? [], [], await getCatalogueApis())
     );
   }
 
@@ -127,12 +127,12 @@ export default class ApplicationsController {
       return;
     }
 
-    const offered = await this.offered();
+    const catalogue = await getCatalogueApis();
     const selected = this.selectedApis(req);
-    const errors = validateApis(selected, offered);
+    const errors = validateApis(selected, catalogue);
 
     if (errors.length) {
-      res.status(400).render('applications/new/apis', this.apisData(selected, errors, offered));
+      res.status(400).render('applications/new/apis', this.apisData(selected, errors, catalogue));
       return;
     }
 
@@ -168,8 +168,7 @@ export default class ApplicationsController {
 
     const draft = req.session.applicationDraft;
     const catalogue = await getCatalogueApis();
-    const offered = offeredApis(catalogue, listedApiNames());
-    const errors = draft ? [...validateName(draft.name), ...validateApis(draft.apis ?? [], offered)] : [];
+    const errors = draft ? [...validateName(draft.name), ...validateApis(draft.apis ?? [], catalogue)] : [];
 
     if (!draft?.name || errors.length) {
       res.redirect(draft?.name ? '/account/applications/new/details' : '/account/applications');
@@ -274,10 +273,13 @@ export default class ApplicationsController {
       return;
     }
 
-    const current = application.apis.map(api => api.apiName);
     res.render('applications/apis', {
       application,
-      ...this.apisData(current, [], await this.offered(current)),
+      ...this.apisData(
+        application.apis.map(api => api.shortCode),
+        [],
+        await this.listed(application.apis)
+      ),
     });
   }
 
@@ -289,21 +291,16 @@ export default class ApplicationsController {
       return;
     }
 
-    const catalogue = await getCatalogueApis();
-    const offered = offeredApis(
-      catalogue,
-      listedApiNames(),
-      application.apis.map(api => api.apiName)
-    );
+    const listed = await this.listed(application.apis);
     const selected = this.selectedApis(req);
-    const errors = validateApis(selected, offered);
+    const errors = validateApis(selected, listed);
 
     if (errors.length) {
-      res.status(400).render('applications/apis', { application, ...this.apisData(selected, errors, offered) });
+      res.status(400).render('applications/apis', { application, ...this.apisData(selected, errors, listed) });
       return;
     }
 
-    const changes = await setApis(this.owner(req), application, selected, catalogue);
+    const changes = await setApis(this.owner(req), application, selected, listed);
     const { added, removed, failed } = changes;
 
     req.session.notice = failed.length
@@ -331,7 +328,7 @@ export default class ApplicationsController {
       return;
     }
 
-    const subscription = application.apis.find(api => api.apiName === req.params.api);
+    const subscription = application.apis.find(api => api.shortCode === req.params.api);
     if (!subscription) {
       next();
       return;
@@ -459,9 +456,9 @@ export default class ApplicationsController {
     return { draft, errors, errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])) };
   }
 
-  /** The APIs the application pages offer: see offeredApis. */
-  private async offered(alreadyChosen: string[] = []): Promise<CatalogueApi[]> {
-    return offeredApis(await getCatalogueApis(), listedApiNames(), alreadyChosen);
+  /** The catalogue, keeping any API an application already has: see includingSubscribed. */
+  private async listed(subscribed: { shortCode: string; apiTitle: string }[] = []): Promise<CatalogueApi[]> {
+    return includingSubscribed(await getCatalogueApis(), subscribed);
   }
 
   private apisData(selected: string[], errors: FieldError[], apis: CatalogueApi[]): Record<string, unknown> {
@@ -470,17 +467,17 @@ export default class ApplicationsController {
       errorFor: Object.fromEntries(errors.map(error => [error.name, error.text])),
       catalogueUnavailable: apis.length === 0,
       apiItems: apis.map(api => ({
-        value: api.name,
+        value: api.shortCode,
         text: api.title,
-        hint: api.description ? { text: api.description } : undefined,
-        checked: selected.includes(api.name),
+        hint: api.summary ? { text: api.summary } : undefined,
+        checked: selected.includes(api.shortCode),
       })),
     };
   }
 
   private async checkAnswersData(draft: ApplicationDraft): Promise<Record<string, unknown>> {
     const catalogue = await getCatalogueApis();
-    const titles = (draft.apis ?? []).map(name => catalogue.find(api => api.name === name)?.title ?? name);
+    const titles = (draft.apis ?? []).map(code => catalogue.find(api => api.shortCode === code)?.title ?? code);
 
     return {
       rows: [

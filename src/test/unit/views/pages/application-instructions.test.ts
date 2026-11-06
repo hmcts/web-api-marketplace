@@ -2,10 +2,10 @@ import { describe, expect, test } from '@jest/globals';
 
 import { env } from '../helpers/nunjucksEnv';
 
-const RCC = 'api-cp-refdata-courthearing-courthouses';
+const RCC = 'rcc';
 
 const rcc = {
-  apiName: RCC,
+  shortCode: RCC,
   apiTitle: 'Refdata Court Hearing Courthouses',
   token: {
     url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
@@ -14,7 +14,7 @@ const rcc = {
     publisherId: '97c20454-55c1-45b0-88cd-268db572f615',
     scope: '97c20454-55c1-45b0-88cd-268db572f615/.default',
   },
-  docsUrl: `https://hmcts.github.io/${RCC}/`,
+  docsUrl: 'https://hmcts.github.io/api-cp-refdata-courthearing-courthouses/',
 };
 
 /** The text of the code block with this id. */
@@ -58,11 +58,18 @@ describe('Application instructions', () => {
     const link = new RegExp(`<a [^>]*id="api-reference-${RCC}"[^>]*>([^<]*)</a>`).exec(html);
 
     expect(html).toContain('>Run try it now in developer portal</h3>');
-    expect(link?.[0]).toContain(`href="https://hmcts.github.io/${RCC}/"`);
+    expect(link?.[0]).toContain('href="https://hmcts.github.io/api-cp-refdata-courthearing-courthouses/"');
     expect(link?.[0]).toContain('target="_blank"');
     expect(link?.[0]).toContain('rel="noreferrer noopener"');
     expect(link?.[1]).toBe('Refdata Court Hearing Courthouses API reference (opens in new tab)');
     expect(html.indexOf(`id="api-reference-${RCC}"`)).toBeGreaterThan(html.indexOf(`id="token-request-${RCC}"`));
+  });
+
+  test('an_api_with_no_published_reference_should_show_no_link_rather_than_an_empty_one', () => {
+    const html = render({ ...rcc, docsUrl: undefined });
+
+    expect(html).not.toContain(`id="api-reference-${RCC}"`);
+    expect(html).toContain(`id="token-request-${RCC}"`);
   });
 
   test('the_developer_portal_link_should_stand_alone_without_header_guidance', () => {

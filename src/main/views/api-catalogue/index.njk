@@ -56,14 +56,14 @@
 {% macro apiRow(api) %}
   <div class="govuk-!-margin-bottom-6 apim-catalogue-api">
     <h3 class="govuk-heading-m govuk-!-margin-bottom-1">
-      <a class="govuk-link" href="/api-catalogue/{{ api.name }}">{{ api.title }}</a>
+      <a class="govuk-link" href="/api-catalogue/{{ api.shortCode }}">{{ api.title }}</a>
     </h3>
     <p class="govuk-!-margin-bottom-2">
-      <strong class="govuk-tag govuk-tag--blue apim-tag--nowrap govuk-!-margin-right-1">{{ api.platform }}</strong>
-      <strong class="govuk-tag govuk-tag--grey apim-tag--nowrap govuk-!-margin-right-1">{{ api.domain }}</strong>
+      {% if api.platform %}<strong class="govuk-tag govuk-tag--blue apim-tag--nowrap govuk-!-margin-right-1">{{ api.platform }}</strong>{% endif %}
+      {% if api.domain %}<strong class="govuk-tag govuk-tag--grey apim-tag--nowrap govuk-!-margin-right-1">{{ api.domain }}</strong>{% endif %}
       <strong class="govuk-tag govuk-tag--green apim-tag--nowrap">Published</strong>
     </p>
-    {% if api.description %}<p class="govuk-body govuk-!-margin-bottom-1">{{ api.description }}</p>{% endif %}
+    {% if api.summary %}<p class="govuk-body govuk-!-margin-bottom-1">{{ api.summary }}</p>{% endif %}
   </div>
 {% endmacro %}
 

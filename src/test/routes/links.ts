@@ -1,22 +1,11 @@
 import { expect } from 'chai';
 
-jest.mock('../../main/services/ApiSpecs', () => ({
-  ...jest.requireActual('../../main/services/ApiSpecs'),
-  getSpecDescription: jest.fn().mockResolvedValue(undefined),
-}));
-
-jest.mock('../../main/services/ApiCatalogue', () => ({
-  ...jest.requireActual('../../main/services/ApiCatalogue'),
-  getCatalogueApis: jest.fn(),
-}));
-
 import { CONTENT_PAGES } from '../../main/controllers/ContentController';
 import { MemoryStore, useDataStore } from '../../main/modules/store';
+import { clearCatalogueCache } from '../../main/services/ApiCatalogue';
 
 import { Agent, CATALOGUE, createdApplication, newAgent, signedInConsumer } from './helpers/consumer';
 import { stubEntra } from './helpers/entra';
-
-const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 
 /**
  * Every internal link on every page must lead somewhere.
@@ -31,7 +20,7 @@ const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
 describe('Links', () => {
   beforeEach(() => {
     useDataStore(new MemoryStore());
-    (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    clearCatalogueCache();
   });
 
   test('every_link_reachable_signed_out_should_work', async () => {
@@ -58,7 +47,7 @@ describe('Links', () => {
       '/account/applications',
       `/account/applications/${id}`,
       `/account/applications/${id}/apis`,
-      `/account/applications/${id}/apis/${CATALOGUE[0].name}`,
+      `/account/applications/${id}/apis/${CATALOGUE[0].shortCode}`,
       `/account/applications/${id}/delete`,
       '/account/production-credentials',
     ]) {
