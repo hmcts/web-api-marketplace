@@ -46,6 +46,10 @@ const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
   resourceAppId: api.resourceAppId,
 }));
 
+/** The API's page in the developer portal, as the backend builds it from the API's APIM name. */
+export const stubPortalUrl = (shortCode: string): string =>
+  `https://amp-portal.example.net/api-details#api=stub-${shortCode}`;
+
 interface StubProductionRequest {
   owner: string;
   reference: string;
@@ -308,6 +312,23 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
 
     if (path === '/products' && method === 'GET') {
       json(200, PRODUCTS);
+      return true;
+    }
+
+    const cataloguePath = /^\/catalogue\/([^/]+)$/.exec(path);
+    if (cataloguePath && method === 'GET') {
+      const shortCode = decodeURIComponent(cataloguePath[1]);
+      const api = CATALOGUE[shortCode];
+      if (api) {
+        json(200, {
+          shortCode,
+          title: api.title,
+          catalogueName: api.catalogueName,
+          portalUrl: stubPortalUrl(shortCode),
+        });
+      } else {
+        json(404, { error: `No API with short code ${shortCode}.` });
+      }
       return true;
     }
 

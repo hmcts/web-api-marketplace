@@ -8,6 +8,7 @@ import {
   listedApiNames,
   offeredApis,
   platformOf,
+  portalUrlFor,
   tokenScopes,
 } from '../../../main/services/ApiCatalogue';
 
@@ -147,6 +148,64 @@ describe('ApiCatalogue', () => {
 
       expect(await getApiProducts()).toEqual([]);
       expect(await tokenScopes()).toEqual({});
+    });
+  });
+
+  describe('developer portal pages', () => {
+    const PRODUCTS = [
+      {
+        shortCode: 'rcc',
+        title: 'Court Houses',
+        catalogueName: 'api-cp-refdata-courthearing-courthouses',
+        productId: 'try-it-now-cp-refdata-courthearing',
+        gatewayPath: 'amp/try/rcc',
+        role: 'app.read',
+      },
+    ];
+    const PAGE =
+      'https://amp-portal.sandbox.api.hmcts.net/api-details#api=common-platform-api-refdata-court-hearing-court-houses';
+
+    /** /products, then /catalogue/{shortCode} answering with this body or failing. */
+    const backend = (catalogue: () => Promise<unknown>) =>
+      mockedGet.mockImplementation(async (url: string) =>
+        url.endsWith('/products') ? { data: PRODUCTS } : catalogue()
+      );
+
+    test('the_page_should_be_the_portal_url_the_backend_holds_for_the_apis_short_code', async () => {
+      backend(async () => ({ data: { shortCode: 'rcc', portalUrl: PAGE } }));
+
+      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBe(PAGE);
+      expect(mockedGet).toHaveBeenCalledWith(expect.stringMatching(/\/catalogue\/rcc$/), { timeout: 5000 });
+    });
+
+    test('an_api_the_backend_does_not_hold_should_have_no_page_and_no_catalogue_call', async () => {
+      backend(async () => ({ data: { portalUrl: PAGE } }));
+
+      expect(await portalUrlFor('api-cp-unknown')).toBeUndefined();
+      expect(mockedGet).not.toHaveBeenCalledWith(expect.stringContaining('/catalogue/'), expect.anything());
+    });
+
+    test('an_entry_without_a_portal_url_should_have_no_page', async () => {
+      backend(async () => ({ data: { shortCode: 'rcc' } }));
+
+      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBeUndefined();
+    });
+
+    test('an_unreachable_catalogue_should_leave_no_page_rather_than_throw', async () => {
+      backend(async () => {
+        throw new Error('Request failed with status code 503');
+      });
+
+      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBeUndefined();
+    });
+
+    test('a_second_read_should_come_from_the_cache', async () => {
+      backend(async () => ({ data: { portalUrl: PAGE } }));
+
+      await portalUrlFor('api-cp-refdata-courthearing-courthouses');
+      await portalUrlFor('api-cp-refdata-courthearing-courthouses');
+
+      expect(mockedGet.mock.calls.filter(([url]) => String(url).includes('/catalogue/'))).toHaveLength(1);
     });
   });
 

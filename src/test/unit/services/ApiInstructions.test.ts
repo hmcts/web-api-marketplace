@@ -1,13 +1,21 @@
-import { tokenScopes } from '../../../main/services/ApiCatalogue';
+import { portalUrlFor, tokenScopes } from '../../../main/services/ApiCatalogue';
 import { SLC_API_NAME, instructionsFor, publisherId } from '../../../main/services/ApiInstructions';
 import { ApiSubscription, Application } from '../../../main/services/Applications';
 
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   tokenScopes: jest.fn(),
+  portalUrlFor: jest.fn(),
 }));
 
 const mockedScopes = tokenScopes as jest.MockedFunction<typeof tokenScopes>;
+const mockedPortalUrl = portalUrlFor as jest.MockedFunction<typeof portalUrlFor>;
+
+const PORTAL = 'https://amp-portal.sandbox.api.hmcts.net/api-details#api=';
+const PORTAL_PAGES: Record<string, string> = {
+  'api-cp-crime-schedulingandlisting-courtschedule': `${PORTAL}common-platform-api-scheduling-and-listing-court-schedule`,
+  'api-cp-refdata-courthearing-courthouses': `${PORTAL}common-platform-api-refdata-court-hearing-court-houses`,
+};
 
 const RCC_API_NAME = 'api-cp-refdata-courthearing-courthouses';
 /** Each API's own Entra resource application, which the marketplace holds against it. */
@@ -46,6 +54,8 @@ describe('ApiInstructions', () => {
       [SLC_API_NAME]: `${SLC_APP_ID}/.default`,
       [RCC_API_NAME]: `${RCC_APP_ID}/.default`,
     });
+    mockedPortalUrl.mockReset();
+    mockedPortalUrl.mockImplementation(async name => PORTAL_PAGES[name]);
   });
 
   test('there_should_be_instructions_for_each_api_the_application_has_and_no_other', async () => {
@@ -80,18 +90,25 @@ describe('ApiInstructions', () => {
     );
   });
 
-  test('each_api_should_point_to_its_own_api_reference_for_its_endpoints', async () => {
+  test('each_api_should_point_to_its_own_page_in_the_developer_portal', async () => {
     const all = await instructionsFor(application([SLC, RCC]));
 
-    expect(all[SLC_API_NAME].docsUrl).toBe(`https://hmcts.github.io/${SLC_API_NAME}/`);
-    expect(all[RCC_API_NAME].docsUrl).toBe(`https://hmcts.github.io/${RCC_API_NAME}/`);
+    expect(all[SLC_API_NAME].portalUrl).toBe(`${PORTAL}common-platform-api-scheduling-and-listing-court-schedule`);
+    expect(all[RCC_API_NAME].portalUrl).toBe(`${PORTAL}common-platform-api-refdata-court-hearing-court-houses`);
+  });
+
+  test('an_api_with_no_developer_portal_page_should_have_no_link', async () => {
+    mockedPortalUrl.mockResolvedValue(undefined);
+    const rcc = (await instructionsFor(application([RCC])))[RCC_API_NAME];
+
+    expect(rcc).not.toHaveProperty('portalUrl');
   });
 
   test('the_instructions_should_hold_no_endpoint_urls_of_their_own', async () => {
     expect(Object.keys((await instructionsFor(application([RCC])))[RCC_API_NAME]).sort()).toEqual([
       'apiName',
       'apiTitle',
-      'docsUrl',
+      'portalUrl',
       'token',
     ]);
   });
