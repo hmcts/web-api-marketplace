@@ -8,20 +8,16 @@ const logger = Logger.getLogger('api-catalogue');
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
 
-/** An API as the catalogue lists it. The short code is the key: nothing is read by repository name. */
 export interface CatalogueApi {
   shortCode: string;
   title: string;
-  /** One line, for the list. The full text is description, on CatalogueApiDetail. */
   summary?: string;
   team?: string;
   domain?: string;
   platform?: string;
-  /** False for an API that is listed but has no APIM product behind it. */
   subscribable?: boolean;
 }
 
-/** One API with the description and links the list leaves out. */
 export interface CatalogueApiDetail extends CatalogueApi {
   catalogueName?: string;
   description?: string;
@@ -29,7 +25,6 @@ export interface CatalogueApiDetail extends CatalogueApi {
   repoUrl?: string;
   gatewayPath?: string;
   portalUrl?: string;
-  /** The Entra application whose roles the API defines. Absent where it has none here. */
   resourceAppId?: string;
   role?: string;
 }
@@ -40,10 +35,6 @@ const details = new Map<string, { api?: CatalogueApiDetail; fetchedAt: number }>
 /**
  * The APIs this site lists, from the marketplace backend, which reads them from API
  * Management and its own rows. Only listed APIs come back, so there is nothing to filter.
- *
- * A failed fetch returns the last good list, or an empty one, rather than throwing: the
- * pages that fill a form from this are still usable for every other answer, and an empty
- * list is visible to the user as a catalogue that says it could not be loaded.
  */
 export async function getCatalogueApis(): Promise<CatalogueApi[]> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
