@@ -21,8 +21,8 @@ export interface Instructions {
   shortCode: string;
   apiTitle: string;
   token: TokenInstructions;
-  /** Where the API's REST endpoints are documented, for the calls to make with the token. */
-  docsUrl?: string;
+  /** The API's page in the developer portal, where it can be tried. Absent where there is none. */
+  portalUrl?: string;
 }
 
 const PUBLISHER_PLACEHOLDER = '{publisher_id}';
@@ -33,7 +33,7 @@ const PUBLISHER_PLACEHOLDER = '{publisher_id}';
  * apiEndpoints.publisherId is SLC's and stands in for SLC alone when the marketplace cannot be
  * reached; any other API gets a placeholder rather than another API's ID.
  */
-export async function publisherId(shortCode: string = SLC_SHORT_CODE): Promise<string> {
+export async function publisherId(shortCode: string): Promise<string> {
   const scope = (await tokenScopes())[shortCode];
   if (scope) {
     return scope.replace(/\/\.default$/, '');
@@ -43,8 +43,8 @@ export async function publisherId(shortCode: string = SLC_SHORT_CODE): Promise<s
 
 /**
  * How a consumer gets a token for this application for each of its APIs, by short code, and
- * where each API's endpoints are documented. Values the page knows are filled in; the secret
- * stays a placeholder.
+ * where each API can be tried in the developer portal. Values the page knows are filled in;
+ * the secret stays a placeholder.
  */
 export async function instructionsFor(application: Application): Promise<Record<string, Instructions>> {
   const all: Record<string, Instructions> = {};
@@ -56,6 +56,7 @@ export async function instructionsFor(application: Application): Promise<Record<
 
 async function instructionsForApi(application: Application, api: ApiSubscription): Promise<Instructions> {
   const resourceAppId = await publisherId(api.shortCode);
+  const portalUrl = (await getCatalogueApi(api.shortCode))?.portalUrl;
 
   return {
     shortCode: api.shortCode,
@@ -67,6 +68,6 @@ async function instructionsForApi(application: Application, api: ApiSubscription
       publisherId: resourceAppId,
       scope: `${resourceAppId}/.default`,
     },
-    docsUrl: (await getCatalogueApi(api.shortCode))?.docsUrl,
+    ...(portalUrl ? { portalUrl } : {}),
   };
 }

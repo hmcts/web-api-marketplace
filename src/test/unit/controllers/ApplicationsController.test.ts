@@ -3,16 +3,13 @@ import { Application, BackendError } from '../../../main/services/Applications';
 import { CATALOGUE, LOCAL_USER, anonymous, asUser } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
 
-/** SLC's own Entra resource application, which the instructions are scoped to. */
-const SLC_RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
-
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
   getCatalogueApi: jest.fn().mockImplementation(async (shortCode: string) => ({
     shortCode,
     title: 'API one',
-    docsUrl: 'https://hmcts.github.io/api-one/',
+    portalUrl: 'https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one',
   })),
   tokenScopes: jest.fn().mockResolvedValue({
     slc: 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
@@ -291,7 +288,7 @@ describe('ApplicationsController', () => {
       expect(res.redirected).toBe('/account/applications/new/apis');
     });
 
-    test('creating_should_show_the_secret_and_keys_once_with_access_still_to_set_up', async () => {
+    test('creating_should_show_the_secret_once_with_access_still_to_set_up', async () => {
       const created = { application: APPLICATION, clientSecret: 'Uc6Q~secret', keys: [], failedApis: [] };
       Applications.createApplication.mockResolvedValue(created);
       const res = mockResponse();
@@ -305,7 +302,6 @@ describe('ApplicationsController', () => {
         ...created,
         accessAttempts: 8,
         accessRetrySeconds: 15,
-        publisherId: SLC_RESOURCE_APP_ID,
       });
       expect(req.session.applicationDraft).toBeUndefined();
     });
@@ -426,11 +422,11 @@ describe('ApplicationsController', () => {
 
       const instructions = res.data?.instructions as Record<
         string,
-        { apiTitle: string; token: object; docsUrl: string }
+        { apiTitle: string; token: object; portalUrl: string }
       >;
       expect(Object.keys(instructions)).toEqual(['one']);
       expect(instructions['one'].apiTitle).toBe('API one');
-      expect(instructions['one'].docsUrl).toBe('https://hmcts.github.io/api-one/');
+      expect(instructions['one'].portalUrl).toBe('https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one');
       expect(instructions['one'].token).toEqual({
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',

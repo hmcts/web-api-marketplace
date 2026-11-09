@@ -20,6 +20,9 @@ interface StubApi {
   platform: string;
 }
 
+export const stubPortalUrl = (shortCode: string): string =>
+  `https://amp-portal.example.net/api-details#api=stub-${shortCode}`;
+
 /** marketplace_api, which is what a short code resolves to. */
 const CATALOGUE: Record<string, StubApi> = {
   hearing: {
@@ -77,7 +80,7 @@ const catalogueDetail = (shortCode: string, api: StubApi) => ({
   docsUrl: `https://hmcts.github.io/${api.catalogueName}/`,
   repoUrl: `https://github.com/hmcts/${api.catalogueName}`,
   gatewayPath: `amp/${shortCode}`,
-  portalUrl: `https://amp-portal.sandbox.api.hmcts.net/api-details#api=${api.catalogueName}`,
+  portalUrl: stubPortalUrl(shortCode),
 });
 
 /** Each API's own resource application, which is what /products carries for the token scope. */

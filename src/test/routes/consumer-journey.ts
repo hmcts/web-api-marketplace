@@ -3,7 +3,7 @@ import request from 'supertest';
 
 import { MemoryStore, useDataStore } from '../../main/modules/store';
 import { clearCatalogueCache } from '../../main/services/ApiCatalogue';
-import { STUB_TENANT_ID } from '../stubs/marketplace';
+import { STUB_TENANT_ID, stubPortalUrl } from '../stubs/marketplace';
 
 import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
 import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
@@ -151,10 +151,11 @@ describe('Consumer onboarding journey', () => {
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       expect(created.text).to.contain('Application created');
-      expect(created.text).to.contain('id="publisher-id">33333333-3333-3333-3333-333333333333<');
       expect(created.text).to.contain('You will not be able to see it again');
       expect(secret).to.match(/^.{3}8Q~.{34}$/);
-      expect(created.text.match(/Subscription key: <span class="apim-credential">[0-9a-f]{32}</g)).to.have.length(2);
+      // The Publisher ID and subscription keys are on the application's page, not here.
+      expect(created.text).to.not.contain('Publisher ID');
+      expect(created.text).to.not.contain('Subscription key');
       expect(created.text).to.contain('These credentials will not work yet');
       expect(created.text).to.contain(`data-access-url="/account/applications/${id}/access"`);
 
@@ -313,9 +314,11 @@ describe('Consumer onboarding journey', () => {
         expect(slcPanel).to.not.contain('11111111-1111-1111-1111-111111111111');
         expect(hearingPanel).to.contain('scope=11111111-1111-1111-1111-111111111111/.default');
         expect(hearingPanel).to.not.contain('33333333-3333-3333-3333-333333333333');
-        // Each panel shows the token request alone and sends the consumer to that API's own reference.
-        expect(slcPanel).to.contain(`href="https://hmcts.github.io/${SLC.catalogueName}/"`);
-        expect(hearingPanel).to.contain(`href="https://hmcts.github.io/${CATALOGUE[0].catalogueName}/"`);
+        // Each panel shows the token request alone and sends the consumer to that API's own page
+        // in the developer portal.
+        expect(slcPanel).to.contain(`href="${stubPortalUrl(SLC.shortCode)}"`);
+        expect(hearingPanel).to.contain(`href="${stubPortalUrl(CATALOGUE[0].shortCode)}"`);
+        expect(res.text).to.not.contain('hmcts.github.io');
         expect(slcPanel).to.not.contain('curl --request GET');
       });
     });

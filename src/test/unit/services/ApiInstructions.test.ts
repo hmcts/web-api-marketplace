@@ -12,9 +12,9 @@ const mockedScopes = tokenScopes as jest.MockedFunction<typeof tokenScopes>;
 const mockedApi = getCatalogueApi as jest.MockedFunction<typeof getCatalogueApi>;
 
 const RCC_SHORT_CODE = 'rcc';
-const DOCS: Record<string, string> = {
-  [SLC_SHORT_CODE]: 'https://hmcts.github.io/api-cp-crime-schedulingandlisting-courtschedule/',
-  [RCC_SHORT_CODE]: 'https://hmcts.github.io/api-cp-refdata-courthearing-courthouses/',
+const PORTAL: Record<string, string> = {
+  [SLC_SHORT_CODE]: 'https://amp-portal.example.net/api-details#api=stub-slc',
+  [RCC_SHORT_CODE]: 'https://amp-portal.example.net/api-details#api=stub-rcc',
 };
 /** Each API's own Entra resource application, which the marketplace holds against it. */
 const SLC_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
@@ -53,7 +53,7 @@ describe('ApiInstructions', () => {
       [RCC_SHORT_CODE]: `${RCC_APP_ID}/.default`,
     });
     mockedApi.mockReset();
-    mockedApi.mockImplementation(async shortCode => ({ shortCode, title: shortCode, docsUrl: DOCS[shortCode] }));
+    mockedApi.mockImplementation(async shortCode => ({ shortCode, title: shortCode, portalUrl: PORTAL[shortCode] }));
   });
 
   test('there_should_be_instructions_for_each_api_the_application_has_and_no_other', async () => {
@@ -88,23 +88,23 @@ describe('ApiInstructions', () => {
     );
   });
 
-  test('each_api_should_point_to_its_own_api_reference_for_its_endpoints', async () => {
+  test('each_api_should_point_to_its_own_page_in_the_developer_portal', async () => {
     const all = await instructionsFor(application([SLC, RCC]));
 
-    expect(all[SLC_SHORT_CODE].docsUrl).toBe(DOCS[SLC_SHORT_CODE]);
-    expect(all[RCC_SHORT_CODE].docsUrl).toBe(DOCS[RCC_SHORT_CODE]);
+    expect(all[SLC_SHORT_CODE].portalUrl).toBe(PORTAL[SLC_SHORT_CODE]);
+    expect(all[RCC_SHORT_CODE].portalUrl).toBe(PORTAL[RCC_SHORT_CODE]);
   });
 
-  test('an_api_the_catalogue_no_longer_lists_should_leave_the_reference_out', async () => {
+  test('an_api_the_catalogue_no_longer_lists_should_leave_the_portal_link_out', async () => {
     mockedApi.mockResolvedValue(undefined);
 
-    expect((await instructionsFor(application([RCC])))[RCC_SHORT_CODE].docsUrl).toBeUndefined();
+    expect((await instructionsFor(application([RCC])))[RCC_SHORT_CODE].portalUrl).toBeUndefined();
   });
 
   test('the_instructions_should_hold_no_endpoint_urls_of_their_own', async () => {
     expect(Object.keys((await instructionsFor(application([RCC])))[RCC_SHORT_CODE]).sort()).toEqual([
       'apiTitle',
-      'docsUrl',
+      'portalUrl',
       'shortCode',
       'token',
     ]);
