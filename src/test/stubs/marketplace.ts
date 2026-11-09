@@ -61,7 +61,7 @@ interface StubProductionRequest {
   goLiveDate: string;
   callVolume: string;
   dataRequest: string;
-  proposedOutputs: string;
+  proposedOutputs?: string;
 }
 
 interface StubApplication {
@@ -178,8 +178,9 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       json(400, { error: 'Call volume must be low, medium or high.' });
     } else if (!text('dataRequest') || text('dataRequest').length > ANSWER_MAX_LENGTH) {
       json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
-    } else if (!text('proposedOutputs') || text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
-      json(400, { error: 'Describe the proposed outputs from this data use.' });
+    } else if (text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
+      // The form no longer asks this: the real backend still requires it until it is made optional.
+      json(400, { error: 'Proposed outputs must be 2000 characters or fewer.' });
     } else {
       const stored: StubProductionRequest = {
         owner: user,

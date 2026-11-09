@@ -108,7 +108,8 @@ test.describe('Signed in', () => {
     await expect(page.locator('h1')).toHaveText('Request production credentials');
     await axeUtils.audit();
     await page.getByRole('radio', { name: appName }).check();
-    await page.getByLabel('Organisation or team name').fill('Web Functional Test Ltd');
+    await page.getByLabel('Which option best describes you?').selectOption('external');
+    await page.getByLabel('Organisation and team name').fill('Web Functional Test Ltd');
     const goLive = new Date();
     goLive.setFullYear(goLive.getFullYear() + 1);
     await page.getByLabel('Day').fill(String(goLive.getDate()));
@@ -116,7 +117,8 @@ test.describe('Signed in', () => {
     await page.getByLabel('Year').fill(String(goLive.getFullYear()));
     await page.locator('input[name="call-volume"]').first().check();
     await page.locator('textarea').nth(0).fill('Court schedules for an automated functional test.');
-    await page.locator('textarea').nth(1).fill('None: this request is made by an automated test.');
+    await page.getByLabel('Me/my immediate team only').check();
+    await page.getByRole('radio', { name: 'No', exact: true }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(page.locator('h1')).toHaveText('Check your answers before submitting');
