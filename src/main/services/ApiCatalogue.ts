@@ -29,22 +29,12 @@ export interface CatalogueApiDetail extends CatalogueApi {
   repoUrl?: string;
   gatewayPath?: string;
   portalUrl?: string;
-}
-
-/** An API as the marketplace holds it. resourceAppId is the Entra application its roles belong to. */
-export interface ApiProduct {
-  shortCode: string;
-  title: string;
-  catalogueName: string;
-  productId: string;
-  gatewayPath: string;
-  role: string;
-  tenantId?: string;
+  /** The Entra application whose roles the API defines. Absent where it has none here. */
   resourceAppId?: string;
+  role?: string;
 }
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
-let products: { all: ApiProduct[]; fetchedAt: number } | null = null;
 const details = new Map<string, { api?: CatalogueApiDetail; fetchedAt: number }>();
 
 /**
@@ -103,38 +93,6 @@ export async function getCatalogueApi(shortCode: string): Promise<CatalogueApiDe
 }
 
 /**
- * The APIs the marketplace holds, which is where the scope a consumer asks a token for comes
- * from. Each API has its own resource application, so the scope differs between them.
- */
-export async function getApiProducts(): Promise<ApiProduct[]> {
-  if (products && Date.now() - products.fetchedAt < CACHE_TTL_MS) {
-    return products.all;
-  }
-
-  const url = `${backendUrl()}/products`;
-  try {
-    const response = await axios.get<ApiProduct[]>(url, { timeout: FETCH_TIMEOUT_MS });
-    products = { all: response.data ?? [], fetchedAt: Date.now() };
-    return products.all;
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Could not load the API products from ${url}: ${detail}`);
-    return products?.all ?? [];
-  }
-}
-
-/** The token scope for each API, by short code. */
-export async function tokenScopes(): Promise<Record<string, string>> {
-  const scopes: Record<string, string> = {};
-  for (const product of await getApiProducts()) {
-    if (product.resourceAppId) {
-      scopes[product.shortCode] = `${product.resourceAppId}/.default`;
-    }
-  }
-  return scopes;
-}
-
-/**
  * The catalogue, plus any API an application already has that is no longer listed. Those stay
  * on its pages so that saving the form does not revoke a subscription the consumer never saw.
  */
@@ -160,7 +118,6 @@ export function paragraphsOf(text: string): string[] {
 /** Only for tests — the module-level caches otherwise leak between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
-  products = null;
   details.clear();
 }
 

@@ -10,11 +10,8 @@ jest.mock('../../../main/services/ApiCatalogue', () => ({
     shortCode,
     title: 'API one',
     portalUrl: 'https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one',
+    resourceAppId: '11111111-1111-1111-1111-111111111111',
   })),
-  tokenScopes: jest.fn().mockResolvedValue({
-    slc: 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
-    one: '11111111-1111-1111-1111-111111111111/.default',
-  }),
 }));
 
 jest.mock('../../../main/services/ProductionRequests', () => ({
