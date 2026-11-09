@@ -26,7 +26,7 @@ const CALL_VOLUMES = [
   { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
 ];
 
-/** "Which option best describes you?", which helps the Data Access Team triage a request. */
+/** "Organisation", which helps the Data Access Team triage a request. */
 const ORGANISATION_TYPES = [
   { value: 'hmcts', text: 'HMCTS' },
   { value: 'moj', text: 'Ministry of Justice' },
@@ -234,10 +234,13 @@ export default class ProductionCredentialsController {
       });
     }
     if (!ORGANISATION_TYPES.some(type => type.value === text('organisation-type'))) {
-      errors.push({ name: 'organisation-type', text: 'Select the option that best describes you' });
+      errors.push({ name: 'organisation-type', text: 'Select your organisation' });
     }
     if (!text('organisation')) {
-      errors.push({ name: 'organisation', text: 'Enter your organisation and team name' });
+      errors.push({
+        name: 'organisation',
+        text: 'Enter your team name (and organisation if external to HMCTS)',
+      });
     }
     const goLive = this.goLiveDate(answers);
     if (!goLive) {
@@ -355,8 +358,8 @@ export default class ProductionCredentialsController {
         value: application?.name ?? '',
       },
       { key: 'APIs', value: application?.apis.map(api => api.apiTitle).join(', ') || 'None' },
-      { key: 'Which option best describes you?', value: label(ORGANISATION_TYPES, answers['organisation-type']) },
-      { key: 'Organisation and team name', value: String(answers.organisation ?? '') },
+      { key: 'Organisation', value: label(ORGANISATION_TYPES, answers['organisation-type']) },
+      { key: 'Team name (and organisation if external to HMCTS?)', value: String(answers.organisation ?? '') },
       {
         key: 'Go-live date',
         value: goLive
@@ -413,7 +416,7 @@ export default class ProductionCredentialsController {
 
     return [
       { key: 'Application', value: request.applicationName },
-      { key: 'Organisation and team name', value: request.organisation },
+      { key: 'Team name (and organisation if external to HMCTS?)', value: request.organisation },
       { key: 'Go-live date', value: this.formatDate(request.goLiveDate) },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, request.callVolume) },
       { key: 'Data request', value: request.dataRequest },
@@ -458,10 +461,10 @@ export default class ProductionCredentialsController {
         },
       })),
       callVolumes: CALL_VOLUMES,
-      organisationTypeItems: [
-        { value: '', text: 'Select an option' },
-        ...ORGANISATION_TYPES.map(type => ({ ...type, selected: type.value === answers['organisation-type'] })),
-      ],
+      organisationTypeItems: ORGANISATION_TYPES.map(type => ({
+        ...type,
+        checked: type.value === answers['organisation-type'],
+      })),
       dataRecipientItems: DATA_RECIPIENTS.map(option => ({
         ...option,
         checked: Array.isArray(answers['data-recipients']) && answers['data-recipients'].includes(option.value),

@@ -1,7 +1,6 @@
 {% extends "template.njk" %}
 
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
-{% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/date-input/macro.njk" import govukDateInput %}
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
@@ -53,16 +52,16 @@
         errorMessage: { text: errorFor.application } if errorFor.application
       }) }}
 
-      {{ govukSelect({
-        id: "organisation-type",
+      {{ govukRadios({
         name: "organisation-type",
-        label: { text: "Which option best describes you?", classes: "govuk-label--m" },
+        idPrefix: "organisation-type",
+        fieldset: { legend: { text: "Organisation", classes: "govuk-fieldset__legend--m" } },
         items: organisationTypeItems,
         errorMessage: { text: errorFor["organisation-type"] } if errorFor["organisation-type"]
       }) }}
 
       {{ govukInput({
-        label: { text: "Organisation and team name", classes: "govuk-label--m" },
+        label: { text: "Team name (and organisation if external to HMCTS?)", classes: "govuk-label--m" },
         id: "organisation",
         name: "organisation",
         value: answers.organisation,

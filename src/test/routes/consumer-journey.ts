@@ -424,7 +424,9 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain(`value="${id}" checked`);
         expect(res.text).to.contain('Submitting this form does not give you access to the API or its data.');
         expect(res.text).to.contain('We aim to tell');
-        expect(res.text).to.contain('Organisation and team name');
+        expect(res.text).to.contain('type="radio" value="moj"');
+        expect(res.text).to.not.contain('<select');
+        expect(res.text).to.contain('Team name (and organisation if external to HMCTS?)');
         expect(res.text).to.contain('name="data-request"');
         expect(res.text).to.contain('Who will have access to, or receive, the data?');
         expect(res.text).to.contain('Briefly explain who will receive the data and why');

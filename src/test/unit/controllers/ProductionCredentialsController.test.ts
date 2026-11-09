@@ -99,6 +99,19 @@ describe('ProductionCredentialsController', () => {
     expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('1 API');
   });
 
+  test('the_organisation_question_should_offer_only_the_four_real_choices', async () => {
+    const res = mockResponse();
+
+    await controller().form(asUser(), res);
+
+    expect((res.data?.organisationTypeItems as { value: string; text: string }[]).map(item => item.text)).toEqual([
+      'HMCTS',
+      'Ministry of Justice',
+      'Other government department/public body',
+      'Other external organisation',
+    ]);
+  });
+
   test('the_applications_should_be_read_from_the_backend_as_the_signed_in_user', async () => {
     await controller().form(asUser(), mockResponse());
 
@@ -152,8 +165,8 @@ describe('ProductionCredentialsController', () => {
     [{ 'data-combined': 'yes' }, 'Briefly describe the other data'],
     [{ 'data-combined': 'unsure' }, 'Briefly describe the other data'],
     [{ 'data-combined': 'yes', 'data-combined-description': 'x'.repeat(2001) }, '2000 characters or fewer'],
-    [{ 'organisation-type': '' }, 'Select the option that best describes you'],
-    [{ 'organisation-type': 'made-up' }, 'Select the option that best describes you'],
+    [{ 'organisation-type': '' }, 'Select your organisation'],
+    [{ 'organisation-type': 'made-up' }, 'Select your organisation'],
   ])('the_answer_%j_should_be_refused', async (change, message) => {
     const res = mockResponse();
 
@@ -251,7 +264,7 @@ describe('ProductionCredentialsController', () => {
       expect.arrayContaining([
         { key: 'Application', value: 'Tracker' },
         { key: 'APIs', value: 'API one' },
-        { key: 'Which option best describes you?', value: 'Other external organisation' },
+        { key: 'Organisation', value: 'Other external organisation' },
         { key: 'Who will have access to, or receive, the data?', value: 'Me/my immediate team only' },
         { key: 'Will you combine or link the API data with other data?', value: 'No' },
         { key: 'Data request', value: expect.stringContaining('Hearing outcomes') },
@@ -416,7 +429,7 @@ describe('ProductionCredentialsController', () => {
     const rows = res.data?.rows as { key: string; value: string }[];
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
     expect(valueFor('Application')).toBe('Tracker');
-    expect(valueFor('Organisation and team name')).toBe('Analytical Engines Ltd');
+    expect(valueFor('Team name (and organisation if external to HMCTS?)')).toBe('Analytical Engines Ltd');
     // Stored values become their labels, as they do on check answers.
     expect(valueFor('Expected call volume')).toBe('Medium');
     expect(valueFor('Go-live date')).toBe('1 April 2027');

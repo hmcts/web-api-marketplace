@@ -108,8 +108,8 @@ test.describe('Signed in', () => {
     await expect(page.locator('h1')).toHaveText('Request production credentials');
     await axeUtils.audit();
     await page.getByRole('radio', { name: appName }).check();
-    await page.getByLabel('Which option best describes you?').selectOption('external');
-    await page.getByLabel('Organisation and team name').fill('Web Functional Test Ltd');
+    await page.getByRole('radio', { name: 'Other external organisation' }).check();
+    await page.getByLabel('Team name (and organisation if external to HMCTS?)').fill('Web Functional Test Ltd');
     const goLive = new Date();
     goLive.setFullYear(goLive.getFullYear() + 1);
     await page.getByLabel('Day').fill(String(goLive.getDate()));
