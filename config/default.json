@@ -46,7 +46,8 @@
     "listedApis": [
       "api-cp-crime-schedulingandlisting-courtschedule",
       "api-cp-refdata-courthearing-courthouses",
-      "api-cp-crime-prosecution-case-details"
+      "api-cp-crime-prosecution-case-details",
+      "api-cp-crime-defendant-details"
     ]
   },
   "apiEndpoints": {
@@ -79,7 +80,8 @@
     "shortCodes": {
       "api-cp-crime-schedulingandlisting-courtschedule": "slc",
       "api-cp-refdata-courthearing-courthouses": "rcc",
-      "api-cp-crime-prosecution-case-details": "pcd"
+      "api-cp-crime-prosecution-case-details": "pcd",
+      "api-cp-crime-defendant-details": "dl"
     }
   }
 }
