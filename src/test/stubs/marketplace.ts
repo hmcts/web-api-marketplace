@@ -81,6 +81,8 @@ const catalogueDetail = (shortCode: string, api: StubApi) => ({
   repoUrl: `https://github.com/hmcts/${api.catalogueName}`,
   gatewayPath: `amp/${shortCode}`,
   portalUrl: stubPortalUrl(shortCode),
+  resourceAppId: api.resourceAppId,
+  role: api.role,
 });
 
 /** Each API's own resource application, which is what /products carries for the token scope. */

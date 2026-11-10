@@ -2,12 +2,10 @@ import axios from 'axios';
 
 import {
   clearCatalogueCache,
-  getApiProducts,
   getCatalogueApi,
   getCatalogueApis,
   includingSubscribed,
   paragraphsOf,
-  tokenScopes,
 } from '../../../main/services/ApiCatalogue';
 
 jest.mock('axios');
@@ -25,6 +23,8 @@ const DETAIL = {
   description: 'Publishes the court list.',
   docsUrl: 'https://hmcts.github.io/api-cp-crime-court-list-publisher/',
   repoUrl: 'https://github.com/hmcts/api-cp-crime-court-list-publisher',
+  resourceAppId: 'aaaaaaaa-1111-2222-3333-444444444444',
+  role: 'app.read',
 };
 
 /** The error shape axios throws, which getCatalogueApi reads the status from. */
@@ -108,60 +108,6 @@ describe('ApiCatalogue', () => {
       mockedGet.mockRejectedValue(new Error('connect ECONNREFUSED'));
 
       await expect(getCatalogueApi('clp')).rejects.toThrow('Could not read');
-    });
-  });
-
-  describe('products', () => {
-    const PRODUCTS = [
-      {
-        shortCode: 'slc',
-        title: 'Court Schedule',
-        catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
-        productId: 'try-it-now-cp-crime-schedulingandlisting',
-        gatewayPath: 'amp/try/slc',
-        role: 'app.read',
-        resourceAppId: 'aaaaaaaa-1111-2222-3333-444444444444',
-      },
-      {
-        shortCode: 'rcc',
-        title: 'Court Houses',
-        catalogueName: 'api-cp-refdata-courthearing-courthouses',
-        productId: 'try-it-now-cp-refdata-courthearing',
-        gatewayPath: 'amp/try/rcc',
-        role: 'app.read',
-        resourceAppId: 'bbbbbbbb-1111-2222-3333-444444444444',
-      },
-    ];
-
-    test('each_api_should_be_scoped_to_its_own_resource_application_by_short_code', async () => {
-      mockedGet.mockResolvedValue({ data: PRODUCTS });
-
-      expect(await tokenScopes()).toEqual({
-        slc: 'aaaaaaaa-1111-2222-3333-444444444444/.default',
-        rcc: 'bbbbbbbb-1111-2222-3333-444444444444/.default',
-      });
-    });
-
-    test('an_api_without_a_resource_application_should_be_left_out_rather_than_scoped_wrongly', async () => {
-      mockedGet.mockResolvedValue({ data: [{ ...PRODUCTS[0], resourceAppId: undefined }] });
-
-      expect(await tokenScopes()).toEqual({});
-    });
-
-    test('a_second_read_should_come_from_the_cache', async () => {
-      mockedGet.mockResolvedValue({ data: PRODUCTS });
-
-      await getApiProducts();
-      await getApiProducts();
-
-      expect(mockedGet).toHaveBeenCalledTimes(1);
-    });
-
-    test('an_unreachable_backend_should_leave_the_scopes_empty_rather_than_throw', async () => {
-      mockedGet.mockRejectedValue(new Error('connect ECONNREFUSED'));
-
-      expect(await getApiProducts()).toEqual([]);
-      expect(await tokenScopes()).toEqual({});
     });
   });
 
