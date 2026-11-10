@@ -37,14 +37,10 @@ export function newAgent(): ReturnType<typeof request.agent> {
   return request.agent(testServer());
 }
 
+/** The APIs the marketplace stub's catalogue serves, in the order it lists them. */
 export const CATALOGUE = [
-  {
-    name: 'api-cp-crime-hearing',
-    title: 'CP Crime Hearing API',
-    description: 'Hearing lifecycle data.',
-    team: 'api-marketplace',
-  },
-  { name: 'api-cp-crime-defendant-details', title: 'Defendant Details', description: 'Defendant details for a case.' },
+  { shortCode: 'hearing', title: 'CP Crime Hearing API', catalogueName: 'api-cp-crime-hearing' },
+  { shortCode: 'defendant', title: 'Defendant Details', catalogueName: 'api-cp-crime-defendant-details' },
 ];
 
 export type Agent = ReturnType<typeof request.agent>;
@@ -62,7 +58,7 @@ export async function signedInConsumer(email: string): Promise<Agent> {
 /** Creates an application through the real journey and returns its id. */
 export async function createdApplication(agent: Agent, name = 'Case tracker'): Promise<string> {
   await agent.post('/account/applications/new/details').type('form').send({ name }).expect(302);
-  await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name }).expect(302);
+  await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode }).expect(302);
   const created = await agent.post('/account/applications/new/check-answers').expect(200);
 
   const id = created.text.match(/href="\/account\/applications\/([0-9a-f-]{36})"/)?.[1];

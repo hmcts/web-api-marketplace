@@ -6,12 +6,15 @@ import { mockResponse } from '../mocks/mockResponse';
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
   getCatalogueApis: jest.fn(),
-  listedApiNames: jest.fn(),
+  getCatalogueApi: jest.fn().mockImplementation(async (shortCode: string) => ({
+    shortCode,
+    title: 'API one',
+    portalUrl: 'https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one',
+  })),
   tokenScopes: jest.fn().mockResolvedValue({
-    'api-cp-crime-schedulingandlisting-courtschedule': 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
-    'api-one': '11111111-1111-1111-1111-111111111111/.default',
+    slc: 'c4c8974c-2800-4fe6-964f-dcd4c0820507/.default',
+    one: '11111111-1111-1111-1111-111111111111/.default',
   }),
-  portalUrlFor: jest.fn().mockResolvedValue('https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one'),
 }));
 
 jest.mock('../../../main/services/ProductionRequests', () => ({
@@ -29,12 +32,12 @@ jest.mock('../../../main/services/Applications', () => ({
   deleteApplication: jest.fn(),
 }));
 
-const { listedApiNames, getCatalogueApis } = require('../../../main/services/ApiCatalogue');
+const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const Applications = require('../../../main/services/Applications');
 const { listProductionRequests } = require('../../../main/services/ProductionRequests');
 
 const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
-const DRAFT = { name: 'Case Viewer', apis: ['api-one'] };
+const DRAFT = { name: 'Case Viewer', apis: ['one'] };
 const APPLICATION: Application = {
   id: 'client-1',
   clientId: 'client-1',
@@ -45,7 +48,7 @@ const APPLICATION: Application = {
   createdAt: '2026-10-15T12:00:00',
   apis: [
     {
-      apiName: 'api-one',
+      shortCode: 'one',
       apiTitle: 'API one',
       publisherId: 'one',
       subscriptionName: 'amp-temp-1',
@@ -67,7 +70,6 @@ describe('ApplicationsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
-    (listedApiNames as jest.Mock).mockReturnValue([]);
     Applications.getApplication.mockResolvedValue(APPLICATION);
     Applications.listApplications.mockResolvedValue([]);
   });
@@ -228,8 +230,8 @@ describe('ApplicationsController', () => {
       await controller().chooseApis(asUser({ session: { applicationDraft: DRAFT } }), res);
 
       expect(res.data?.apiItems).toEqual([
-        { value: 'api-one', text: 'API one', hint: { text: 'The first API.' }, checked: true },
-        { value: 'api-two', text: 'API two', hint: undefined, checked: false },
+        { value: 'one', text: 'API one', hint: { text: 'The first API.' }, checked: true },
+        { value: 'two', text: 'API two', hint: undefined, checked: false },
       ]);
     });
 
@@ -239,26 +241,26 @@ describe('ApplicationsController', () => {
       expect(refused.statusCode).toBe(400);
 
       const res = mockResponse();
-      const req = asUser({ body: { apis: ['api-two'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
+      const req = asUser({ body: { apis: ['two'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
       await controller().saveApis(req, res);
-      expect(req.session.applicationDraft?.apis).toEqual(['api-two']);
+      expect(req.session.applicationDraft?.apis).toEqual(['two']);
       expect(res.redirected).toBe('/account/applications/new/check-answers');
     });
 
-    test('only_the_allowed_apis_should_be_offered', async () => {
-      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+    test('only_the_apis_the_catalogue_lists_should_be_offered', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([CATALOGUE[1]]);
       const res = mockResponse();
 
       await controller().chooseApis(asUser({ session: { applicationDraft: { name: 'Case Viewer' } } }), res);
 
-      expect((res.data?.apiItems as { value: string }[]).map(item => item.value)).toEqual(['api-two']);
+      expect((res.data?.apiItems as { value: string }[]).map(item => item.value)).toEqual(['two']);
     });
 
-    test('an_api_that_is_not_offered_should_be_refused_when_chosen_and_when_created', async () => {
-      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+    test('an_api_the_catalogue_does_not_list_should_be_refused_when_chosen_and_when_created', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([CATALOGUE[1]]);
 
       const refused = mockResponse();
-      const req = asUser({ body: { apis: ['api-one'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
+      const req = asUser({ body: { apis: ['one'] }, session: { applicationDraft: { name: 'Case Viewer' } } });
       await controller().saveApis(req, refused);
       expect(refused.statusCode).toBe(400);
 
@@ -422,12 +424,10 @@ describe('ApplicationsController', () => {
         string,
         { apiTitle: string; token: object; portalUrl: string }
       >;
-      expect(Object.keys(instructions)).toEqual(['api-one']);
-      expect(instructions['api-one'].apiTitle).toBe('API one');
-      expect(instructions['api-one'].portalUrl).toBe(
-        'https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one'
-      );
-      expect(instructions['api-one'].token).toEqual({
+      expect(Object.keys(instructions)).toEqual(['one']);
+      expect(instructions['one'].apiTitle).toBe('API one');
+      expect(instructions['one'].portalUrl).toBe('https://amp-portal.sandbox.api.hmcts.net/api-details#api=api-one');
+      expect(instructions['one'].token).toEqual({
         url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
         clientId: 'client-1',
         clientSecret: '<client_secret>',
@@ -482,8 +482,8 @@ describe('ApplicationsController', () => {
       expect((res.data?.apiItems as { checked: boolean }[]).map(item => item.checked)).toEqual([true, false]);
     });
 
-    test('an_api_no_longer_offered_should_still_show_while_the_application_has_it', async () => {
-      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+    test('an_api_the_catalogue_no_longer_lists_should_still_show_while_the_application_has_it', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([CATALOGUE[1]]);
       const res = mockResponse();
 
       await controller().editApis(forId(), res, jest.fn());
@@ -491,22 +491,27 @@ describe('ApplicationsController', () => {
       expect(
         (res.data?.apiItems as { value: string; checked: boolean }[]).map(item => [item.value, item.checked])
       ).toEqual([
-        ['api-one', true],
-        ['api-two', false],
+        ['one', true],
+        ['two', false],
       ]);
     });
 
-    test('keeping_an_api_no_longer_offered_should_be_allowed_but_adding_one_should_not', async () => {
-      (listedApiNames as jest.Mock).mockReturnValue(['api-two']);
+    test('keeping_an_api_the_catalogue_no_longer_lists_should_be_allowed_but_adding_one_should_not', async () => {
+      (getCatalogueApis as jest.Mock).mockResolvedValue([CATALOGUE[1]]);
       Applications.setApis.mockResolvedValue({ added: [], removed: [], failed: [] });
 
-      await controller().saveEditedApis(forId({ body: { apis: ['api-one'] } }), mockResponse(), jest.fn());
-      expect(Applications.setApis).toHaveBeenCalledWith(OWNER, APPLICATION, ['api-one'], CATALOGUE);
+      await controller().saveEditedApis(forId({ body: { apis: ['one'] } }), mockResponse(), jest.fn());
+      expect(Applications.setApis).toHaveBeenCalledWith(
+        OWNER,
+        APPLICATION,
+        ['one'],
+        [{ shortCode: 'one', title: 'API one' }, CATALOGUE[1]]
+      );
 
       Applications.getApplication.mockResolvedValue({ ...APPLICATION, apis: [] });
       Applications.setApis.mockClear();
       const refused = mockResponse();
-      await controller().saveEditedApis(forId({ body: { apis: ['api-one'] } }), refused, jest.fn());
+      await controller().saveEditedApis(forId({ body: { apis: ['one'] } }), refused, jest.fn());
       expect(refused.statusCode).toBe(400);
       expect(Applications.setApis).not.toHaveBeenCalled();
     });
@@ -521,17 +526,17 @@ describe('ApplicationsController', () => {
     });
 
     test.each([
-      [{ added: ['api-two'], removed: ['api-one'], failed: [] }, true, 'APIs updated: 1 added, 1 removed.'],
+      [{ added: ['two'], removed: ['one'], failed: [] }, true, 'APIs updated: 1 added, 1 removed.'],
       [{ added: [], removed: [], failed: [] }, true, 'No changes were made to the APIs.'],
       [{ added: [], removed: [], failed: ['API two'] }, false, 'Some APIs could not be changed: API two.'],
     ])('saving_apis_should_say_what_happened_%#', async (changes, success, text) => {
       Applications.setApis.mockResolvedValue(changes);
       const res = mockResponse();
-      const req = forId({ body: { apis: ['api-two'] } });
+      const req = forId({ body: { apis: ['two'] } });
 
       await controller().saveEditedApis(req, res, jest.fn());
 
-      expect(Applications.setApis).toHaveBeenCalledWith(OWNER, APPLICATION, ['api-two'], CATALOGUE);
+      expect(Applications.setApis).toHaveBeenCalledWith(OWNER, APPLICATION, ['two'], CATALOGUE);
       expect(req.session.notice?.success).toBe(success);
       expect(req.session.notice?.text).toContain(text);
       expect(res.redirected).toBe('/account/applications/client-1');
@@ -541,7 +546,7 @@ describe('ApplicationsController', () => {
       Applications.subscriptionKey.mockResolvedValue('c5212ea6');
       const res = mockResponse();
 
-      await controller().api(forId({ params: { id: 'client-1', api: 'api-one' } }), res, jest.fn());
+      await controller().api(forId({ params: { id: 'client-1', api: 'one' } }), res, jest.fn());
 
       expect(res.view).toBe('applications/api');
       expect(res.data).toMatchObject({ subscriptionKey: 'c5212ea6', subscription: APPLICATION.apis[0] });
@@ -551,7 +556,7 @@ describe('ApplicationsController', () => {
       Applications.subscriptionKey.mockRejectedValue(new BackendError('down'));
       const res = mockResponse();
 
-      await controller().api(forId({ params: { id: 'client-1', api: 'api-one' } }), res, jest.fn());
+      await controller().api(forId({ params: { id: 'client-1', api: 'one' } }), res, jest.fn());
 
       expect(res.view).toBe('applications/api');
       expect(res.data?.subscriptionKey).toBeUndefined();
@@ -560,7 +565,7 @@ describe('ApplicationsController', () => {
     test('an_api_the_application_is_not_subscribed_to_should_be_not_found', async () => {
       const next = jest.fn();
 
-      await controller().api(forId({ params: { id: 'client-1', api: 'api-two' } }), mockResponse(), next);
+      await controller().api(forId({ params: { id: 'client-1', api: 'two' } }), mockResponse(), next);
 
       expect(next).toHaveBeenCalled();
     });

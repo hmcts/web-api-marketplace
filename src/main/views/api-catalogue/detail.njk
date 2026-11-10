@@ -52,20 +52,32 @@
 
     <h2 class="govuk-heading-m">About this API</h2>
 
-    {{ govukSummaryList({
-      rows: [
-        { key: { text: "Owning team" }, value: { text: owningTeam } },
-        { key: { text: "Platform" }, value: { text: api.platform } },
-        { key: { text: "Domain" }, value: { text: api.domain } },
-        { key: { text: "Repository name" }, value: { text: api.name } }
-      ]
-    }) }}
+    {% set aboutRows = [] %}
+    {% for row in [
+      { label: "Owning team", value: api.team },
+      { label: "Platform", value: api.platform },
+      { label: "Domain", value: api.domain },
+      { label: "Short code", value: api.shortCode },
+      { label: "Repository name", value: api.catalogueName }
+    ] %}
+      {% if row.value %}
+        {% set aboutRows = (aboutRows.push({ key: { text: row.label }, value: { text: row.value } }), aboutRows) %}
+      {% endif %}
+    {% endfor %}
+    {{ govukSummaryList({ rows: aboutRows, attributes: { id: "about-this-api" } }) }}
 
     <h2 class="govuk-heading-m">Documentation</h2>
 
     <ul class="govuk-list">
-      <li><a class="govuk-link" href="{{ docsUrl }}" rel="noreferrer noopener" target="_blank">Read the API reference (opens in new tab)</a></li>
-      <li><a class="govuk-link" href="{{ repoUrl }}" rel="noreferrer noopener" target="_blank">View the source repository on GitHub (opens in new tab)</a></li>
+      {% if api.docsUrl %}
+        <li><a class="govuk-link" href="{{ api.docsUrl }}" rel="noreferrer noopener" target="_blank">Read the API reference (opens in new tab)</a></li>
+      {% endif %}
+      {% if api.portalUrl %}
+        <li><a class="govuk-link" href="{{ api.portalUrl }}" rel="noreferrer noopener" target="_blank">Try the operations in the developer portal (opens in new tab)</a></li>
+      {% endif %}
+      {% if api.repoUrl %}
+        <li><a class="govuk-link" href="{{ api.repoUrl }}" rel="noreferrer noopener" target="_blank">View the source repository on GitHub (opens in new tab)</a></li>
+      {% endif %}
     </ul>
 
   </div>
