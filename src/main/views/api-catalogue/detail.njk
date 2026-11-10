@@ -66,19 +66,18 @@
     {% endfor %}
     {{ govukSummaryList({ rows: aboutRows, attributes: { id: "about-this-api" } }) }}
 
-    <h2 class="govuk-heading-m">Documentation</h2>
+    {% if api.portalUrl or api.repoUrl %}
+      <h2 class="govuk-heading-m">Documentation</h2>
 
-    <ul class="govuk-list">
-      {% if api.docsUrl %}
-        <li><a class="govuk-link" href="{{ api.docsUrl }}" rel="noreferrer noopener" target="_blank">Read the API reference (opens in new tab)</a></li>
-      {% endif %}
-      {% if api.portalUrl %}
-        <li><a class="govuk-link" href="{{ api.portalUrl }}" rel="noreferrer noopener" target="_blank">Try the operations in the developer portal (opens in new tab)</a></li>
-      {% endif %}
-      {% if api.repoUrl %}
-        <li><a class="govuk-link" href="{{ api.repoUrl }}" rel="noreferrer noopener" target="_blank">View the source repository on GitHub (opens in new tab)</a></li>
-      {% endif %}
-    </ul>
+      <ul class="govuk-list">
+        {% if api.portalUrl %}
+          <li><a class="govuk-link" href="{{ api.portalUrl }}" rel="noreferrer noopener" target="_blank">Read the API reference (opens in new tab)</a></li>
+        {% endif %}
+        {% if api.repoUrl %}
+          <li><a class="govuk-link" href="{{ api.repoUrl }}" rel="noreferrer noopener" target="_blank">View the source repository on GitHub (opens in new tab)</a></li>
+        {% endif %}
+      </ul>
+    {% endif %}
 
   </div>
 </div>
