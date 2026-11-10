@@ -45,7 +45,7 @@ const APPLICATION = {
   secretExpiresAt: '',
   createdAt: '',
   apis: [
-    { apiName: 'api-one', apiTitle: 'API one', publisherId: 'one', subscriptionName: 'amp-temp-1', subscribedAt: '' },
+    { shortCode: 'one', apiTitle: 'API one', publisherId: 'one', subscriptionName: 'amp-temp-1', subscribedAt: '' },
   ],
   accessGranted: true,
 };

@@ -2,13 +2,11 @@ import axios from 'axios';
 
 import {
   clearCatalogueCache,
-  domainOf,
   getApiProducts,
+  getCatalogueApi,
   getCatalogueApis,
-  listedApiNames,
-  offeredApis,
-  platformOf,
-  portalUrlFor,
+  includingSubscribed,
+  paragraphsOf,
   tokenScopes,
 } from '../../../main/services/ApiCatalogue';
 
@@ -16,12 +14,21 @@ jest.mock('axios');
 
 const mockedGet = axios.get as jest.MockedFunction<typeof axios.get>;
 
-const feed = {
-  apis: [
-    { name: 'api-cp-crime-court-list-publisher', title: 'Crime Court List Publisher' },
-    { name: 'api-cp-ai-rag', title: 'RAG Service API' },
-  ],
+const CATALOGUE = [
+  { shortCode: 'clp', title: 'Crime Court List Publisher', platform: 'Common Platform', subscribable: true },
+  { shortCode: 'rag', title: 'RAG Service API', domain: 'AI', subscribable: false },
+];
+
+const DETAIL = {
+  ...CATALOGUE[0],
+  catalogueName: 'api-cp-crime-court-list-publisher',
+  description: 'Publishes the court list.',
+  docsUrl: 'https://hmcts.github.io/api-cp-crime-court-list-publisher/',
+  repoUrl: 'https://github.com/hmcts/api-cp-crime-court-list-publisher',
 };
+
+/** The error shape axios throws, which getCatalogueApi reads the status from. */
+const answered = (status: number) => ({ response: { status } });
 
 describe('ApiCatalogue', () => {
   beforeEach(() => {
@@ -29,28 +36,15 @@ describe('ApiCatalogue', () => {
     clearCatalogueCache();
   });
 
-  test('a_successful_fetch_should_return_the_apis_sorted_by_title', async () => {
-    mockedGet.mockResolvedValue({ data: feed });
+  test('the_catalogue_should_be_read_from_the_backend_sorted_by_title', async () => {
+    mockedGet.mockResolvedValue({ data: [CATALOGUE[1], CATALOGUE[0]] });
 
-    const apis = await getCatalogueApis();
-
-    expect(apis.map(api => api.title)).toEqual(['Crime Court List Publisher', 'RAG Service API']);
-  });
-
-  test('an_api_without_a_title_should_fall_back_to_its_name', async () => {
-    mockedGet.mockResolvedValue({ data: { apis: [{ name: 'api-cp-ai-rag' }] } });
-
-    expect((await getCatalogueApis())[0].title).toBe('api-cp-ai-rag');
-  });
-
-  test('an_entry_without_a_name_should_be_dropped', async () => {
-    mockedGet.mockResolvedValue({ data: { apis: [{ title: 'Nameless' }, { name: 'api-cp-ai-rag' }] } });
-
-    expect(await getCatalogueApis()).toHaveLength(1);
+    expect((await getCatalogueApis()).map(api => api.title)).toEqual(['Crime Court List Publisher', 'RAG Service API']);
+    expect(mockedGet.mock.calls[0][0]).toMatch(/\/catalogue$/);
   });
 
   test('a_second_call_should_be_served_from_the_cache_without_fetching_again', async () => {
-    mockedGet.mockResolvedValue({ data: feed });
+    mockedGet.mockResolvedValue({ data: CATALOGUE });
 
     await getCatalogueApis();
     await getCatalogueApis();
@@ -65,10 +59,10 @@ describe('ApiCatalogue', () => {
   });
 
   test('a_failed_refresh_should_fall_back_to_the_previously_cached_list', async () => {
-    mockedGet.mockResolvedValue({ data: feed });
+    mockedGet.mockResolvedValue({ data: CATALOGUE });
     await getCatalogueApis();
 
-    // Age the clock past the cache TTL so the next call tries the feed again.
+    // Age the clock past the cache TTL so the next call asks the backend again.
     const later = Date.now() + 60 * 60 * 1000;
     const clock = jest.spyOn(Date, 'now').mockReturnValue(later);
     mockedGet.mockRejectedValue(new Error('timeout'));
@@ -79,22 +73,42 @@ describe('ApiCatalogue', () => {
     clock.mockRestore();
   });
 
-  test.each([
-    ['api-cp-ai-rag', 'AI'],
-    ['api-cp-refdata-courthearing-courthouses', 'Reference data'],
-    ['api-cp-crime-prosecution-case-details', 'Case administration'],
-    ['api-cp-crime-defendant-details', 'Case administration'],
-    ['api-cp-crime-schedulingandlisting-courtschedule', 'Scheduling and listing'],
-    ['api-cp-crime-court-list-publisher', 'Scheduling and listing'],
-    ['api-cp-crime-hearing-results', 'Hearings'],
-    ['api-something-else', 'Other'],
-  ])('the_domain_of_%s_should_be_%s', (name, domain) => {
-    expect(domainOf(name)).toBe(domain);
-  });
+  describe('one api', () => {
+    test('a_short_code_should_be_read_by_its_own_path', async () => {
+      mockedGet.mockResolvedValue({ data: DETAIL });
 
-  test('the_platform_should_be_common_platform_for_cp_apis_and_other_otherwise', () => {
-    expect(platformOf('api-cp-crime-hearing')).toBe('Common Platform');
-    expect(platformOf('api-cft-something')).toBe('Other');
+      expect(await getCatalogueApi('clp')).toEqual(DETAIL);
+      expect(mockedGet.mock.calls[0][0]).toMatch(/\/catalogue\/clp$/);
+    });
+
+    test('a_short_code_with_a_slash_should_be_escaped_rather_than_pasted_into_the_path', async () => {
+      mockedGet.mockResolvedValue({ data: DETAIL });
+
+      await getCatalogueApi('../products');
+
+      expect(mockedGet.mock.calls[0][0]).toMatch(/\/catalogue\/\.\.%2Fproducts$/);
+    });
+
+    test('a_short_code_the_catalogue_does_not_list_should_come_back_as_nothing', async () => {
+      mockedGet.mockRejectedValue(answered(404));
+
+      expect(await getCatalogueApi('nope')).toBeUndefined();
+    });
+
+    test('a_second_read_of_a_missing_short_code_should_not_ask_again', async () => {
+      mockedGet.mockRejectedValue(answered(404));
+
+      await getCatalogueApi('nope');
+      await getCatalogueApi('nope');
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+    });
+
+    test('an_unreachable_backend_should_be_raised_rather_than_read_as_not_listed', async () => {
+      mockedGet.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+      await expect(getCatalogueApi('clp')).rejects.toThrow('Could not read');
+    });
   });
 
   describe('products', () => {
@@ -119,12 +133,12 @@ describe('ApiCatalogue', () => {
       },
     ];
 
-    test('each_api_should_be_scoped_to_its_own_resource_application', async () => {
+    test('each_api_should_be_scoped_to_its_own_resource_application_by_short_code', async () => {
       mockedGet.mockResolvedValue({ data: PRODUCTS });
 
       expect(await tokenScopes()).toEqual({
-        'api-cp-crime-schedulingandlisting-courtschedule': 'aaaaaaaa-1111-2222-3333-444444444444/.default',
-        'api-cp-refdata-courthearing-courthouses': 'bbbbbbbb-1111-2222-3333-444444444444/.default',
+        slc: 'aaaaaaaa-1111-2222-3333-444444444444/.default',
+        rcc: 'bbbbbbbb-1111-2222-3333-444444444444/.default',
       });
     });
 
@@ -151,89 +165,31 @@ describe('ApiCatalogue', () => {
     });
   });
 
-  describe('developer portal pages', () => {
-    const PRODUCTS = [
-      {
-        shortCode: 'rcc',
-        title: 'Court Houses',
-        catalogueName: 'api-cp-refdata-courthearing-courthouses',
-        productId: 'try-it-now-cp-refdata-courthearing',
-        gatewayPath: 'amp/try/rcc',
-        role: 'app.read',
-      },
-    ];
-    const PAGE =
-      'https://amp-portal.sandbox.api.hmcts.net/api-details#api=common-platform-api-refdata-court-hearing-court-houses';
+  describe('includingSubscribed', () => {
+    test('a_subscription_the_catalogue_still_lists_should_not_be_added_twice', () => {
+      const kept = includingSubscribed(CATALOGUE, [{ shortCode: 'clp', apiTitle: 'Crime Court List Publisher' }]);
 
-    /** /products, then /catalogue/{shortCode} answering with this body or failing. */
-    const backend = (catalogue: () => Promise<unknown>) =>
-      mockedGet.mockImplementation(async (url: string) =>
-        url.endsWith('/products') ? { data: PRODUCTS } : catalogue()
-      );
-
-    test('the_page_should_be_the_portal_url_the_backend_holds_for_the_apis_short_code', async () => {
-      backend(async () => ({ data: { shortCode: 'rcc', portalUrl: PAGE } }));
-
-      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBe(PAGE);
-      expect(mockedGet).toHaveBeenCalledWith(expect.stringMatching(/\/catalogue\/rcc$/), { timeout: 5000 });
+      expect(kept).toEqual(CATALOGUE);
     });
 
-    test('an_api_the_backend_does_not_hold_should_have_no_page_and_no_catalogue_call', async () => {
-      backend(async () => ({ data: { portalUrl: PAGE } }));
+    test('a_subscription_the_catalogue_no_longer_lists_should_stay_so_it_is_not_dropped_unseen', () => {
+      const kept = includingSubscribed(CATALOGUE, [{ shortCode: 'gone', apiTitle: 'Another API' }]);
 
-      expect(await portalUrlFor('api-cp-unknown')).toBeUndefined();
-      expect(mockedGet).not.toHaveBeenCalledWith(expect.stringContaining('/catalogue/'), expect.anything());
+      expect(kept.map(api => api.title)).toEqual(['Another API', 'Crime Court List Publisher', 'RAG Service API']);
     });
 
-    test('an_entry_without_a_portal_url_should_have_no_page', async () => {
-      backend(async () => ({ data: { shortCode: 'rcc' } }));
-
-      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBeUndefined();
-    });
-
-    test('an_unreachable_catalogue_should_leave_no_page_rather_than_throw', async () => {
-      backend(async () => {
-        throw new Error('Request failed with status code 503');
-      });
-
-      expect(await portalUrlFor('api-cp-refdata-courthearing-courthouses')).toBeUndefined();
-    });
-
-    test('a_second_read_should_come_from_the_cache', async () => {
-      backend(async () => ({ data: { portalUrl: PAGE } }));
-
-      await portalUrlFor('api-cp-refdata-courthearing-courthouses');
-      await portalUrlFor('api-cp-refdata-courthearing-courthouses');
-
-      expect(mockedGet.mock.calls.filter(([url]) => String(url).includes('/catalogue/'))).toHaveLength(1);
+    test('no_subscriptions_should_leave_the_catalogue_as_it_is', () => {
+      expect(includingSubscribed(CATALOGUE, [])).toEqual(CATALOGUE);
     });
   });
 
-  describe('offeredApis', () => {
-    const catalogue = [
-      { name: 'api-one', title: 'API one' },
-      { name: 'api-two', title: 'API two' },
-      { name: 'api-three', title: 'API three' },
-    ];
-
-    test('only_the_allowed_apis_should_be_offered_in_catalogue_order', () => {
-      expect(offeredApis(catalogue, ['api-three', 'api-one']).map(api => api.name)).toEqual(['api-one', 'api-three']);
+  describe('paragraphsOf', () => {
+    test('blank_lines_should_separate_paragraphs_and_wrapping_should_not', () => {
+      expect(paragraphsOf('One that\nwraps.\n\nTwo.\n  \nThree.')).toEqual(['One that wraps.', 'Two.', 'Three.']);
     });
 
-    test('an_empty_allow_list_should_offer_the_whole_catalogue', () => {
-      expect(offeredApis(catalogue, [])).toEqual(catalogue);
+    test('text_that_is_only_whitespace_should_give_no_paragraphs', () => {
+      expect(paragraphsOf(' \n\n ')).toEqual([]);
     });
-
-    test('an_allowed_api_missing_from_the_catalogue_should_not_be_offered', () => {
-      expect(offeredApis(catalogue, ['api-gone'])).toEqual([]);
-    });
-
-    test('apis_already_chosen_should_stay_offered_so_they_are_not_dropped_unseen', () => {
-      expect(offeredApis(catalogue, ['api-one'], ['api-two']).map(api => api.name)).toEqual(['api-one', 'api-two']);
-    });
-  });
-
-  test('the_test_config_should_allow_every_api', () => {
-    expect(listedApiNames()).toEqual([]);
   });
 });

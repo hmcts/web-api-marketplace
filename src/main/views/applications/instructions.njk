@@ -2,13 +2,13 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {{ govukSummaryList({
   rows: [
-    { key: { text: "Publisher ID (scope)" }, value: { html: '<span class="apim-credential" id="publisher-id-' + i.apiName + '">' + (i.token.publisherId | escape) + '</span>' } }
+    { key: { text: "Publisher ID (scope)" }, value: { html: '<span class="apim-credential" id="publisher-id-' + i.shortCode + '">' + (i.token.publisherId | escape) + '</span>' } }
   ]
 }) }}
 
 <h3 class="govuk-heading-s">Get an access token</h3>
 <p class="govuk-body">Request a token from Microsoft Entra ID with the OAuth 2.0 client credentials flow:</p>
-<pre class="apim-code" id="token-request-{{ i.apiName }}"><code>curl --request POST \
+<pre class="apim-code" id="token-request-{{ i.shortCode }}"><code>curl --request POST \
   --url {{ i.token.url }} \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --data grant_type=client_credentials \
@@ -18,5 +18,5 @@
 
 {% if i.portalUrl %}
   <h3 class="govuk-heading-s">Run try it now in developer portal</h3>
-  <p class="govuk-body"><a class="govuk-link" id="api-reference-{{ i.apiName }}" href="{{ i.portalUrl }}" rel="noreferrer noopener" target="_blank">{{ i.apiTitle }} API reference (opens in new tab)</a></p>
+  <p class="govuk-body"><a class="govuk-link" id="api-reference-{{ i.shortCode }}" href="{{ i.portalUrl }}" rel="noreferrer noopener" target="_blank">{{ i.apiTitle }} API reference (opens in new tab)</a></p>
 {% endif %}
