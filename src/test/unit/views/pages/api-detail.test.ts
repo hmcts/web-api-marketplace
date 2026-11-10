@@ -106,9 +106,26 @@ describe('API detail page', () => {
       }
     });
 
-    test('only_the_links_the_catalogue_publishes_should_be_shown', () => {
-      expect(render()).toContain('developer portal');
-      expect(render({ api: { shortCode: 'one', title: 'API one' } })).not.toContain('opens in new tab');
+    test('the_api_reference_should_be_the_developer_portal_and_not_the_published_pages', () => {
+      const html = render();
+
+      expect(html).toContain('Read the API reference');
+      expect(html).toContain(api.portalUrl);
+      expect(html).not.toContain(api.docsUrl);
+    });
+
+    test('the_source_repository_should_still_be_offered', () => {
+      const html = render();
+
+      expect(html).toContain('View the source repository on GitHub');
+      expect(html).toContain(api.repoUrl);
+    });
+
+    test('an_api_with_neither_a_portal_page_nor_a_repository_should_show_no_documentation', () => {
+      const html = render({ api: { shortCode: 'one', title: 'API one' } });
+
+      expect(html).not.toContain('>Documentation<');
+      expect(html).not.toContain('opens in new tab');
     });
 
     test('the_page_should_not_repeat_the_breadcrumb_as_a_caption', () => {
