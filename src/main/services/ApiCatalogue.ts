@@ -8,20 +8,16 @@ const logger = Logger.getLogger('api-catalogue');
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
 
-/** An API as the catalogue lists it. The short code is the key: nothing is read by repository name. */
 export interface CatalogueApi {
   shortCode: string;
   title: string;
-  /** One line, for the list. The full text is description, on CatalogueApiDetail. */
   summary?: string;
   team?: string;
   domain?: string;
   platform?: string;
-  /** False for an API that is listed but has no APIM product behind it. */
   subscribable?: boolean;
 }
 
-/** One API with the description and links the list leaves out. */
 export interface CatalogueApiDetail extends CatalogueApi {
   catalogueName?: string;
   description?: string;
@@ -29,31 +25,16 @@ export interface CatalogueApiDetail extends CatalogueApi {
   repoUrl?: string;
   gatewayPath?: string;
   portalUrl?: string;
-}
-
-/** An API as the marketplace holds it. resourceAppId is the Entra application its roles belong to. */
-export interface ApiProduct {
-  shortCode: string;
-  title: string;
-  catalogueName: string;
-  productId: string;
-  gatewayPath: string;
-  role: string;
-  tenantId?: string;
   resourceAppId?: string;
+  role?: string;
 }
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
-let products: { all: ApiProduct[]; fetchedAt: number } | null = null;
 const details = new Map<string, { api?: CatalogueApiDetail; fetchedAt: number }>();
 
 /**
  * The APIs this site lists, from the marketplace backend, which reads them from API
  * Management and its own rows. Only listed APIs come back, so there is nothing to filter.
- *
- * A failed fetch returns the last good list, or an empty one, rather than throwing: the
- * pages that fill a form from this are still usable for every other answer, and an empty
- * list is visible to the user as a catalogue that says it could not be loaded.
  */
 export async function getCatalogueApis(): Promise<CatalogueApi[]> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
@@ -103,38 +84,6 @@ export async function getCatalogueApi(shortCode: string): Promise<CatalogueApiDe
 }
 
 /**
- * The APIs the marketplace holds, which is where the scope a consumer asks a token for comes
- * from. Each API has its own resource application, so the scope differs between them.
- */
-export async function getApiProducts(): Promise<ApiProduct[]> {
-  if (products && Date.now() - products.fetchedAt < CACHE_TTL_MS) {
-    return products.all;
-  }
-
-  const url = `${backendUrl()}/products`;
-  try {
-    const response = await axios.get<ApiProduct[]>(url, { timeout: FETCH_TIMEOUT_MS });
-    products = { all: response.data ?? [], fetchedAt: Date.now() };
-    return products.all;
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Could not load the API products from ${url}: ${detail}`);
-    return products?.all ?? [];
-  }
-}
-
-/** The token scope for each API, by short code. */
-export async function tokenScopes(): Promise<Record<string, string>> {
-  const scopes: Record<string, string> = {};
-  for (const product of await getApiProducts()) {
-    if (product.resourceAppId) {
-      scopes[product.shortCode] = `${product.resourceAppId}/.default`;
-    }
-  }
-  return scopes;
-}
-
-/**
  * The catalogue, plus any API an application already has that is no longer listed. Those stay
  * on its pages so that saving the form does not revoke a subscription the consumer never saw.
  */
@@ -160,7 +109,6 @@ export function paragraphsOf(text: string): string[] {
 /** Only for tests — the module-level caches otherwise leak between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
-  products = null;
   details.clear();
 }
 

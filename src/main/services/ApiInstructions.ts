@@ -1,10 +1,5 @@
-import config from 'config';
-
-import { getCatalogueApi, tokenScopes } from './ApiCatalogue';
+import { getCatalogueApi } from './ApiCatalogue';
 import { ApiSubscription, Application } from './Applications';
-
-/** Scheduling and Listing Court Schedule, the API the configured fallback Publisher ID belongs to. */
-export const SLC_SHORT_CODE = 'slc';
 
 export interface TokenInstructions {
   url: string;
@@ -25,21 +20,8 @@ export interface Instructions {
   portalUrl?: string;
 }
 
+/** Shown where the catalogue holds no resource app for an API, rather than another API's ID. */
 const PUBLISHER_PLACEHOLDER = '{publisher_id}';
-
-/**
- * The Entra application an API's roles belong to, which is what a consumer asks for a token on.
- * Each API has its own, so it is read from the marketplace rather than configured here.
- * apiEndpoints.publisherId is SLC's and stands in for SLC alone when the marketplace cannot be
- * reached; any other API gets a placeholder rather than another API's ID.
- */
-export async function publisherId(shortCode: string): Promise<string> {
-  const scope = (await tokenScopes())[shortCode];
-  if (scope) {
-    return scope.replace(/\/\.default$/, '');
-  }
-  return shortCode === SLC_SHORT_CODE ? config.get<string>('apiEndpoints.publisherId') : PUBLISHER_PLACEHOLDER;
-}
 
 /**
  * How a consumer gets a token for this application for each of its APIs, by short code, and
@@ -55,8 +37,9 @@ export async function instructionsFor(application: Application): Promise<Record<
 }
 
 async function instructionsForApi(application: Application, api: ApiSubscription): Promise<Instructions> {
-  const resourceAppId = await publisherId(api.shortCode);
-  const portalUrl = (await getCatalogueApi(api.shortCode))?.portalUrl;
+  const catalogue = await getCatalogueApi(api.shortCode);
+  // The Entra application the API's roles belong to, which is what a consumer asks a token on.
+  const resourceAppId = catalogue?.resourceAppId || PUBLISHER_PLACEHOLDER;
 
   return {
     shortCode: api.shortCode,
@@ -68,6 +51,6 @@ async function instructionsForApi(application: Application, api: ApiSubscription
       publisherId: resourceAppId,
       scope: `${resourceAppId}/.default`,
     },
-    ...(portalUrl ? { portalUrl } : {}),
+    ...(catalogue?.portalUrl ? { portalUrl: catalogue.portalUrl } : {}),
   };
 }

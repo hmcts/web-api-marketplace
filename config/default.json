@@ -42,7 +42,6 @@
     }
   },
   "apiEndpoints": {
-    "publisherId": "30288840-e345-4543-99ee-f9253d789339",
     "environment": "",
     "apimBaseUrls": {
       "sandbox": "https://sps-api-mgmt.sandbox.api.hmcts.net",

@@ -1,26 +1,31 @@
-import { getCatalogueApi, tokenScopes } from '../../../main/services/ApiCatalogue';
-import { SLC_SHORT_CODE, instructionsFor, publisherId } from '../../../main/services/ApiInstructions';
+import { getCatalogueApi } from '../../../main/services/ApiCatalogue';
+import { instructionsFor } from '../../../main/services/ApiInstructions';
 import { ApiSubscription, Application } from '../../../main/services/Applications';
 
 jest.mock('../../../main/services/ApiCatalogue', () => ({
   ...jest.requireActual('../../../main/services/ApiCatalogue'),
-  tokenScopes: jest.fn(),
   getCatalogueApi: jest.fn(),
 }));
 
-const mockedScopes = tokenScopes as jest.MockedFunction<typeof tokenScopes>;
 const mockedApi = getCatalogueApi as jest.MockedFunction<typeof getCatalogueApi>;
 
+const SLC_SHORT_CODE = 'slc';
 const RCC_SHORT_CODE = 'rcc';
-const PORTAL: Record<string, string> = {
-  [SLC_SHORT_CODE]: 'https://amp-portal.example.net/api-details#api=stub-slc',
-  [RCC_SHORT_CODE]: 'https://amp-portal.example.net/api-details#api=stub-rcc',
-};
-/** Each API's own Entra resource application, which the marketplace holds against it. */
+
+/** Each API's own Entra resource application, which the catalogue holds against it. */
 const SLC_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
 const RCC_APP_ID = '97c20454-55c1-45b0-88cd-268db572f615';
-/** SLC's, stood in only when the marketplace cannot be reached. */
-const CONFIGURED_FALLBACK = '30288840-e345-4543-99ee-f9253d789339';
+
+const CATALOGUE: Record<string, { resourceAppId?: string; portalUrl?: string }> = {
+  [SLC_SHORT_CODE]: {
+    resourceAppId: SLC_APP_ID,
+    portalUrl: 'https://amp-portal.example.net/api-details#api=stub-slc',
+  },
+  [RCC_SHORT_CODE]: {
+    resourceAppId: RCC_APP_ID,
+    portalUrl: 'https://amp-portal.example.net/api-details#api=stub-rcc',
+  },
+};
 
 const subscription = (shortCode: string, apiTitle: string): ApiSubscription => ({
   shortCode,
@@ -47,13 +52,8 @@ const application = (apis: ApiSubscription[], tenantId = 'tenant-1'): Applicatio
 
 describe('ApiInstructions', () => {
   beforeEach(() => {
-    mockedScopes.mockReset();
-    mockedScopes.mockResolvedValue({
-      [SLC_SHORT_CODE]: `${SLC_APP_ID}/.default`,
-      [RCC_SHORT_CODE]: `${RCC_APP_ID}/.default`,
-    });
     mockedApi.mockReset();
-    mockedApi.mockImplementation(async shortCode => ({ shortCode, title: shortCode, portalUrl: PORTAL[shortCode] }));
+    mockedApi.mockImplementation(async shortCode => ({ shortCode, title: shortCode, ...CATALOGUE[shortCode] }));
   });
 
   test('there_should_be_instructions_for_each_api_the_application_has_and_no_other', async () => {
@@ -82,17 +82,28 @@ describe('ApiInstructions', () => {
     expect(all[RCC_SHORT_CODE].token.scope).toBe(`${RCC_APP_ID}/.default`);
   });
 
+  test('one_read_of_the_catalogue_should_serve_both_the_scope_and_the_portal_link', async () => {
+    const all = await instructionsFor(application([SLC]));
+
+    expect(mockedApi).toHaveBeenCalledTimes(1);
+    expect(mockedApi).toHaveBeenCalledWith(SLC_SHORT_CODE);
+    expect(all[SLC_SHORT_CODE].token.publisherId).toBe(SLC_APP_ID);
+    expect(all[SLC_SHORT_CODE].portalUrl).toBe(CATALOGUE[SLC_SHORT_CODE].portalUrl);
+  });
+
   test('without_a_tenant_from_the_backend_the_request_should_keep_a_placeholder', async () => {
     expect((await instructionsFor(application([SLC], '')))[SLC_SHORT_CODE].token.url).toBe(
       'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
     );
   });
 
-  test('each_api_should_point_to_its_own_page_in_the_developer_portal', async () => {
-    const all = await instructionsFor(application([SLC, RCC]));
+  test('an_api_with_no_resource_app_should_show_a_placeholder_rather_than_another_apis_id', async () => {
+    mockedApi.mockResolvedValue({ shortCode: RCC_SHORT_CODE, title: 'Courthouses' });
 
-    expect(all[SLC_SHORT_CODE].portalUrl).toBe(PORTAL[SLC_SHORT_CODE]);
-    expect(all[RCC_SHORT_CODE].portalUrl).toBe(PORTAL[RCC_SHORT_CODE]);
+    const token = (await instructionsFor(application([RCC])))[RCC_SHORT_CODE].token;
+
+    expect(token.publisherId).toBe('{publisher_id}');
+    expect(token.scope).toBe('{publisher_id}/.default');
   });
 
   test('an_api_the_catalogue_no_longer_lists_should_leave_the_portal_link_out', async () => {
@@ -108,14 +119,5 @@ describe('ApiInstructions', () => {
       'shortCode',
       'token',
     ]);
-  });
-
-  test('a_marketplace_that_cannot_be_reached_should_fall_back_to_the_configured_id_for_slc_alone', async () => {
-    mockedScopes.mockResolvedValue({});
-
-    expect(await publisherId(SLC_SHORT_CODE)).toBe(CONFIGURED_FALLBACK);
-    // That configured ID is SLC's app, so no other API is shown it.
-    expect(await publisherId(RCC_SHORT_CODE)).toBe('{publisher_id}');
-    expect((await instructionsFor(application([RCC])))[RCC_SHORT_CODE].token.scope).toBe('{publisher_id}/.default');
   });
 });
