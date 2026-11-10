@@ -1,6 +1,8 @@
 {% extends "template.njk" %}
 
-{% set pageTitle = "Producer guidance - HMCTS API Marketplace - GOV.UK" %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = "Producer Onboarding - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "documentation" %}
 {% set breadcrumbs = [
   { text: "Home", href: "/" },
@@ -12,70 +14,117 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-xl">Producer guidance</h1>
+    <h1 class="govuk-heading-xl">Producer Onboarding</h1>
 
     <p class="govuk-body-l">
-      How to list your team&rsquo;s API in the marketplace so other teams can find it, understand what
-      it does, and request access &mdash; and what you are responsible for once it is live.
+      Publish your API on the HMCTS API Marketplace so that other teams and partners can find it, try
+      it safely, and request access. This page explains what you need before you start, and what
+      happens next.
     </p>
+
+    <h2 class="govuk-heading-m" id="before-you-start">Before you start</h2>
 
     <p class="govuk-body">
-      The marketplace doesn&rsquo;t own or run any of the APIs it lists &mdash; your team keeps that.
-      What it does is make your API discoverable, documented, and reachable through
-      a consistent access request process.
+      Your API needs all six of these. If one is missing, it is best fixed before onboarding begins.
     </p>
-
-    <h2 class="govuk-heading-m">What you will need</h2>
-
-    <p class="govuk-body">
-      Your API must meet the <a class="govuk-link" href="/documentation/producer-standards">producer
-      standards</a> before it can be listed. You will need:
-    </p>
-
-    <ul class="govuk-list govuk-list--bullet">
-      <li>a published OpenAPI specification, reachable at a stable URL</li>
-      <li>a named owning team and a contact email</li>
-      <li>a data classification for everything the API returns</li>
-      <li>a description of what the API is for</li>
-      <li>a DPIA in place that covers the data being shared as part of the API</li>
-    </ul>
-
-    <h2 class="govuk-heading-m" id="getting-listed">How to get your API listed</h2>
 
     <ol class="govuk-list govuk-list--number">
-      <li>Check your API meets the <a class="govuk-link" href="/documentation/producer-standards">producer standards</a>: the technical requirements, eligibility criteria and specification quality.</li>
-      <li>Make sure your API repository is <strong>public on GitHub</strong> under the HMCTS organisation.</li>
-      <li>Add the <code>publish-api-docs.yml</code> workflow to <code>.github/workflows/</code> and raise a pull request.</li>
-      <li>Once merged, trigger the workflow manually or cut a GitHub release &mdash; the version is stamped from the release tag.</li>
-      <li>Confirm the Swagger UI documentation site is live at <code>https://hmcts.github.io/&lt;repo-name&gt;/</code>.</li>
-      <li>Email the API Marketplace team at <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a> to get your API published. The team will review your API and confirm.</li>
-      <li>Once approved, your API appears in the catalogue and is kept in sync with your specification automatically.</li>
+      <li>A clear description of your API, written as an OpenAPI specification, with sample responses
+        &mdash; including what errors look like. Samples must not contain real data.</li>
+      <li>Security checks in your API. It checks the security token on every call.</li>
+      <li>System-to-system sign-in (OAuth 2.0). Callers are applications, not people logging in.</li>
+      <li>Your API is running in each environment we connect to: a test environment with no live data,
+        and live.</li>
+      <li>Approval to share it with people outside your team.</li>
+      <li>A private connection. The marketplace can reach your API privately, agreed with our platform
+        team.</li>
     </ol>
 
-    <h2 class="govuk-heading-m">Ongoing responsibilities</h2>
+    <p class="govuk-body">
+      Read the <a class="govuk-link" href="/documentation/producer-standards">Producer Guidance</a> page for
+      the technical requirements in more detail.
+    </p>
 
-    <dl class="govuk-body">
-      <dt class="govuk-!-font-weight-bold">Keeping the spec current</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Update your OpenAPI specification whenever you change the API. Cut a new GitHub release to publish the updated documentation.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Notifying consumers of breaking changes</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Tell consumers about breaking changes with enough notice to act on them.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Reviewing access requests promptly</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Respond to consumer access requests promptly. Give a clear reason if you reject one.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Maintaining contact details</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">Keep <code>info.contact.email</code> in your spec pointing at an active team inbox.</dd>
-
-      <dt class="govuk-!-font-weight-bold">Deprecation and removal</dt>
-      <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-4">If you need to remove an API, tell all consumers and the marketplace team at least 30 days in advance.</dd>
-    </dl>
-
-    <h2 class="govuk-heading-m">Get help</h2>
+    <h2 class="govuk-heading-m" id="how-it-fits-together">How it fits together</h2>
 
     <p class="govuk-body">
-      If you&rsquo;re not sure whether your API is ready, or you want to talk through the process
-      first, contact the marketplace team at <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
+      Consumers find your API in the catalogue and sign up. Every call goes through our secure
+      gateway, which checks who is calling before anything reaches you. While consumers build their
+      integration, they use Try It Now: a practice copy of your API that returns your sample
+      responses. Once approved, their calls reach your real API.
+    </p>
+
+    {# The pub-flow.png diagram from the onboarding content goes here once the image is supplied. #}
+
+    <p class="govuk-body">
+      Your API stays with your team. The marketplace adds the catalogue, the security checks and a
+      practice sandbox in front of it.
+    </p>
+
+    <h2 class="govuk-heading-m" id="how-onboarding-works">How onboarding works</h2>
+
+    {{ govukTable({
+      caption: "Onboarding steps",
+      captionClasses: "govuk-visually-hidden",
+      firstCellIsHeader: true,
+      head: [
+        { text: "Step" },
+        { text: "What happens" },
+        { text: "Who" }
+      ],
+      rows: [
+        [
+          { text: "1. Check you are ready" },
+          { text: "Go through the list above." },
+          { text: "Your team" }
+        ],
+        [
+          { text: "2. Agree the basics" },
+          { text: "A short name for your API, which environments, and how we connect to it." },
+          { text: "Your team and API Marketplace" }
+        ],
+        [
+          { text: "3. Set up secure access" },
+          { text: "We create your API's security identity. Your team sets your API to accept tokens from it." },
+          { text: "Your team and API Marketplace" }
+        ],
+        [
+          { text: "4. Connect" },
+          { text: "We register your API on our gateway and open the private connection to it." },
+          { text: "Your team and API Marketplace" }
+        ],
+        [
+          { text: "5. Build the practice sandbox" },
+          { text: "We create Try It Now from your sample responses." },
+          { text: "Your team" }
+        ],
+        [
+          { text: "6. List it and test it" },
+          { text: "Your API appears in the catalogue, and we test the whole journey together." },
+          { text: "Your team and API Marketplace" }
+        ],
+        [
+          { text: "7. Go live" },
+          { text: "We release it on the live gateway, then your team publishes the API version." },
+          { text: "Your team and API Marketplace" }
+        ]
+      ]
+    }) }}
+
+    <h2 class="govuk-heading-m" id="what-you-get">What you get</h2>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>A listing in the API Marketplace catalogue, with your documentation.</li>
+      <li>Self-service sign-up, so consumers can register without emailing you.</li>
+      <li>Try It Now, so consumers can build and test against sample data before getting real access.</li>
+      <li>A secure gateway that checks identity and limits traffic before calls reach you.</li>
+    </ul>
+
+    <h2 class="govuk-heading-m" id="get-in-touch">Get in touch</h2>
+
+    <p class="govuk-body">
+      To start onboarding, or if you have a question, email the API Marketplace team at
+      <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
     </p>
 
   </div>
