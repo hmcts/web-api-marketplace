@@ -36,6 +36,17 @@ const STORED = {
   proposedOutputs: 'A weekly outcomes report.',
 };
 
+/** A request made since the form began asking the triage questions. */
+const TRIAGED = {
+  ...STORED,
+  proposedOutputs: undefined,
+  organisationType: 'external',
+  dataRecipients: ['own-team', 'supplier'],
+  dataRecipientsExplanation: 'Our delivery partner runs the ingest.',
+  dataCombined: 'yes',
+  dataCombinedDescription: 'Joined to our own case tracker to measure turnaround.',
+};
+
 const APPLICATION = {
   id: 'client-1',
   clientId: 'client-1',
@@ -75,6 +86,7 @@ describe('ProductionCredentialsController', () => {
     useDataStore(new MemoryStore());
     (listApplications as jest.Mock).mockReset().mockResolvedValue([APPLICATION]);
     (listProductionRequests as jest.Mock).mockReset().mockResolvedValue([]);
+    (submitProductionRequest as jest.Mock).mockReset();
     applicationId = APPLICATION.id;
   });
 
@@ -391,6 +403,39 @@ describe('ProductionCredentialsController', () => {
     expect(submission).not.toHaveProperty('proposedOutputs');
   });
 
+  test('submitting_should_send_the_triage_answers_the_data_access_team_review', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const draft = answers(applicationId, {
+      'organisation-type': 'moj',
+      'data-recipients': ['own-team', 'supplier'],
+      'data-recipients-explanation': 'Our delivery partner runs the ingest.',
+      'data-combined': 'unsure',
+      'data-combined-description': 'Possibly our own case tracker.',
+    });
+
+    await controller().submit(asUser({ session: { productionDraft: draft } }), mockResponse());
+
+    expect((submitProductionRequest as jest.Mock).mock.calls[0][1]).toMatchObject({
+      organisationType: 'moj',
+      dataRecipients: ['own-team', 'supplier'],
+      dataRecipientsExplanation: 'Our delivery partner runs the ingest.',
+      dataCombined: 'unsure',
+      dataCombinedDescription: 'Possibly our own case tracker.',
+    });
+  });
+
+  test('submitting_answers_that_need_no_explanation_should_leave_both_out', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const req = asUser({ session: { productionDraft: answers(applicationId) } });
+
+    await controller().submit(req, mockResponse());
+
+    const submission = (submitProductionRequest as jest.Mock).mock.calls[0][1];
+    expect(submission).toMatchObject({ organisationType: 'external', dataRecipients: ['own-team'] });
+    expect(submission).not.toHaveProperty('dataRecipientsExplanation');
+    expect(submission).not.toHaveProperty('dataCombinedDescription');
+  });
+
   test('a_failure_to_store_should_keep_the_answers_and_say_so', async () => {
     (submitProductionRequest as jest.Mock).mockRejectedValueOnce(new BackendError('Backend down'));
     const req = asUser({ session: { productionDraft: answers(applicationId) } });
@@ -435,6 +480,37 @@ describe('ProductionCredentialsController', () => {
     expect(valueFor('Go-live date')).toBe('1 April 2027');
     expect(valueFor('Data request')).toBe('Hearing outcomes for listed cases.');
     expect(valueFor('Proposed outputs')).toBe('A weekly outcomes report.');
+  });
+
+  test('viewing_a_triaged_request_should_show_every_answer_as_its_label', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue(TRIAGED);
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    const rows = res.data?.rows as { key: string; value: string }[];
+    const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
+    expect(valueFor('Organisation')).toBe('Other external organisation');
+    expect(valueFor('Who will have access to, or receive, the data?')).toBe(
+      'Me/my immediate team only, Supplier/contract/delivery partner'
+    );
+    expect(valueFor('Who will receive the data and why')).toBe('Our delivery partner runs the ingest.');
+    expect(valueFor('Will you combine or link the API data with other data?')).toBe('Yes');
+    expect(valueFor('Other data and what the combined data will be used for')).toBe(
+      'Joined to our own case tracker to measure turnaround.'
+    );
+  });
+
+  test('viewing_a_request_made_before_the_triage_questions_should_show_no_empty_rows', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    const keys = (res.data?.rows as { key: string }[]).map(row => row.key);
+    expect(keys).not.toContain('Organisation');
+    expect(keys).not.toContain('Who will have access to, or receive, the data?');
+    expect(keys).not.toContain('Will you combine or link the API data with other data?');
   });
 
   test('a_request_made_without_proposed_outputs_should_not_show_an_empty_row', async () => {

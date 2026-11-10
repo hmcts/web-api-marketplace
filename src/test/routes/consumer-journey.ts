@@ -463,8 +463,10 @@ describe('Consumer onboarding journey', () => {
           'go-live-year': String(new Date().getFullYear() + 1),
           'call-volume': 'medium',
           'data-request': 'Hearing outcomes, used with court listings.',
-          'data-recipients': 'own-team',
-          'data-combined': 'no',
+          'data-recipients': ['own-team', 'supplier'],
+          'data-recipients-explanation': 'Our delivery partner runs the ingest.',
+          'data-combined': 'yes',
+          'data-combined-description': 'Joined to our case tracker to measure turnaround.',
         })
         .expect(res => expect(res.headers.location).to.equal('/account/production-credentials/check-answers'));
 
@@ -479,9 +481,15 @@ describe('Consumer onboarding journey', () => {
       const reference = /id="confirmation-reference">(PCR-[A-Z2-9]{8})</.exec(confirmation.text)?.[1] as string;
       expect(reference).to.be.a('string');
 
+      // The triage answers are read back from the backend rather than the session, so this is
+      // what catches a field the submission names differently from the one the backend stores.
       await agent.get(`/account/production-credentials/${reference}`).expect(res => {
         expect(res.text).to.contain(reference);
         expect(res.text).to.contain('Submitted');
+        expect(res.text).to.contain('Other external organisation');
+        expect(res.text).to.contain('Supplier/contract/delivery partner');
+        expect(res.text).to.contain('Our delivery partner runs the ingest.');
+        expect(res.text).to.contain('Joined to our case tracker to measure turnaround.');
       });
       await agent.get('/account').expect(res => {
         expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);

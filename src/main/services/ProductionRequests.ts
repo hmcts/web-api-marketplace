@@ -13,6 +13,11 @@ export interface ProductionRequestDetail extends ProductionRequestSummary {
   goLiveDate: string;
   callVolume: string;
   dataRequest: string;
+  organisationType?: string;
+  dataRecipients?: string[];
+  dataRecipientsExplanation?: string;
+  dataCombined?: string;
+  dataCombinedDescription?: string;
   /** Asked on requests made before the question was removed from the form. */
   proposedOutputs?: string;
 }
@@ -23,6 +28,11 @@ export interface ProductionRequestSubmission {
   goLiveDate: string;
   callVolume: string;
   dataRequest: string;
+  organisationType: string;
+  dataRecipients: string[];
+  dataRecipientsExplanation?: string;
+  dataCombined: string;
+  dataCombinedDescription?: string;
 }
 
 const PATH = '/production-requests';

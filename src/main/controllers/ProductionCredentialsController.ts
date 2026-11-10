@@ -401,12 +401,21 @@ export default class ProductionCredentialsController {
     const text = (name: string) => (typeof answers[name] === 'string' ? (answers[name] as string) : '');
     const goLive = this.goLiveDate(answers) as Date;
 
+    // The two explanations are left out when empty rather than sent blank, so a request the
+    // backend holds carries an answer only where one was asked for.
     return {
       clientId: text('application'),
       organisation: text('organisation'),
       goLiveDate: goLive.toISOString().slice(0, 10),
       callVolume: text('call-volume'),
       dataRequest: text('data-request'),
+      organisationType: text('organisation-type'),
+      dataRecipients: Array.isArray(answers['data-recipients']) ? answers['data-recipients'] : [],
+      dataCombined: text('data-combined'),
+      ...(text('data-recipients-explanation')
+        ? { dataRecipientsExplanation: text('data-recipients-explanation') }
+        : {}),
+      ...(text('data-combined-description') ? { dataCombinedDescription: text('data-combined-description') } : {}),
     };
   }
 
@@ -414,12 +423,44 @@ export default class ProductionCredentialsController {
     const label = (options: { value: string; text: string }[], value: string) =>
       options.find(option => option.value === value)?.text ?? value;
 
+    // Every triage answer is optional here: requests made before the questions were added
+    // carry none of them, and proposedOutputs is the question they carry instead.
     return [
       { key: 'Application', value: request.applicationName },
+      ...(request.organisationType
+        ? [{ key: 'Organisation', value: label(ORGANISATION_TYPES, request.organisationType) }]
+        : []),
       { key: 'Team name (and organisation if external to HMCTS?)', value: request.organisation },
       { key: 'Go-live date', value: this.formatDate(request.goLiveDate) },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, request.callVolume) },
       { key: 'Data request', value: request.dataRequest },
+      ...(request.dataRecipients?.length
+        ? [
+            {
+              key: 'Who will have access to, or receive, the data?',
+              value: request.dataRecipients.map(value => label(DATA_RECIPIENTS, value)).join(', '),
+            },
+          ]
+        : []),
+      ...(request.dataRecipientsExplanation
+        ? [{ key: 'Who will receive the data and why', value: request.dataRecipientsExplanation }]
+        : []),
+      ...(request.dataCombined
+        ? [
+            {
+              key: 'Will you combine or link the API data with other data?',
+              value: label(DATA_COMBINED, request.dataCombined),
+            },
+          ]
+        : []),
+      ...(request.dataCombinedDescription
+        ? [
+            {
+              key: 'Other data and what the combined data will be used for',
+              value: request.dataCombinedDescription,
+            },
+          ]
+        : []),
       ...(request.proposedOutputs ? [{ key: 'Proposed outputs', value: request.proposedOutputs }] : []),
     ];
   }
