@@ -7,17 +7,35 @@ const ANSWER_MAX_LENGTH = 2000;
 /** Every application is registered in the one tenant the backend is configured with. */
 export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 
+interface StubApi {
+  title: string;
+  catalogueName: string;
+  productId: string;
+  role: string;
+  resourceAppId: string;
+  summary: string;
+  description: string;
+  team: string;
+  domain: string;
+  platform: string;
+}
+
+export const stubPortalUrl = (shortCode: string): string =>
+  `https://amp-portal.example.net/api-details#api=stub-${shortCode}`;
+
 /** marketplace_api, which is what a short code resolves to. */
-const CATALOGUE: Record<
-  string,
-  { title: string; catalogueName: string; productId: string; role: string; resourceAppId: string }
-> = {
+const CATALOGUE: Record<string, StubApi> = {
   hearing: {
     title: 'CP Crime Hearing API',
     catalogueName: 'api-cp-crime-hearing',
     productId: 'cp-crime-hearing',
     role: 'app.read',
     resourceAppId: '11111111-1111-1111-1111-111111111111',
+    summary: 'Hearing lifecycle data.',
+    description: 'Hearing lifecycle data.\n\nEvery stage of a hearing, from listing to outcome.',
+    team: 'api-marketplace',
+    domain: 'Hearings',
+    platform: 'Common Platform',
   },
   defendant: {
     title: 'Defendant Details',
@@ -25,6 +43,11 @@ const CATALOGUE: Record<
     productId: 'cp-crime-defendant-details',
     role: 'app.read',
     resourceAppId: '22222222-2222-2222-2222-222222222222',
+    summary: 'Defendant details for a case.',
+    description: 'Defendant details for a case.',
+    team: 'api-marketplace',
+    domain: 'Case administration',
+    platform: 'Common Platform',
   },
   slc: {
     title: 'Scheduling and Listing Court Schedule',
@@ -32,8 +55,35 @@ const CATALOGUE: Record<
     productId: 'try-it-now-cp-crime-schedulingandlisting',
     role: 'app.read',
     resourceAppId: '33333333-3333-3333-3333-333333333333',
+    summary: 'The court hearing schedule for a case.',
+    description: 'The court hearing schedule for a case.',
+    team: 'api-marketplace',
+    domain: 'Scheduling and listing',
+    platform: 'Common Platform',
   },
 };
+
+const catalogueEntry = (shortCode: string, api: StubApi) => ({
+  shortCode,
+  title: api.title,
+  summary: api.summary,
+  team: api.team,
+  domain: api.domain,
+  platform: api.platform,
+  subscribable: true,
+});
+
+const catalogueDetail = (shortCode: string, api: StubApi) => ({
+  ...catalogueEntry(shortCode, api),
+  catalogueName: api.catalogueName,
+  description: api.description,
+  docsUrl: `https://hmcts.github.io/${api.catalogueName}/`,
+  repoUrl: `https://github.com/hmcts/${api.catalogueName}`,
+  gatewayPath: `amp/${shortCode}`,
+  portalUrl: stubPortalUrl(shortCode),
+  resourceAppId: api.resourceAppId,
+  role: api.role,
+});
 
 /** Each API's own resource application, which is what /products carries for the token scope. */
 const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
@@ -45,10 +95,6 @@ const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
   role: api.role,
   resourceAppId: api.resourceAppId,
 }));
-
-/** The API's page in the developer portal, as the backend builds it from the API's APIM name. */
-export const stubPortalUrl = (shortCode: string): string =>
-  `https://amp-portal.example.net/api-details#api=stub-${shortCode}`;
 
 const TRIAGE_ORGANISATION_TYPES = ['hmcts', 'moj', 'other-government', 'external'];
 const TRIAGE_RECIPIENTS = [
@@ -357,19 +403,21 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       return true;
     }
 
-    const cataloguePath = /^\/catalogue\/([^/]+)$/.exec(path);
+    const cataloguePath = /^\/catalogue(?:\/([^/]+))?$/.exec(path);
     if (cataloguePath && method === 'GET') {
-      const shortCode = decodeURIComponent(cataloguePath[1]);
-      const api = CATALOGUE[shortCode];
-      if (api) {
-        json(200, {
-          shortCode,
-          title: api.title,
-          catalogueName: api.catalogueName,
-          portalUrl: stubPortalUrl(shortCode),
-        });
+      const [, shortCode] = cataloguePath;
+      if (!shortCode) {
+        json(
+          200,
+          Object.entries(CATALOGUE).map(([code, api]) => catalogueEntry(code, api))
+        );
       } else {
-        json(404, { error: `No API with short code ${shortCode}.` });
+        const api = CATALOGUE[decodeURIComponent(shortCode)];
+        if (api) {
+          json(200, catalogueDetail(decodeURIComponent(shortCode), api));
+        } else {
+          json(404, { error: `No API with short code ${shortCode}.` });
+        }
       }
       return true;
     }

@@ -1,10 +1,5 @@
-import config from 'config';
-
-import { portalUrlFor, tokenScopes } from './ApiCatalogue';
+import { getCatalogueApi } from './ApiCatalogue';
 import { ApiSubscription, Application } from './Applications';
-
-/** Scheduling and Listing Court Schedule, the API the configured fallback Publisher ID belongs to. */
-export const SLC_API_NAME = 'api-cp-crime-schedulingandlisting-courtschedule';
 
 export interface TokenInstructions {
   url: string;
@@ -18,48 +13,36 @@ export interface TokenInstructions {
 
 export interface Instructions {
   /** The API they are shown under, folded away below its row. */
-  apiName: string;
+  shortCode: string;
   apiTitle: string;
   token: TokenInstructions;
   /** The API's page in the developer portal, where it can be tried. Absent where there is none. */
   portalUrl?: string;
 }
 
+/** Shown where the catalogue holds no resource app for an API, rather than another API's ID. */
 const PUBLISHER_PLACEHOLDER = '{publisher_id}';
 
 /**
- * The Entra application an API's roles belong to, which is what a consumer asks for a token on.
- * Each API has its own, so it is read from the marketplace rather than configured here.
- * apiEndpoints.publisherId is SLC's and stands in for SLC alone when the marketplace cannot be
- * reached; any other API gets a placeholder rather than another API's ID.
- */
-export async function publisherId(apiName: string): Promise<string> {
-  const scope = (await tokenScopes())[apiName];
-  if (scope) {
-    return scope.replace(/\/\.default$/, '');
-  }
-  return apiName === SLC_API_NAME ? config.get<string>('apiEndpoints.publisherId') : PUBLISHER_PLACEHOLDER;
-}
-
-/**
- * How a consumer gets a token for this application for each of its APIs, by API name, and where
- * each API can be tried in the developer portal. Values the page knows are filled in; the secret stays a
- * placeholder.
+ * How a consumer gets a token for this application for each of its APIs, by short code, and
+ * where each API can be tried in the developer portal. Values the page knows are filled in;
+ * the secret stays a placeholder.
  */
 export async function instructionsFor(application: Application): Promise<Record<string, Instructions>> {
   const all: Record<string, Instructions> = {};
   for (const api of application.apis) {
-    all[api.apiName] = await instructionsForApi(application, api);
+    all[api.shortCode] = await instructionsForApi(application, api);
   }
   return all;
 }
 
 async function instructionsForApi(application: Application, api: ApiSubscription): Promise<Instructions> {
-  const resourceAppId = await publisherId(api.apiName);
-  const portalUrl = await portalUrlFor(api.apiName);
+  const catalogue = await getCatalogueApi(api.shortCode);
+  // The Entra application the API's roles belong to, which is what a consumer asks a token on.
+  const resourceAppId = catalogue?.resourceAppId || PUBLISHER_PLACEHOLDER;
 
   return {
-    apiName: api.apiName,
+    shortCode: api.shortCode,
     apiTitle: api.apiTitle,
     token: {
       url: `https://login.microsoftonline.com/${application.tenantId || '{tenant_id}'}/oauth2/v2.0/token`,
@@ -68,6 +51,6 @@ async function instructionsForApi(application: Application, api: ApiSubscription
       publisherId: resourceAppId,
       scope: `${resourceAppId}/.default`,
     },
-    ...(portalUrl ? { portalUrl } : {}),
+    ...(catalogue?.portalUrl ? { portalUrl: catalogue.portalUrl } : {}),
   };
 }

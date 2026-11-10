@@ -9,7 +9,7 @@ parameters([
 ])
 ])
 
-@Library("Infrastructure@2.13.4")
+@Library("Infrastructure@2.13.6")
 
 def type = "nodejs"
 def product = "amp"

@@ -1,25 +1,18 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/ApiSpecs', () => ({
-  ...jest.requireActual('../../main/services/ApiSpecs'),
-  getSpecDescription: jest.fn().mockResolvedValue(undefined),
-}));
-
-jest.mock('../../main/services/ApiCatalogue', () => ({
-  ...jest.requireActual('../../main/services/ApiCatalogue'),
-  getCatalogueApis: jest.fn(),
-}));
-
 import { MemoryStore, useDataStore } from '../../main/modules/store';
+import { clearCatalogueCache } from '../../main/services/ApiCatalogue';
 import { STUB_TENANT_ID, stubPortalUrl } from '../stubs/marketplace';
 
 import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
 import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
 
-const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
-
-const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'Scheduling and Listing Court Schedule' };
+const SLC = {
+  shortCode: 'slc',
+  title: 'Scheduling and Listing Court Schedule',
+  catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
+};
 
 /**
  * The consumer onboarding journey end to end, through the real app: create an account,
@@ -29,7 +22,7 @@ const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'S
 describe('Consumer onboarding journey', () => {
   beforeEach(() => {
     useDataStore(new MemoryStore());
-    (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    clearCatalogueCache();
   });
 
   describe('creating an account', () => {
@@ -141,7 +134,7 @@ describe('Consumer onboarding journey', () => {
       await agent
         .post('/account/applications/new/apis')
         .type('form')
-        .send({ apis: [CATALOGUE[0].name, CATALOGUE[1].name] });
+        .send({ apis: [CATALOGUE[0].shortCode, CATALOGUE[1].shortCode] });
 
       await agent.get('/account/applications/new/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
@@ -179,8 +172,12 @@ describe('Consumer onboarding journey', () => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
         // Each API has its own instructions, with its own Publisher ID.
-        expect(res.text).to.contain(`id="publisher-id-${CATALOGUE[0].name}">11111111-1111-1111-1111-111111111111<`);
-        expect(res.text).to.contain(`id="publisher-id-${CATALOGUE[1].name}">22222222-2222-2222-2222-222222222222<`);
+        expect(res.text).to.contain(
+          `id="publisher-id-${CATALOGUE[0].shortCode}">11111111-1111-1111-1111-111111111111<`
+        );
+        expect(res.text).to.contain(
+          `id="publisher-id-${CATALOGUE[1].shortCode}">22222222-2222-2222-2222-222222222222<`
+        );
         expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
       });
 
@@ -195,7 +192,7 @@ describe('Consumer onboarding journey', () => {
       await createdApplication(agent, 'Case tracker');
 
       await agent.post('/account/applications/new/details').type('form').send({ name: 'case tracker' }).expect(302);
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent.post('/account/applications/new/check-answers').expect(res => {
         expect(res.status).to.equal(400);
         expect(res.text).to.contain('You already have an application called case tracker');
@@ -218,7 +215,7 @@ describe('Consumer onboarding journey', () => {
       await agent.get('/account/applications/new').expect(302).expect('Location', '/account/applications');
       await agent.get('/account/applications').expect(res => expect(res.text).to.contain('id="notice"'));
       await agent.post('/account/applications/new/details').type('form').send({ name: 'One too many' });
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent
         .post('/account/applications/new/check-answers')
         .expect(302)
@@ -274,7 +271,7 @@ describe('Consumer onboarding journey', () => {
       stubEntra().marketplace.failSubscriptions(502);
 
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker' });
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent.post('/account/applications/new/check-answers').expect(res => {
         expect(res.status).to.equal(200);
         expect(res.text).to.match(/id="client-secret"[^>]*>.{3}8Q~/);
@@ -283,13 +280,12 @@ describe('Consumer onboarding journey', () => {
     });
 
     test('each_apis_instructions_should_fold_away_right_under_its_own_row', async () => {
-      (getCatalogueApis as jest.Mock).mockResolvedValue([...CATALOGUE, SLC]);
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Court tracker' });
       await agent
         .post('/account/applications/new/apis')
         .type('form')
-        .send({ apis: [CATALOGUE[0].name, SLC.name] });
+        .send({ apis: [CATALOGUE[0].shortCode, SLC.shortCode] });
       const created = await agent.post('/account/applications/new/check-answers').expect(200);
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
@@ -301,7 +297,7 @@ describe('Consumer onboarding journey', () => {
         const hearingPanel = rows[hearingRow + 1];
 
         expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
-        expect(slcPanel).to.match(new RegExp(`colspan="2"[\\s\\S]*id="api-instructions-${SLC.name}"`));
+        expect(slcPanel).to.match(new RegExp(`colspan="2"[\\s\\S]*id="api-instructions-${SLC.shortCode}"`));
         expect(slcPanel).to.match(new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${SLC.title}`));
         expect(hearingPanel).to.match(
           new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${CATALOGUE[0].title}`)
@@ -310,7 +306,9 @@ describe('Consumer onboarding journey', () => {
         expect(slcPanel).to.contain('client_secret=&lt;client_secret&gt;');
         // Each panel has its own Publisher ID at the top, before its token request, and not the other's.
         expect(slcPanel).to.match(
-          new RegExp(`id="publisher-id-${SLC.name}">33333333-3333-3333-3333-333333333333<[\\s\\S]*id="token-request-`)
+          new RegExp(
+            `id="publisher-id-${SLC.shortCode}">33333333-3333-3333-3333-333333333333<[\\s\\S]*id="token-request-`
+          )
         );
         expect(slcPanel).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
         expect(slcPanel).to.not.contain('11111111-1111-1111-1111-111111111111');
@@ -318,8 +316,8 @@ describe('Consumer onboarding journey', () => {
         expect(hearingPanel).to.not.contain('33333333-3333-3333-3333-333333333333');
         // Each panel shows the token request alone and sends the consumer to that API's own page
         // in the developer portal.
-        expect(slcPanel).to.contain(`href="${stubPortalUrl('slc')}"`);
-        expect(hearingPanel).to.contain(`href="${stubPortalUrl('hearing')}"`);
+        expect(slcPanel).to.contain(`href="${stubPortalUrl(SLC.shortCode)}"`);
+        expect(hearingPanel).to.contain(`href="${stubPortalUrl(CATALOGUE[0].shortCode)}"`);
         expect(res.text).to.not.contain('hmcts.github.io');
         expect(slcPanel).to.not.contain('curl --request GET');
       });
@@ -330,7 +328,7 @@ describe('Consumer onboarding journey', () => {
       const id = await createdApplication(agent);
       const [subscription] = [...stubEntra().marketplace.subscriptions.values()];
 
-      await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].name}`).expect(res => {
+      await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].shortCode}`).expect(res => {
         expect(res.status).to.equal(200);
         expect(res.text).to.not.contain('Publisher ID');
         expect(res.text).to.contain(`id="subscription-key">${subscription.primaryKey}<`);
@@ -346,7 +344,7 @@ describe('Consumer onboarding journey', () => {
       await agent
         .post(`/account/applications/${id}/apis`)
         .type('form')
-        .send({ apis: CATALOGUE[1].name })
+        .send({ apis: CATALOGUE[1].shortCode })
         .expect(res => expect(res.headers.location).to.equal(`/account/applications/${id}`));
 
       await agent.get(`/account/applications/${id}`).expect(res => {

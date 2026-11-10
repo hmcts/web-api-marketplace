@@ -51,15 +51,15 @@
       {% for api in application.apis %}
         {% set rows = (rows.push([
           { text: api.apiTitle },
-          { html: '<a class="govuk-link" href="' + base + '/apis/' + api.apiName + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
+          { html: '<a class="govuk-link" href="' + base + '/apis/' + api.shortCode + '">View subscription key<span class="govuk-visually-hidden"> for ' + (api.apiTitle | escape) + '</span></a>' }
         ]), rows) %}
         {#- Part of that API's row: a full-width row right under it, folded away. -#}
-        {% set i = instructions[api.apiName] %}
+        {% set i = instructions[api.shortCode] %}
         {% if i %}
           {% set instructionsHtml %}{% include "applications/instructions.njk" %}{% endset %}
           {% set detailsHtml %}
             {{- govukDetails({
-              id: "api-instructions-" + api.apiName,
+              id: "api-instructions-" + api.shortCode,
               summaryText: "How to get an access token and call " + api.apiTitle,
               html: instructionsHtml,
               classes: "govuk-!-margin-bottom-0"

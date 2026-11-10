@@ -2,10 +2,10 @@ import { describe, expect, test } from '@jest/globals';
 
 import { env } from '../helpers/nunjucksEnv';
 
-const RCC = 'api-cp-refdata-courthearing-courthouses';
+const RCC = 'rcc';
 
 const rcc = {
-  apiName: RCC,
+  shortCode: RCC,
   apiTitle: 'Refdata Court Hearing Courthouses',
   token: {
     url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',

@@ -5,207 +5,113 @@ import { Logger } from '../modules/logging';
 
 const logger = Logger.getLogger('api-catalogue');
 
-// The feed is read from raw.githubusercontent.com rather than hmcts.github.io, because the
-// cluster egress firewall resets connections to hmcts.github.io.
-// Fetch the catalogue from the developer portal instead of the amp-catalog repository.
-export const catalogueUrl: string = process.env.CATALOGUE_URL || config.get('catalogue.url');
-
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 5000;
 
 export interface CatalogueApi {
-  name: string;
-  title: string;
-  description?: string;
-  team?: string;
-}
-
-interface CatalogueFeed {
-  apis?: { name?: string; title?: string; description?: string; team?: string }[];
-}
-
-/** An API as the marketplace holds it. resourceAppId is the Entra application its roles belong to. */
-export interface ApiProduct {
   shortCode: string;
   title: string;
-  catalogueName: string;
-  productId: string;
-  gatewayPath: string;
-  role: string;
-  tenantId?: string;
+  summary?: string;
+  team?: string;
+  domain?: string;
+  platform?: string;
+  subscribable?: boolean;
+}
+
+export interface CatalogueApiDetail extends CatalogueApi {
+  catalogueName?: string;
+  description?: string;
+  docsUrl?: string;
+  repoUrl?: string;
+  gatewayPath?: string;
+  portalUrl?: string;
   resourceAppId?: string;
+  role?: string;
 }
 
 let cache: { apis: CatalogueApi[]; fetchedAt: number } | null = null;
-let products: { all: ApiProduct[]; fetchedAt: number } | null = null;
-let portalPages: Record<string, { url: string | undefined; fetchedAt: number }> = {};
+const details = new Map<string, { api?: CatalogueApiDetail; fetchedAt: number }>();
 
 /**
- * The published API catalogue, used to fill the "Which API do you need access to?" list.
- *
- * The prototype fetches this feed from the browser. We fetch it here instead, because the
- * CSP connect-src only permits this origin — and doing it server-side also means the list
- * is present with JavaScript unavailable.
- *
- * A failed fetch returns an empty list rather than throwing: the form is still usable for
- * every other answer, and an empty list is visible to the user as a select with nothing to
- * choose, which validation then rejects. Results are cached so a page refresh does not hit
- * the feed again.
+ * The APIs this site lists, from the marketplace backend, which reads them from API
+ * Management and its own rows. Only listed APIs come back, so there is nothing to filter.
  */
 export async function getCatalogueApis(): Promise<CatalogueApi[]> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.apis;
   }
 
+  const url = `${backendUrl()}/catalogue`;
   try {
-    const response = await axios.get<CatalogueFeed>(catalogueUrl, { timeout: 5000 });
-    const apis = toApis(response.data);
+    const response = await axios.get<CatalogueApi[]>(url, { timeout: FETCH_TIMEOUT_MS });
+    const apis = [...(response.data ?? [])].sort((a, b) => a.title.localeCompare(b.title));
 
-    logger.info(`Loaded ${apis.length} APIs from the catalogue at ${catalogueUrl}`);
+    logger.info(`Loaded ${apis.length} APIs from the catalogue at ${url}`);
     cache = { apis, fetchedAt: Date.now() };
     return apis;
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Could not load the catalogue from ${catalogueUrl}: ${detail}`);
+    logger.error(`Could not load the catalogue from ${url}: ${detail}`);
     return cache?.apis ?? [];
   }
 }
 
 /**
- * The APIs the marketplace holds, which is where the scope a consumer asks a token for comes
- * from. Each API has its own resource application, so the scope differs between them.
+ * One API in full. Undefined for a short code the catalogue does not list, so the caller can
+ * hand on to its own not found page. Anything else the backend answers is raised, because a
+ * backend that is down is not the same as an API that does not exist.
  */
-export async function getApiProducts(): Promise<ApiProduct[]> {
-  if (products && Date.now() - products.fetchedAt < CACHE_TTL_MS) {
-    return products.all;
-  }
-
-  const url = `${process.env.API_URL || config.get<string>('backend.url')}/products`;
-  try {
-    const response = await axios.get<ApiProduct[]>(url, { timeout: 5000 });
-    products = { all: response.data ?? [], fetchedAt: Date.now() };
-    return products.all;
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Could not load the API products from ${url}: ${detail}`);
-    return products?.all ?? [];
-  }
-}
-
-/**
- * The API's page in the developer portal, by the catalogue name the application pages hold.
- * The backend builds it from the portal address and the API's APIM name, and answers it on
- * /catalogue/{shortCode}. That endpoint reads the portal each time, so the answer is cached.
- * Undefined where the backend holds no page for the API, or cannot be reached.
- */
-export async function portalUrlFor(apiName: string): Promise<string | undefined> {
-  const product = (await getApiProducts()).find(candidate => candidate.catalogueName === apiName);
-  if (!product) {
-    return undefined;
-  }
-
-  const cached = portalPages[product.shortCode];
+export async function getCatalogueApi(shortCode: string): Promise<CatalogueApiDetail | undefined> {
+  const cached = details.get(shortCode);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.url;
+    return cached.api;
   }
 
-  const url = `${process.env.API_URL || config.get<string>('backend.url')}/catalogue/${encodeURIComponent(product.shortCode)}`;
+  const url = `${backendUrl()}/catalogue/${encodeURIComponent(shortCode)}`;
   try {
-    const response = await axios.get<{ portalUrl?: string }>(url, { timeout: 5000 });
-    portalPages[product.shortCode] = { url: response.data?.portalUrl || undefined, fetchedAt: Date.now() };
-    return portalPages[product.shortCode].url;
+    const response = await axios.get<CatalogueApiDetail>(url, { timeout: FETCH_TIMEOUT_MS });
+    details.set(shortCode, { api: response.data, fetchedAt: Date.now() });
+    return response.data;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Could not load the developer portal page from ${url}: ${detail}`);
-    return cached?.url;
-  }
-}
-
-/** The token scope for each API, by the catalogue name the application pages hold. */
-export async function tokenScopes(): Promise<Record<string, string>> {
-  const scopes: Record<string, string> = {};
-  for (const product of await getApiProducts()) {
-    if (product.resourceAppId) {
-      scopes[product.catalogueName] = `${product.resourceAppId}/.default`;
+    if ((error as { response?: { status?: number } }).response?.status === 404) {
+      details.set(shortCode, { fetchedAt: Date.now() });
+      return undefined;
     }
+    throw new Error(`Could not read ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      cause: error,
+    });
   }
-  return scopes;
 }
 
 /**
- * The names of the APIs this site lists, in the catalogue and for applications
- * (catalogue.listedApis). Empty means every API in the feed.
+ * The catalogue, plus any API an application already has that is no longer listed. Those stay
+ * on its pages so that saving the form does not revoke a subscription the consumer never saw.
  */
-export function listedApiNames(): string[] {
-  return config.has('catalogue.listedApis') ? config.get<string[]>('catalogue.listedApis') : [];
-}
-
-/**
- * The feed's APIs to show: the allowed ones, plus any an application already has. Those
- * stay on its pages so that saving the form does not revoke a subscription the consumer
- * never saw.
- */
-export function offeredApis(
+export function includingSubscribed(
   catalogue: CatalogueApi[],
-  allowed: string[],
-  alreadyChosen: string[] = []
+  subscribed: { shortCode: string; apiTitle: string }[]
 ): CatalogueApi[] {
-  if (!allowed.length) {
-    return catalogue;
-  }
-  return catalogue.filter(api => allowed.includes(api.name) || alreadyChosen.includes(api.name));
+  const missing = subscribed
+    .filter(api => !catalogue.some(listed => listed.shortCode === api.shortCode))
+    .map(api => ({ shortCode: api.shortCode, title: api.apiTitle }));
+
+  return missing.length ? [...catalogue, ...missing].sort((a, b) => a.title.localeCompare(b.title)) : catalogue;
 }
 
-/**
- * Where an API's own documentation and source live. The feed carries neither, but every
- * API in it is published from an hmcts repository of the same name by the
- * publish-api-docs workflow, which is what puts it in the feed at all.
- */
-export function linksFor(name: string): { docsUrl: string; repoUrl: string } {
-  return {
-    docsUrl: `https://hmcts.github.io/${encodeURIComponent(name)}/`,
-    repoUrl: `https://github.com/hmcts/${encodeURIComponent(name)}`,
-  };
+/** Plain text, split at blank lines. Line breaks inside a paragraph are just wrapping. */
+export function paragraphsOf(text: string): string[] {
+  return text
+    .split(/\n\s*\n/)
+    .map(paragraph => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
 }
 
-/**
- * The catalogue feed carries no domain or platform, so both are read from the repository
- * name, as the GitHub Pages catalogue does. They are for browsing only — a name that
- * matches no rule is "Other" rather than a wrong guess. Ordered: the first match wins.
- */
-const DOMAIN_RULES: [RegExp, string][] = [
-  [/^api-cp-ai-/, 'AI'],
-  [/^api-cp-refdata-/, 'Reference data'],
-  [/prosecution-case|results-pcr|caseadmin|defendant/, 'Case administration'],
-  [/scheduling|listing|court-list/, 'Scheduling and listing'],
-  [/hearing/, 'Hearings'],
-];
-
-/** Every API in the feed is api-cp-* today. Add a rule when another platform appears. */
-const PLATFORM_RULES: [RegExp, string][] = [[/^api-cp-/, 'Common Platform']];
-
-export function domainOf(name: string): string {
-  return DOMAIN_RULES.find(([pattern]) => pattern.test(name))?.[1] ?? 'Other';
-}
-
-export function platformOf(name: string): string {
-  return PLATFORM_RULES.find(([pattern]) => pattern.test(name))?.[1] ?? 'Other';
-}
-
-/** Only for tests — the module-level cache otherwise leaks between cases. */
+/** Only for tests — the module-level caches otherwise leak between cases. */
 export function clearCatalogueCache(): void {
   cache = null;
-  products = null;
-  portalPages = {};
+  details.clear();
 }
 
-function toApis(feed: CatalogueFeed): CatalogueApi[] {
-  return (feed?.apis ?? [])
-    .filter(api => !!api?.name)
-    .map(api => ({
-      name: api.name as string,
-      title: api.title || (api.name as string),
-      ...(api.description ? { description: api.description } : {}),
-      ...(api.team ? { team: api.team } : {}),
-    }))
-    .sort((a, b) => a.title.localeCompare(b.title));
+function backendUrl(): string {
+  return process.env.API_URL || config.get<string>('backend.url');
 }
