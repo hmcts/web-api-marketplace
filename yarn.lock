@@ -9630,10 +9630,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:17.13.0":
-  version: 17.13.0
-  resolution: "globals@npm:17.13.0"
-  checksum: 10/f723714cfb07bcf3163d44661d63b2a6076d93fd2f3724622b22084c62bcbbdb3ea3c601ec39635f1430d5cdf60bbf6fd7e458f12b5381ed422ed355c699537b
+"globals@npm:17.14.0":
+  version: 17.14.0
+  resolution: "globals@npm:17.14.0"
+  checksum: 10/3d889e226ee8f4401abc568cd853d017b6407b24744c28b3d8260c65200174082bb77eeefecf4d2b40ab48e9484a2b163b1372c8addf782f49ecd546faf27ceb
   languageName: node
   linkType: hard
 
@@ -11004,9 +11004,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jest-html-reporter@npm:4.4.2":
-  version: 4.4.2
-  resolution: "jest-html-reporter@npm:4.4.2"
+"jest-html-reporter@npm:4.4.3":
+  version: 4.4.3
+  resolution: "jest-html-reporter@npm:4.4.3"
   dependencies:
     "@jest/reporters": "npm:^30.0.2"
     "@jest/test-result": "npm:^30.0.2"
@@ -11017,7 +11017,7 @@ __metadata:
     xmlbuilder: "npm:15.0.0"
   peerDependencies:
     jest: 19.x - 30.x
-  checksum: 10/007fce90e5d7b800c9cb42de6b3b1e7a233d6713a0845b08f8237ee4936b8f5b76f629d4a869f46d62d209838a082604782e5c4156a1d87f537b6315cb0f8c9c
+  checksum: 10/074db5afcce1d1b266b4471a02257994c15f17ac23c3446261afa8c32ca5270ad2da2b1b073c0efc6738fb2fd452306dafbd5ffa742994eb443cad47c0d83dd0
   languageName: node
   linkType: hard
 
@@ -15826,7 +15826,7 @@ __metadata:
     express-session: "npm:^1.19.0"
     get-port: "npm:^7.2.0"
     glob: "npm:14.0.4"
-    globals: "npm:17.13.0"
+    globals: "npm:17.14.0"
     govuk-frontend: "npm:5.14.0"
     helmet: "npm:8.3.0"
     html-webpack-plugin: "npm:5.6.8"
@@ -15835,7 +15835,7 @@ __metadata:
     i18next-http-middleware: "npm:3.9.11"
     jest: "npm:30.4.2"
     jest-environment-jsdom: "npm:30.4.1"
-    jest-html-reporter: "npm:4.4.2"
+    jest-html-reporter: "npm:4.4.3"
     jose: "npm:6.2.15"
     lighthouse: "npm:13.4.1"
     lint-staged: "npm:17.1.1"
