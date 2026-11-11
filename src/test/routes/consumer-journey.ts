@@ -420,10 +420,20 @@ describe('Consumer onboarding journey', () => {
 
       await agent.get(`/account/production-credentials?application=${id}`).expect(res => {
         expect(res.text).to.contain(`value="${id}" checked`);
-        expect(res.text).to.contain('Organisation or team name');
+        expect(res.text).to.contain('Submitting this form does not give you access to the API or its data.');
+        expect(res.text).to.contain('We aim to tell');
+        expect(res.text).to.contain('type="radio" value="moj"');
+        expect(res.text).to.not.contain('<select');
+        expect(res.text).to.contain('Team name (and organisation if external to HMCTS?)');
         expect(res.text).to.contain('name="data-request"');
-        expect(res.text).to.contain('name="proposed-outputs"');
-        expect(res.text.split('for each API selected in the above application')).to.have.length(3);
+        expect(res.text).to.contain('Who will have access to, or receive, the data?');
+        expect(res.text).to.contain('Briefly explain who will receive the data and why');
+        expect(res.text).to.contain('Will you combine or link the API data with other data?');
+        expect(res.text).to.contain('Briefly describe the other data and what the combined data will be used for?');
+        expect(res.text).not.to.contain('proposed-outputs');
+        expect(res.text).to.contain('Why do you need access and how will you use the data?');
+        expect(res.text).to.contain('For each API, briefly describe the business purpose');
+        expect(res.text).to.not.contain('for each API selected in the above application');
         expect(res.text).to.not.contain('name="dpia"');
         expect(res.text).to.not.contain('name="declaration"');
         expect(res.text).to.not.contain('name="dsa"');
@@ -437,35 +447,47 @@ describe('Consumer onboarding journey', () => {
         .expect(res => {
           expect(res.status).to.equal(400);
           expect(res.text).to.contain('Select the application you need production credentials for');
-          expect(res.text).to.contain('Describe the proposed outputs from this data use');
+          expect(res.text).to.contain('Select who will have access to, or receive, the data');
         });
       await agent
         .post('/account/production-credentials')
         .type('form')
         .send({
           application: id,
+          'organisation-type': 'external',
           organisation: 'Analytical Engines Ltd',
           'go-live-day': '1',
           'go-live-month': '4',
           'go-live-year': String(new Date().getFullYear() + 1),
           'call-volume': 'medium',
           'data-request': 'Hearing outcomes, used with court listings.',
-          'proposed-outputs': 'A case summary shown inside our own service.',
+          'data-recipients': ['own-team', 'supplier'],
+          'data-recipients-explanation': 'Our delivery partner runs the ingest.',
+          'data-combined': 'yes',
+          'data-combined-description': 'Joined to our case tracker to measure turnaround.',
         })
         .expect(res => expect(res.headers.location).to.equal('/account/production-credentials/check-answers'));
 
       await agent.get('/account/production-credentials/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
         expect(res.text).to.contain('1 April');
+        expect(res.text).to.contain('Other external organisation');
+        expect(res.text).to.contain('Me/my immediate team only');
       });
 
       const confirmation = await agent.post('/account/production-credentials/check-answers').expect(200);
       const reference = /id="confirmation-reference">(PCR-[A-Z2-9]{8})</.exec(confirmation.text)?.[1] as string;
       expect(reference).to.be.a('string');
 
+      // The triage answers are read back from the backend rather than the session, so this is
+      // what catches a field the submission names differently from the one the backend stores.
       await agent.get(`/account/production-credentials/${reference}`).expect(res => {
         expect(res.text).to.contain(reference);
         expect(res.text).to.contain('Submitted');
+        expect(res.text).to.contain('Other external organisation');
+        expect(res.text).to.contain('Supplier/contract/delivery partner');
+        expect(res.text).to.contain('Our delivery partner runs the ingest.');
+        expect(res.text).to.contain('Joined to our case tracker to measure turnaround.');
       });
       await agent.get('/account').expect(res => {
         expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);
