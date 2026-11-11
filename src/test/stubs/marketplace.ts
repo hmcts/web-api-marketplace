@@ -96,6 +96,17 @@ const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
   resourceAppId: api.resourceAppId,
 }));
 
+const TRIAGE_ORGANISATION_TYPES = ['hmcts', 'moj', 'other-government', 'external'];
+const TRIAGE_RECIPIENTS = [
+  'own-team',
+  'other-hmcts',
+  'wider-moj',
+  'other-government',
+  'supplier',
+  'external',
+  'public',
+];
+
 interface StubProductionRequest {
   owner: string;
   reference: string;
@@ -107,7 +118,12 @@ interface StubProductionRequest {
   goLiveDate: string;
   callVolume: string;
   dataRequest: string;
-  proposedOutputs: string;
+  organisationType?: string;
+  dataRecipients?: string[];
+  dataRecipientsExplanation?: string;
+  dataCombined?: string;
+  dataCombinedDescription?: string;
+  proposedOutputs?: string;
 }
 
 interface StubApplication {
@@ -192,6 +208,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     goLiveDate: request.goLiveDate,
     callVolume: request.callVolume,
     dataRequest: request.dataRequest,
+    organisationType: request.organisationType,
+    dataRecipients: request.dataRecipients,
+    dataRecipientsExplanation: request.dataRecipientsExplanation,
+    dataCombined: request.dataCombined,
+    dataCombinedDescription: request.dataCombinedDescription,
     proposedOutputs: request.proposedOutputs,
   });
 
@@ -208,7 +229,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
   function submitProductionRequest(user: string, body: string, json: Json): void {
     const request = JSON.parse(body || '{}') as Record<string, unknown>;
     const text = (name: string) => String(request[name] ?? '').trim();
+    const list = (name: string) => (Array.isArray(request[name]) ? (request[name] as string[]) : []);
     const application = applications.get(text('clientId'));
+    const recipients = list('dataRecipients');
+    const leavesTheTeam = recipients.some(recipient => recipient !== 'own-team');
+    const combines = ['yes', 'unsure'].includes(text('dataCombined'));
 
     const requested = [...productionRequests.values()].find(held => held.clientId === text('clientId'));
 
@@ -224,8 +249,20 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       json(400, { error: 'Call volume must be low, medium or high.' });
     } else if (!text('dataRequest') || text('dataRequest').length > ANSWER_MAX_LENGTH) {
       json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
-    } else if (!text('proposedOutputs') || text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
-      json(400, { error: 'Describe the proposed outputs from this data use.' });
+    } else if (text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
+      // The form no longer asks this, and the backend no longer requires it. Requests made
+      // before it was dropped still carry an answer, which is why the length still matters.
+      json(400, { error: 'Proposed outputs must be 2000 characters or fewer.' });
+    } else if (!TRIAGE_ORGANISATION_TYPES.includes(text('organisationType'))) {
+      json(400, { error: 'Organisation type must be hmcts, moj, other-government or external.' });
+    } else if (!recipients.length || !recipients.every(value => TRIAGE_RECIPIENTS.includes(value))) {
+      json(400, { error: 'Data recipients must be from the published list.' });
+    } else if (leavesTheTeam && !text('dataRecipientsExplanation')) {
+      json(400, { error: 'Explain who will receive the data and why.' });
+    } else if (!['no', 'yes', 'unsure'].includes(text('dataCombined'))) {
+      json(400, { error: 'Data combined must be no, yes or unsure.' });
+    } else if (combines && !text('dataCombinedDescription')) {
+      json(400, { error: 'Describe the other data and what the combined data will be used for.' });
     } else {
       const stored: StubProductionRequest = {
         owner: user,
@@ -238,6 +275,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
         goLiveDate: text('goLiveDate'),
         callVolume: text('callVolume'),
         dataRequest: text('dataRequest'),
+        organisationType: text('organisationType'),
+        dataRecipients: recipients,
+        dataRecipientsExplanation: text('dataRecipientsExplanation') || undefined,
+        dataCombined: text('dataCombined'),
+        dataCombinedDescription: text('dataCombinedDescription') || undefined,
         proposedOutputs: text('proposedOutputs'),
       };
       productionRequests.set(stored.reference, stored);

@@ -36,6 +36,17 @@ const STORED = {
   proposedOutputs: 'A weekly outcomes report.',
 };
 
+/** A request made since the form began asking the triage questions. */
+const TRIAGED = {
+  ...STORED,
+  proposedOutputs: undefined,
+  organisationType: 'external',
+  dataRecipients: ['own-team', 'supplier'],
+  dataRecipientsExplanation: 'Our delivery partner runs the ingest.',
+  dataCombined: 'yes',
+  dataCombinedDescription: 'Joined to our own case tracker to measure turnaround.',
+};
+
 const APPLICATION = {
   id: 'client-1',
   clientId: 'client-1',
@@ -55,13 +66,15 @@ const controller = () => new ProductionCredentialsController();
 function answers(applicationId: string, change: Record<string, unknown> = {}) {
   return {
     application: applicationId,
+    'organisation-type': 'external',
     organisation: 'Analytical Engines Ltd',
     'go-live-day': '1',
     'go-live-month': '4',
     'go-live-year': String(new Date().getFullYear() + 1),
     'call-volume': 'medium',
     'data-request': 'Hearing outcomes, used with court listings to show case workers what happened.',
-    'proposed-outputs': 'A case summary shown to case workers inside our own service.',
+    'data-recipients': ['own-team'],
+    'data-combined': 'no',
     ...change,
   };
 }
@@ -73,6 +86,7 @@ describe('ProductionCredentialsController', () => {
     useDataStore(new MemoryStore());
     (listApplications as jest.Mock).mockReset().mockResolvedValue([APPLICATION]);
     (listProductionRequests as jest.Mock).mockReset().mockResolvedValue([]);
+    (submitProductionRequest as jest.Mock).mockReset();
     applicationId = APPLICATION.id;
   });
 
@@ -95,6 +109,19 @@ describe('ProductionCredentialsController', () => {
     expect(res.view).toBe('production-credentials/form');
     expect(res.data?.answers).toMatchObject({ application: applicationId });
     expect((res.data?.applicationItems as { hint: { text: string } }[])[0].hint.text).toBe('1 API');
+  });
+
+  test('the_organisation_question_should_offer_only_the_four_real_choices', async () => {
+    const res = mockResponse();
+
+    await controller().form(asUser(), res);
+
+    expect((res.data?.organisationTypeItems as { value: string; text: string }[]).map(item => item.text)).toEqual([
+      'HMCTS',
+      'Ministry of Justice',
+      'Other government department/public body',
+      'Other external organisation',
+    ]);
   });
 
   test('the_applications_should_be_read_from_the_backend_as_the_signed_in_user', async () => {
@@ -121,11 +148,13 @@ describe('ProductionCredentialsController', () => {
     expect(res.statusCode).toBe(400);
     expect(Object.keys(res.data?.errorFor as object)).toEqual([
       'application',
+      'organisation-type',
       'organisation',
       'go-live-day',
       'call-volume',
       'data-request',
-      'proposed-outputs',
+      'data-recipients',
+      'data-combined',
     ]);
   });
 
@@ -134,8 +163,22 @@ describe('ProductionCredentialsController', () => {
     [{ 'go-live-year': '2020' }, 'must be in the future'],
     [{ 'go-live-year': '99' }, 'Enter a real go-live date'],
     [{ 'data-request': 'x'.repeat(2001) }, '2000 characters or fewer'],
-    [{ 'proposed-outputs': 'x'.repeat(2001) }, '2000 characters or fewer'],
     [{ application: 'not-mine' }, 'Select the application'],
+    [{ 'data-recipients': [] }, 'Select who will have access to'],
+    [{ 'data-recipients': ['made-up'] }, 'Select who will have access to'],
+    [{ 'data-recipients': ['other-hmcts'] }, 'Briefly explain who will receive the data and why'],
+    [
+      { 'data-recipients': ['other-hmcts'], 'data-recipients-explanation': 'x'.repeat(2001) },
+      '2000 characters or fewer',
+    ],
+    [{ 'data-recipients': ['own-team', 'wider-moj'] }, 'Briefly explain who will receive the data and why'],
+    [{ 'data-combined': '' }, 'Select whether you will combine or link'],
+    [{ 'data-combined': 'maybe' }, 'Select whether you will combine or link'],
+    [{ 'data-combined': 'yes' }, 'Briefly describe the other data'],
+    [{ 'data-combined': 'unsure' }, 'Briefly describe the other data'],
+    [{ 'data-combined': 'yes', 'data-combined-description': 'x'.repeat(2001) }, '2000 characters or fewer'],
+    [{ 'organisation-type': '' }, 'Select your organisation'],
+    [{ 'organisation-type': 'made-up' }, 'Select your organisation'],
   ])('the_answer_%j_should_be_refused', async (change, message) => {
     const res = mockResponse();
 
@@ -210,9 +253,9 @@ describe('ProductionCredentialsController', () => {
     });
   });
 
-  test('the_long_answers_should_take_two_thousand_characters', async () => {
+  test('the_long_answer_should_take_two_thousand_characters', async () => {
     const res = mockResponse();
-    const full = { 'data-request': 'x'.repeat(2000), 'proposed-outputs': 'y'.repeat(2000) };
+    const full = { 'data-request': 'x'.repeat(2000) };
 
     await controller().save(asUser({ body: answers(applicationId, full) }), res);
 
@@ -233,10 +276,92 @@ describe('ProductionCredentialsController', () => {
       expect.arrayContaining([
         { key: 'Application', value: 'Tracker' },
         { key: 'APIs', value: 'API one' },
+        { key: 'Organisation', value: 'Other external organisation' },
+        { key: 'Who will have access to, or receive, the data?', value: 'Me/my immediate team only' },
+        { key: 'Will you combine or link the API data with other data?', value: 'No' },
         { key: 'Data request', value: expect.stringContaining('Hearing outcomes') },
-        { key: 'Proposed outputs', value: expect.stringContaining('case summary') },
       ])
     );
+  });
+
+  test('several_recipients_with_an_explanation_should_be_accepted_and_listed_for_checking', async () => {
+    const req = asUser({
+      body: answers(applicationId, {
+        'data-recipients': ['other-hmcts', 'supplier'],
+        'data-recipients-explanation': 'Our delivery partner builds the service.',
+      }),
+    });
+
+    const saved = mockResponse();
+    await controller().save(req, saved);
+    expect(saved.redirected).toBe('/account/production-credentials/check-answers');
+
+    const checked = mockResponse();
+    await controller().checkAnswers(req, checked);
+    expect(checked.data?.rows).toEqual(
+      expect.arrayContaining([
+        {
+          key: 'Who will have access to, or receive, the data?',
+          value: 'Other HMCTS teams, Supplier/contract/delivery partner',
+        },
+        { key: 'Who will receive the data and why', value: 'Our delivery partner builds the service.' },
+      ])
+    );
+  });
+
+  test('my_own_team_together_with_other_recipients_should_be_accepted_with_an_explanation', async () => {
+    const res = mockResponse();
+    const together = {
+      'data-recipients': ['own-team', 'wider-moj'],
+      'data-recipients-explanation': 'Shared with MOJ.',
+    };
+
+    await controller().save(asUser({ body: answers(applicationId, together) }), res);
+
+    expect(res.redirected).toBe('/account/production-credentials/check-answers');
+  });
+
+  test('combining_with_other_data_should_be_accepted_with_a_description_and_listed_for_checking', async () => {
+    const req = asUser({
+      body: answers(applicationId, {
+        'data-combined': 'unsure',
+        'data-combined-description': 'Case management records, to show a full case history.',
+      }),
+    });
+
+    const saved = mockResponse();
+    await controller().save(req, saved);
+    expect(saved.redirected).toBe('/account/production-credentials/check-answers');
+
+    const checked = mockResponse();
+    await controller().checkAnswers(req, checked);
+    expect(checked.data?.rows).toEqual(
+      expect.arrayContaining([
+        { key: 'Will you combine or link the API data with other data?', value: 'Unsure' },
+        {
+          key: 'Other data and what the combined data will be used for',
+          value: 'Case management records, to show a full case history.',
+        },
+      ])
+    );
+  });
+
+  test('a_description_left_behind_after_choosing_no_should_not_be_shown_for_checking', async () => {
+    const req = asUser({ body: answers(applicationId, { 'data-combined-description': 'Left over text.' }) });
+
+    await controller().save(req, mockResponse());
+    const checked = mockResponse();
+    await controller().checkAnswers(req, checked);
+
+    expect(JSON.stringify(checked.data?.rows)).not.toContain('Left over text.');
+  });
+
+  test('a_single_recipient_option_posted_as_text_should_still_count', async () => {
+    const res = mockResponse();
+
+    await controller().save(asUser({ body: answers(applicationId, { 'data-recipients': 'own-team' }) }), res);
+
+    expect(res.redirected).toBe('/account/production-credentials/check-answers');
   });
 
   test('check_answers_and_submit_without_a_draft_should_go_back_to_the_form', async () => {
@@ -275,7 +400,40 @@ describe('ProductionCredentialsController', () => {
       callVolume: 'medium',
     });
     expect(submission.dataRequest).toBeDefined();
-    expect(submission.proposedOutputs).toBeDefined();
+    expect(submission).not.toHaveProperty('proposedOutputs');
+  });
+
+  test('submitting_should_send_the_triage_answers_the_data_access_team_review', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const draft = answers(applicationId, {
+      'organisation-type': 'moj',
+      'data-recipients': ['own-team', 'supplier'],
+      'data-recipients-explanation': 'Our delivery partner runs the ingest.',
+      'data-combined': 'unsure',
+      'data-combined-description': 'Possibly our own case tracker.',
+    });
+
+    await controller().submit(asUser({ session: { productionDraft: draft } }), mockResponse());
+
+    expect((submitProductionRequest as jest.Mock).mock.calls[0][1]).toMatchObject({
+      organisationType: 'moj',
+      dataRecipients: ['own-team', 'supplier'],
+      dataRecipientsExplanation: 'Our delivery partner runs the ingest.',
+      dataCombined: 'unsure',
+      dataCombinedDescription: 'Possibly our own case tracker.',
+    });
+  });
+
+  test('submitting_answers_that_need_no_explanation_should_leave_both_out', async () => {
+    (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const req = asUser({ session: { productionDraft: answers(applicationId) } });
+
+    await controller().submit(req, mockResponse());
+
+    const submission = (submitProductionRequest as jest.Mock).mock.calls[0][1];
+    expect(submission).toMatchObject({ organisationType: 'external', dataRecipients: ['own-team'] });
+    expect(submission).not.toHaveProperty('dataRecipientsExplanation');
+    expect(submission).not.toHaveProperty('dataCombinedDescription');
   });
 
   test('a_failure_to_store_should_keep_the_answers_and_say_so', async () => {
@@ -316,11 +474,51 @@ describe('ProductionCredentialsController', () => {
     const rows = res.data?.rows as { key: string; value: string }[];
     const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
     expect(valueFor('Application')).toBe('Tracker');
-    expect(valueFor('Organisation or team name')).toBe('Analytical Engines Ltd');
+    expect(valueFor('Team name (and organisation if external to HMCTS?)')).toBe('Analytical Engines Ltd');
     // Stored values become their labels, as they do on check answers.
     expect(valueFor('Expected call volume')).toBe('Medium');
     expect(valueFor('Go-live date')).toBe('1 April 2027');
     expect(valueFor('Data request')).toBe('Hearing outcomes for listed cases.');
     expect(valueFor('Proposed outputs')).toBe('A weekly outcomes report.');
+  });
+
+  test('viewing_a_triaged_request_should_show_every_answer_as_its_label', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue(TRIAGED);
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    const rows = res.data?.rows as { key: string; value: string }[];
+    const valueFor = (key: string) => rows.find(row => row.key === key)?.value;
+    expect(valueFor('Organisation')).toBe('Other external organisation');
+    expect(valueFor('Who will have access to, or receive, the data?')).toBe(
+      'Me/my immediate team only, Supplier/contract/delivery partner'
+    );
+    expect(valueFor('Who will receive the data and why')).toBe('Our delivery partner runs the ingest.');
+    expect(valueFor('Will you combine or link the API data with other data?')).toBe('Yes');
+    expect(valueFor('Other data and what the combined data will be used for')).toBe(
+      'Joined to our own case tracker to measure turnaround.'
+    );
+  });
+
+  test('viewing_a_request_made_before_the_triage_questions_should_show_no_empty_rows', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue(STORED);
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    const keys = (res.data?.rows as { key: string }[]).map(row => row.key);
+    expect(keys).not.toContain('Organisation');
+    expect(keys).not.toContain('Who will have access to, or receive, the data?');
+    expect(keys).not.toContain('Will you combine or link the API data with other data?');
+  });
+
+  test('a_request_made_without_proposed_outputs_should_not_show_an_empty_row', async () => {
+    (getProductionRequest as jest.Mock).mockResolvedValue({ ...STORED, proposedOutputs: undefined });
+    const res = mockResponse();
+
+    await controller().view(asUser({ params: { reference: 'PCR-ABCD2345' } }), res, jest.fn());
+
+    expect(JSON.stringify(res.data?.rows)).not.toContain('Proposed outputs');
   });
 });

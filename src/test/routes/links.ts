@@ -146,13 +146,15 @@ async function submitProductionRequest(agent: Agent, applicationId: string): Pro
     .type('form')
     .send({
       application: applicationId,
+      'organisation-type': 'external',
       organisation: 'Analytical Engines Ltd',
       'go-live-day': '1',
       'go-live-month': '4',
       'go-live-year': String(new Date().getFullYear() + 1),
       'call-volume': 'medium',
       'data-request': 'Hearing outcomes, used with court listings.',
-      'proposed-outputs': 'A case summary shown inside our own service.',
+      'data-recipients': 'own-team',
+      'data-combined': 'no',
     })
     .expect(302);
   await agent.post('/account/production-credentials/check-answers').expect(200);
