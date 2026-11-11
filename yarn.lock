@@ -10091,10 +10091,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next-http-middleware@npm:3.9.11":
-  version: 3.9.11
-  resolution: "i18next-http-middleware@npm:3.9.11"
-  checksum: 10/cf835267a84c11cd511ee84ed740e5cf433bb9152d594dd39452994453c56f13d498284a16f17cf875e579b57baa91b30a7583dd48c5b5670da27434284bd790
+"i18next-http-middleware@npm:3.10.0":
+  version: 3.10.0
+  resolution: "i18next-http-middleware@npm:3.10.0"
+  checksum: 10/932fa4314f1a2bcdf76581052ecd74b2ff5cc6413c04aca8ed3671443b52be1dd9f02e93519ec1612ac1eef7ac2681ed27aaa7caa35261c96a95205d5cc033ed
   languageName: node
   linkType: hard
 
@@ -15832,7 +15832,7 @@ __metadata:
     html-webpack-plugin: "npm:5.6.8"
     husky: "npm:9.1.7"
     i18next: "npm:26.7.2"
-    i18next-http-middleware: "npm:3.9.11"
+    i18next-http-middleware: "npm:3.10.0"
     jest: "npm:30.4.2"
     jest-environment-jsdom: "npm:30.4.1"
     jest-html-reporter: "npm:4.4.3"
