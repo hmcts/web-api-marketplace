@@ -192,7 +192,10 @@ export default class ApplicationsController {
       created = await createApplication(this.owner(req), draft as Required<ApplicationDraft>, catalogue);
     } catch (error) {
       if (error instanceof BackendError && (error.status === 400 || error.status === 409)) {
-        const message = error.status === 409 ? `You already have an application called ${draft.name}` : error.message;
+        const message =
+          error.status === 409
+            ? `An application called ${draft.name} already exists. Choose another name.`
+            : error.message;
         res.status(400).render('applications/new/details', this.detailsData(draft, [{ name: 'name', text: message }]));
         return;
       }
