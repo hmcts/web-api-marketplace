@@ -338,7 +338,7 @@ describe('ApplicationsController', () => {
     });
 
     test.each([
-      [409, 'Taken', 'You already have an application called Case Viewer'],
+      [409, 'Taken', 'An application called Case Viewer already exists. Choose another name.'],
       [400, 'Use letters, digits and spaces only.', 'Use letters, digits and spaces only.'],
     ])('a_%i_from_the_backend_should_go_back_to_the_name', async (status, message, shown) => {
       Applications.createApplication.mockRejectedValue(new BackendError(message, status));
