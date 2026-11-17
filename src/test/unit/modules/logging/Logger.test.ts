@@ -14,6 +14,7 @@ jest.mock('@hmcts/nodejs-logging', () => ({
   },
 }));
 
+import { runWithCorrelationId } from '../../../../main/modules/correlation/context';
 import { Logger, setAppInsightsClient } from '../../../../main/modules/logging';
 
 describe('Logger', () => {
@@ -64,5 +65,45 @@ describe('Logger', () => {
 
     expect(() => Logger.getLogger('app').warn('Application warning')).not.toThrow();
     expect(delegateLogger.warn).toHaveBeenCalledWith('Application warning');
+  });
+
+  describe('during a request', () => {
+    test('adds the correlation ID as metadata and to Application Insights', () => {
+      runWithCorrelationId('abc-123', () => Logger.getLogger('app').info('Application created'));
+
+      expect(delegateLogger.info).toHaveBeenCalledWith('Application created', { correlationId: 'abc-123' });
+      expect(trackTrace).toHaveBeenCalledWith({
+        message: 'Application created',
+        severity: 'Information',
+        properties: { loggerName: 'app', correlationId: 'abc-123' },
+      });
+    });
+
+    test('merges into existing metadata rather than adding a second object', () => {
+      const details = { status: 409 };
+
+      runWithCorrelationId('abc-123', () => Logger.getLogger('app').warn('APIM rejected the key', details));
+
+      expect(delegateLogger.warn).toHaveBeenCalledWith('APIM rejected the key', {
+        status: 409,
+        correlationId: 'abc-123',
+      });
+      expect(details).toEqual({ status: 409 });
+    });
+
+    test('appends after an error rather than merging into it', () => {
+      const error = new Error('boom');
+
+      runWithCorrelationId('abc-123', () => Logger.getLogger('app').error('Failed', error));
+
+      expect(delegateLogger.error).toHaveBeenCalledWith('Failed', error, { correlationId: 'abc-123' });
+    });
+  });
+
+  test('leaves the arguments untouched outside a request', () => {
+    Logger.getLogger('app').info('Startup complete');
+
+    expect(delegateLogger.info).toHaveBeenCalledWith('Startup complete');
+    expect(trackTrace).toHaveBeenCalledWith(expect.objectContaining({ properties: { loggerName: 'app' } }));
   });
 });
