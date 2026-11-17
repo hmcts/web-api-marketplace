@@ -81,13 +81,10 @@ describe('Access control on the form journeys', () => {
     }
   );
 
-  test('the_old_producer_standards_address_should_lead_to_producer_guidance', async () => {
+  test('the_old_producer_standards_address_should_be_gone', async () => {
     await request(app)
       .get('/documentation/producer-standards')
-      .expect(res => {
-        expect(res.status).to.equal(301);
-        expect(res.headers.location).to.equal('/documentation/producer-guidance');
-      });
+      .expect(res => expect(res.status).to.equal(404));
   });
 
   test('the_data_governance_standards_page_should_be_off_the_site_for_now', async () => {

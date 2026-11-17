@@ -19,25 +19,11 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/privacy': 'content/privacy',
 };
 
-/**
- * Pages that have moved, and where they went. Only an address whose page now lives somewhere
- * else belongs here: an address that was retired is left to answer 404.
- */
-export const MOVED_PAGES: Record<string, string> = {
-  '/documentation/producer-standards': '/documentation/producer-guidance',
-};
-
-const withoutTrailingSlash = (path: string): string => path.replace(/(.)\/$/, '$1');
-
 export default class ContentController {
   public get(req: Request, res: Response): void {
     // req.path, not req.route.path: every page shares the one route, whose path is the
     // whole list. A trailing slash still reaches the page, as express matches it anyway.
-    res.render(CONTENT_PAGES[withoutTrailingSlash(req.path)]);
-  }
-
-  public moved(req: Request, res: Response): void {
-    res.redirect(301, MOVED_PAGES[withoutTrailingSlash(req.path)]);
+    res.render(CONTENT_PAGES[req.path.replace(/(.)\/$/, '$1')]);
   }
 }
 
@@ -47,8 +33,3 @@ for (const path of Object.keys(CONTENT_PAGES)) {
   route(path)(ContentController.prototype, 'get');
 }
 GET()(ContentController.prototype, 'get');
-
-for (const path of Object.keys(MOVED_PAGES)) {
-  route(path)(ContentController.prototype, 'moved');
-}
-GET()(ContentController.prototype, 'moved');
