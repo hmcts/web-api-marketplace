@@ -13,8 +13,8 @@ export const CONTENT_PAGES: Record<string, string> = {
   '/get-started': 'content/get-started/index',
   '/documentation': 'content/documentation/index',
   '/documentation/consumer-guidance': 'content/documentation/consumer-guidance',
+  '/documentation/producer-onboarding': 'content/documentation/producer-onboarding',
   '/documentation/producer-guidance': 'content/documentation/producer-guidance',
-  '/documentation/producer-standards': 'content/documentation/producer-standards',
   '/help': 'content/help/index',
   '/privacy': 'content/privacy',
 };
