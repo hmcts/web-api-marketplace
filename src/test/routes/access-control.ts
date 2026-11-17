@@ -72,10 +72,19 @@ describe('Access control on the form journeys', () => {
     }
   );
 
-  test('the_publish_guidance_pages_should_still_be_reachable', async () => {
+  test.each(['/documentation/producer-onboarding', '/documentation/producer-guidance'])(
+    'the_producer_page_at_%s_should_be_reachable',
+    async path => {
+      await request(app)
+        .get(path)
+        .expect(res => expect(res.status).to.equal(200));
+    }
+  );
+
+  test('the_old_producer_standards_address_should_be_gone', async () => {
     await request(app)
-      .get('/documentation/producer-guidance')
-      .expect(res => expect(res.status).to.equal(200));
+      .get('/documentation/producer-standards')
+      .expect(res => expect(res.status).to.equal(404));
   });
 
   test('the_data_governance_standards_page_should_be_off_the_site_for_now', async () => {
