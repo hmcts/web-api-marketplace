@@ -78,7 +78,7 @@
     "@axe-core/playwright": "4.14.0",
     "@babel/core": "7.29.13",
     "@babel/plugin-proposal-decorators": "7.29.7",
-    "@babel/preset-env": "7.29.7",
+    "@babel/preset-env": "7.29.14",
     "@babel/preset-typescript": "7.29.7",
     "@eslint/compat": "2.1.1",
     "@eslint/eslintrc": "3.3.7",
