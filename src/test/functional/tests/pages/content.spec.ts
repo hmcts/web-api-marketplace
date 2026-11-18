@@ -5,7 +5,6 @@ const pages = [
   { path: '/documentation', heading: 'Documentation' },
   { path: '/documentation/consumer-guidance', heading: 'Consumer guidance' },
   { path: '/documentation/producer-onboarding', heading: 'Producer Onboarding' },
-  { path: '/documentation/producer-guidance', heading: 'Producer Guidance' },
   { path: '/help', heading: 'Help and support' },
   { path: '/privacy', heading: 'Privacy notice' },
   { path: '/cookies', heading: 'Cookies' },
