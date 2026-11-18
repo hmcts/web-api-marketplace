@@ -1,4 +1,4 @@
-import { WEB_ADMIN } from './AdminRole';
+import { API_MARKETPLACE_ADMIN } from './AdminRole';
 import { EntraClaims } from './Entra';
 
 const JOHN_DOE: EntraClaims = {
@@ -18,7 +18,7 @@ export const entraBypass = {
   },
 
   get claims(): EntraClaims {
-    return asksForAdmin() ? { ...JOHN_DOE, roles: [WEB_ADMIN] } : JOHN_DOE;
+    return asksForAdmin() ? { ...JOHN_DOE, roles: [API_MARKETPLACE_ADMIN] } : JOHN_DOE;
   },
 };
 
