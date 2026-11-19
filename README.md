@@ -220,8 +220,7 @@ row, "How to get an access token and call {API title}". It shows that API's Publ
 (scope), then a curl command to get a token. The token endpoint uses the tenant the backend
 returns (`tenantId`), and the scope is the Publisher ID followed by `/.default`. The Publisher
 ID is the API's own Entra app (`resourceAppId` on the backend's `/products`). If the
-marketplace cannot be reached, SLC falls back to `apiEndpoints.publisherId` and any other API
-shows `{publisher_id}`.
+marketplace cannot be reached, it shows `{publisher_id}`.
 
 The panel does not list the API's endpoints. Under "Run try it now in developer portal" it links
 to "{API title} API reference", the API's page in the APIM developer portal (for example
