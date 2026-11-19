@@ -15,11 +15,11 @@ const logger = Logger.getLogger('admin-role');
  * holds it is a question for Entra and never a list in this repository. The string has to read the
  * same here, in the token, and in the API that checks it, so it is written once.
  */
-export const API_MARKETPLACE_ADMIN = 'api_marketplace_admin';
+export const AMP_ADMIN = 'amp_admin';
 
 /** No roles claim means no roles: absence is the ordinary case, not an error. */
 export function isMarketplaceAdmin(user: SignedInUser | undefined): boolean {
-  return user?.roles?.includes(API_MARKETPLACE_ADMIN) === true;
+  return user?.roles?.includes(AMP_ADMIN) === true;
 }
 
 /**
@@ -38,7 +38,7 @@ export function requireMarketplaceAdmin(req: AppRequest, res: Response): boolean
     return true;
   }
 
-  logger.warn(`Admin page refused: ${req.session?.user?.oid} does not hold ${API_MARKETPLACE_ADMIN}`);
+  logger.warn(`Admin page refused: ${req.session?.user?.oid} does not hold ${AMP_ADMIN}`);
   res.status(404);
   res.render('not-found', req.i18n?.getDataByLanguage(req.lng)?.['not-found'] ?? {});
   return false;

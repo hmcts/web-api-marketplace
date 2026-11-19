@@ -2,7 +2,7 @@ import { Response } from 'express';
 
 import { AppRequest } from '../../../main/interfaces/AppRequest';
 import {
-  API_MARKETPLACE_ADMIN,
+  AMP_ADMIN,
   adminRequestHeaders,
   isMarketplaceAdmin,
   requireMarketplaceAdmin,
@@ -21,7 +21,7 @@ const response = () => {
 
 describe('isMarketplaceAdmin', () => {
   it('is true only for someone holding the role', () => {
-    expect(isMarketplaceAdmin(user([API_MARKETPLACE_ADMIN]))).toBe(true);
+    expect(isMarketplaceAdmin(user([AMP_ADMIN]))).toBe(true);
   });
 
   it('is false without the claim, with other roles, and with no user at all', () => {
@@ -34,7 +34,7 @@ describe('isMarketplaceAdmin', () => {
 describe('requireMarketplaceAdmin', () => {
   it('lets an admin through', () => {
     const res = response();
-    expect(requireMarketplaceAdmin(request(user([API_MARKETPLACE_ADMIN])), res)).toBe(true);
+    expect(requireMarketplaceAdmin(request(user([AMP_ADMIN])), res)).toBe(true);
     expect(res.render).not.toHaveBeenCalled();
   });
 
@@ -59,6 +59,6 @@ describe('adminRequestHeaders', () => {
   });
 
   it('refuses to build headers for a session with no token', () => {
-    expect(() => adminRequestHeaders(request(user([API_MARKETPLACE_ADMIN])))).toThrow(/no admin token/);
+    expect(() => adminRequestHeaders(request(user([AMP_ADMIN])))).toThrow(/no admin token/);
   });
 });
