@@ -43,3 +43,20 @@ export function requireMarketplaceAdmin(req: AppRequest, res: Response): boolean
   res.render('not-found', req.i18n?.getDataByLanguage(req.lng)?.['not-found'] ?? {});
   return false;
 }
+
+/**
+ * What an admin call to the API carries: the token this sign in verified, forwarded for the
+ * service to verify again. No `requestingUserId` header — on admin paths the service takes the
+ * identity from the token, because an admin action recorded against a header the caller wrote
+ * is not an audit record.
+ *
+ * The token outlives neither its own expiry nor the session. Once it expires the API answers
+ * 401 and the person signs in again; nothing here tries to refresh it.
+ */
+export function adminRequestHeaders(req: AppRequest): Record<string, string> {
+  const token = req.session?.adminToken;
+  if (!token) {
+    throw new Error('This session holds no admin token; requireMarketplaceAdmin should have run first');
+  }
+  return { Authorization: `Bearer ${token}` };
+}

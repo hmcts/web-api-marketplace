@@ -1,7 +1,12 @@
 import { Response } from 'express';
 
 import { AppRequest } from '../../../main/interfaces/AppRequest';
-import { API_MARKETPLACE_ADMIN, isMarketplaceAdmin, requireMarketplaceAdmin } from '../../../main/services/AdminRole';
+import {
+  API_MARKETPLACE_ADMIN,
+  adminRequestHeaders,
+  isMarketplaceAdmin,
+  requireMarketplaceAdmin,
+} from '../../../main/services/AdminRole';
 import { SignedInUser } from '../../../main/services/SignIn';
 
 const user = (roles?: string[]): SignedInUser => ({ id: 1, email: 'ada@example.net', name: 'Ada', roles });
@@ -44,5 +49,16 @@ describe('requireMarketplaceAdmin', () => {
     const res = response();
     expect(requireMarketplaceAdmin(request(), res)).toBe(false);
     expect(res.redirect).toHaveBeenCalledWith('/sign-in');
+  });
+});
+
+describe('adminRequestHeaders', () => {
+  it('forwards the session token as a bearer token, and nothing else', () => {
+    const req = { session: { adminToken: 'the-id-token' } } as AppRequest;
+    expect(adminRequestHeaders(req)).toEqual({ Authorization: 'Bearer the-id-token' });
+  });
+
+  it('refuses to build headers for a session with no token', () => {
+    expect(() => adminRequestHeaders(request(user([API_MARKETPLACE_ADMIN])))).toThrow(/no admin token/);
   });
 });
