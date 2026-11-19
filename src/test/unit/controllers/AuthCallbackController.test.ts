@@ -42,7 +42,15 @@ describe('AuthCallbackController', () => {
       oid: ADA.oid,
       email: 'ada@example.com',
       name: 'Ada Lovelace',
+      role: 'USER',
     });
+  });
+
+  test('an_admin_should_be_signed_in_as_an_admin', async () => {
+    entra.admins.add(ADA.oid);
+    const { req } = await callback();
+
+    expect(req.session.user?.role).toBe('ADMIN');
   });
 
   test('a_later_sign_in_should_go_to_the_account', async () => {

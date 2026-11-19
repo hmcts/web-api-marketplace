@@ -99,7 +99,7 @@ export function startSession(req: AppRequest, res: Response, claims: EntraClaims
       return;
     }
 
-    req.session.user = toSignedInUser(claims, user.id, user.userReference);
+    req.session.user = toSignedInUser(claims, user.id, user.userReference, user.role);
     // Every sign in lands on the account page, whichever page asked for it.
     req.session.save(() => res.redirect('/account'));
   });

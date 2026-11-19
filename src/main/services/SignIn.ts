@@ -8,6 +8,11 @@ export interface SignedInUser {
   oid?: string;
   email: string;
   name: string;
+  role?: string;
   /** Set while the backend has no requests: submissions go to the data store. */
   local?: boolean;
+}
+
+export function isAdmin(user?: SignedInUser): boolean {
+  return user?.role === 'ADMIN';
 }
