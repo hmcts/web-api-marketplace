@@ -64,3 +64,36 @@ describe('The admin tab', () => {
       });
   });
 });
+
+describe('The registered users page', () => {
+  beforeEach(() => stubEntra().admins.add(ADMIN.oid));
+  afterEach(() => stubEntra().reset());
+
+  test('an_admin_should_see_the_registered_users', async () => {
+    await signedInAs(USER);
+    const agent = await signedInAs(ADMIN);
+    const adminId = stubEntra().savedUsers.get(ADMIN.oid)?.id;
+
+    await agent.get('/admin/users').expect(res => {
+      expect(res.status).to.equal(200);
+      expect(res.text).to.contain('<h1 class="govuk-heading-xl">Users</h1>');
+      expect(res.text).to.contain(`href="/admin/users/${adminId}"`);
+      expect(res.text).to.contain('joe@example.com');
+    });
+  });
+
+  test('a_user_should_be_told_the_users_page_is_not_found', async () => {
+    const agent = await signedInAs(USER);
+
+    await agent.get('/admin/users').expect(res => expect(res.status).to.equal(404));
+  });
+
+  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_users_page', async () => {
+    await request(app)
+      .get('/admin/users')
+      .expect(res => {
+        expect(res.status).to.equal(302);
+        expect(res.headers.location).to.equal('/sign-in');
+      });
+  });
+});
