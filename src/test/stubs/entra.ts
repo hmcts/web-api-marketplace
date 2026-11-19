@@ -57,6 +57,8 @@ export interface StubEntra {
   failTokenRequests(status: number): void;
   /** Every user saved through the backend's POST /session, by oid. */
   savedUsers: Map<string, { id: number; email: string; name: string }>;
+  /** The oids POST /session answers as ADMIN, until `reset()`. */
+  admins: Set<string>;
   /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
   failUserSaves(status: number): void;
   /** The backend's /applications and /apim/subscription-keys. */
@@ -80,6 +82,7 @@ export async function startStubEntra(): Promise<StubEntra> {
   let failWith: number | undefined;
   let failSavesWith: number | undefined;
   const savedUsers: StubEntra['savedUsers'] = new Map();
+  const admins = new Set<string>();
   const marketplace = stubMarketplace(() => new Map([...savedUsers].map(([oid, user]) => [oid, user.id])));
 
   const server = http.createServer((req, res) => {
@@ -105,10 +108,12 @@ export async function startStubEntra(): Promise<StubEntra> {
     answerTokenRequestsWith: answer => (issue = answer),
     failTokenRequests: status => (failWith = status),
     savedUsers,
+    admins,
     failUserSaves: status => (failSavesWith = status),
     marketplace: marketplace.state,
     reset: () => {
       marketplace.state.reset();
+      admins.clear();
       issue = undefined;
       failWith = undefined;
       failSavesWith = undefined;
@@ -171,6 +176,7 @@ export async function startStubEntra(): Promise<StubEntra> {
         userReference,
         entraObjectId: objectId,
         status: 'ACTIVE',
+        role: admins.has(objectId) ? 'ADMIN' : 'USER',
         createdAt: now,
         lastLoginAt: now,
       });

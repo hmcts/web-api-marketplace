@@ -11,7 +11,7 @@ export function normalise(email: string): string {
 }
 
 /** The session's user, with the backend's id. Still `local`: the backend has no requests yet. */
-export function toSignedInUser(claims: EntraClaims, id: number, userReference: string): SignedInUser {
+export function toSignedInUser(claims: EntraClaims, id: number, userReference: string, role = 'USER'): SignedInUser {
   return {
     id,
     userReference,
@@ -19,5 +19,6 @@ export function toSignedInUser(claims: EntraClaims, id: number, userReference: s
     oid: claims.oid,
     email: normalise(claims.email ?? ''),
     name: (claims.name ?? '').trim(),
+    role,
   };
 }
