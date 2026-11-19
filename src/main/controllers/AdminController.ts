@@ -4,14 +4,16 @@ import { NextFunction, Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireAdmin } from '../services/AdminGuard';
-import { AdminUser, listAdminUsers } from '../services/AdminUsers';
+import { AdminUser, AdminUserDetail, getAdminUser, listAdminUsers } from '../services/AdminUsers';
 import { ownerOf } from '../services/Applications';
 import { formatDate } from '../services/Dates';
+import { statusText } from '../services/LocalRequests';
 import { SignedInUser } from '../services/SignIn';
 
 const logger = Logger.getLogger('admin');
 
 const NOT_KNOWN = 'Not known';
+const ROW_ID = /^[0-9]{1,18}$/;
 
 @route('/admin')
 export default class AdminController {
@@ -54,6 +56,65 @@ export default class AdminController {
 
     res.render('admin/users', { q, count: rows.length, users: rows, couldNotLoad });
   }
+
+  @route('/users/:id')
+  @GET()
+  public async user(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    if (!requireAdmin(req, res, next)) {
+      return;
+    }
+
+    const id = String(req.params.id);
+    if (!ROW_ID.test(id)) {
+      next();
+      return;
+    }
+
+    let found: AdminUserDetail | undefined;
+    try {
+      found = await getAdminUser(ownerOf(req.session.user as SignedInUser), Number(id));
+    } catch (error) {
+      logger.error(`Could not read user ${id} for an admin: ${(error as Error).message}`);
+      res.render('admin/user', { couldNotLoad: true, applications: [], productionRequests: [] });
+      return;
+    }
+
+    if (!found) {
+      next();
+      return;
+    }
+
+    res.render('admin/user', {
+      user: {
+        name: found.name?.trim() || found.email,
+        email: found.email,
+        organisation: found.organisation || NOT_KNOWN,
+        status: sentenceCase(found.status),
+        joined: formatDate(found.createdAt) ?? NOT_KNOWN,
+        lastSignedIn: formatDate(found.lastLoginAt) ?? NOT_KNOWN,
+      },
+      applications: found.applications.map(application => ({
+        name: application.name,
+        apis: `${application.apiCount} ${application.apiCount === 1 ? 'API' : 'APIs'}`,
+        created: formatDate(application.createdAt) ?? NOT_KNOWN,
+      })),
+      productionRequests: found.productionRequests.map(request => ({
+        reference: request.reference,
+        applicationName: request.applicationName,
+        status: statusText(request.status),
+        submitted: formatDate(request.submittedAt) ?? NOT_KNOWN,
+      })),
+      couldNotLoad: false,
+    });
+  }
+}
+
+function sentenceCase(value?: string): string {
+  if (!value) {
+    return NOT_KNOWN;
+  }
+  const words = value.replace(/_/g, ' ').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function matches(user: AdminUser, q: string): boolean {

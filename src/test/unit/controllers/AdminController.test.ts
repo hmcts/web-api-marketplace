@@ -4,7 +4,144 @@ import { mockResponse } from '../mocks/mockResponse';
 
 jest.mock('../../../main/services/AdminUsers', () => ({ listAdminUsers: jest.fn(), getAdminUser: jest.fn() }));
 
-const { listAdminUsers } = require('../../../main/services/AdminUsers');
+const { listAdminUsers, getAdminUser } = require('../../../main/services/AdminUsers');
+
+const GRACE_DETAIL = {
+  id: 2,
+  name: 'Grace Hopper',
+  email: 'grace.hopper@hmcts.net',
+  status: 'ACTIVE',
+  createdAt: '2026-10-15T10:00:00',
+  lastLoginAt: '2026-11-02T09:00:00',
+  organisation: 'Example Legal Ltd',
+  applications: [
+    { name: 'Case Viewer', apiCount: 2, createdAt: '2026-10-29T10:00:00' },
+    { name: 'Listings', apiCount: 1, createdAt: '2026-10-30T10:00:00' },
+  ],
+  productionRequests: [
+    {
+      reference: 'PCR-ABCD2345',
+      applicationName: 'Case Viewer',
+      status: 'SUBMITTED',
+      submittedAt: '2026-11-01T10:00:00',
+    },
+  ],
+};
+
+const userPage = async (id: string, session: Record<string, unknown> = { user: admin }) => {
+  const req = mockRequest({}, session);
+  req.params = { id };
+  const res = mockResponse();
+  const next = jest.fn();
+  await new AdminController().user(req, res, next);
+  return { res, next, data: res.data as Record<string, unknown> };
+};
+
+describe('AdminController user page', () => {
+  beforeEach(() => {
+    (getAdminUser as jest.Mock).mockReset();
+    (getAdminUser as jest.Mock).mockResolvedValue(GRACE_DETAIL);
+  });
+
+  test('one_user_should_show_their_details_applications_and_requests', async () => {
+    const { res, data } = await userPage('2');
+
+    expect(res.view).toBe('admin/user');
+    expect((getAdminUser as jest.Mock).mock.calls[0][1]).toBe(2);
+    expect(data.user).toEqual({
+      name: 'Grace Hopper',
+      email: 'grace.hopper@hmcts.net',
+      organisation: 'Example Legal Ltd',
+      status: 'Active',
+      joined: '15 October 2026',
+      lastSignedIn: '2 November 2026',
+    });
+    expect((data.applications as unknown[])[0]).toEqual({
+      name: 'Case Viewer',
+      apis: '2 APIs',
+      created: '29 October 2026',
+    });
+    expect(data.productionRequests).toEqual([
+      { reference: 'PCR-ABCD2345', applicationName: 'Case Viewer', status: 'Submitted', submitted: '1 November 2026' },
+    ]);
+    expect(data.couldNotLoad).toBe(false);
+  });
+
+  test('one_api_should_read_singular', async () => {
+    const { data } = await userPage('2');
+
+    expect((data.applications as { apis: string }[])[1].apis).toBe('1 API');
+  });
+
+  test('missing_values_should_show_not_known', async () => {
+    (getAdminUser as jest.Mock).mockResolvedValue({ ...GRACE_DETAIL, organisation: null, lastLoginAt: null });
+
+    const { data } = await userPage('2');
+
+    expect((data.user as { organisation: string }).organisation).toBe('Not known');
+    expect((data.user as { lastSignedIn: string }).lastSignedIn).toBe('Not known');
+  });
+
+  test('a_status_other_than_active_should_read_in_sentence_case', async () => {
+    (getAdminUser as jest.Mock).mockResolvedValue({ ...GRACE_DETAIL, status: 'SUSPENDED' });
+
+    const { data } = await userPage('2');
+
+    expect((data.user as { status: string }).status).toBe('Suspended');
+  });
+
+  test('a_user_with_no_name_should_be_headed_by_email', async () => {
+    (getAdminUser as jest.Mock).mockResolvedValue({ ...GRACE_DETAIL, name: ' ' });
+
+    const { data } = await userPage('2');
+
+    expect((data.user as { name: string }).name).toBe('grace.hopper@hmcts.net');
+  });
+
+  test('an_unknown_user_should_be_handed_on_to_not_found', async () => {
+    (getAdminUser as jest.Mock).mockResolvedValue(undefined);
+
+    const { res, next } = await userPage('999');
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+  });
+
+  test.each(['abc', '1abc', '1.5', '-1', '1234567890123456789'])(
+    'an_id_that_is_not_a_row_id_%s_should_be_not_found_without_asking_the_backend',
+    async id => {
+      const { res, next } = await userPage(id);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.view).toBeUndefined();
+      expect(getAdminUser).not.toHaveBeenCalled();
+    }
+  );
+
+  test('an_unreachable_backend_should_say_the_user_could_not_be_loaded', async () => {
+    (getAdminUser as jest.Mock).mockRejectedValue(new Error('Could not reach the backend'));
+
+    const { res, data } = await userPage('2');
+
+    expect(res.view).toBe('admin/user');
+    expect(data.couldNotLoad).toBe(true);
+  });
+
+  test('a_non_admin_should_be_handed_on_to_not_found_from_a_user_page', async () => {
+    const { res, next } = await userPage('2', { user });
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+    expect(getAdminUser).not.toHaveBeenCalled();
+  });
+
+  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_a_user_page', async () => {
+    const { res } = await userPage('2', {});
+
+    expect(res.redirected).toBe('/sign-in');
+    expect(getAdminUser).not.toHaveBeenCalled();
+  });
+});
 
 const admin = { id: 1, email: 'ada@example.com', name: 'Ada Admin', role: 'ADMIN' };
 const user = { id: 2, email: 'joe@example.com', name: 'Joe Bloggs', role: 'USER' };

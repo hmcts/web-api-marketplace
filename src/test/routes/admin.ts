@@ -88,6 +88,31 @@ describe('The registered users page', () => {
     await agent.get('/admin/users').expect(res => expect(res.status).to.equal(404));
   });
 
+  test('an_admin_should_see_one_user', async () => {
+    await signedInAs(USER);
+    const agent = await signedInAs(ADMIN);
+    const joeId = stubEntra().savedUsers.get(USER.oid)?.id;
+
+    await agent.get(`/admin/users/${joeId}`).expect(res => {
+      expect(res.status).to.equal(200);
+      expect(res.text).to.contain('<h1 class="govuk-heading-xl">Joe Bloggs</h1>');
+      expect(res.text).to.contain('Production credentials requests');
+    });
+  });
+
+  test('a_user_should_be_told_a_user_page_is_not_found', async () => {
+    const agent = await signedInAs(USER);
+    const joeId = stubEntra().savedUsers.get(USER.oid)?.id;
+
+    await agent.get(`/admin/users/${joeId}`).expect(res => expect(res.status).to.equal(404));
+  });
+
+  test('an_unknown_user_should_be_not_found', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin/users/999').expect(res => expect(res.status).to.equal(404));
+  });
+
   test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_users_page', async () => {
     await request(app)
       .get('/admin/users')
