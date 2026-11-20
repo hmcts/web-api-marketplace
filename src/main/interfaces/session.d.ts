@@ -22,6 +22,8 @@ declare module 'express-session' {
      * Nobody else's session has a use for one, so nobody else's holds one.
      */
     adminToken?: string;
+    /** Sent back with every form and script request that changes something; see modules/csrf. */
+    csrfToken?: string;
     /** A one-off banner for the next page rendered, then cleared. */
     notice?: { success: boolean; title: string; text: string };
     /** Answers collected so far by the multi-page journeys, until they are submitted. */

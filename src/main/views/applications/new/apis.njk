@@ -23,6 +23,7 @@
     <p class="govuk-body">Not sure? Browse the <a class="govuk-link" href="/api-catalogue">API catalogue</a>. You can add or remove APIs later.</p>
 
     <form method="post" action="/account/applications/new/apis" novalidate>
+      {{ csrfField() }}
       {% include "applications/api-checkboxes.njk" %}
       {{ govukButton({ text: "Continue", attributes: { id: "apis-continue" } }) }}
       <p class="govuk-body"><a class="govuk-link" href="/account/applications">Cancel</a></p>
