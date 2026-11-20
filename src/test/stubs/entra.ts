@@ -57,7 +57,7 @@ export interface StubEntra {
   failTokenRequests(status: number): void;
   /** Every user saved through the backend's POST /session, by oid. */
   savedUsers: Map<string, { id: number; email: string; name: string }>;
-  /** The oids POST /session answers as ADMIN, until `reset()`. */
+  /** The oids whose ID token carries the admin app role, until `reset()`. */
   admins: Set<string>;
   /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
   failUserSaves(status: number): void;
@@ -159,7 +159,8 @@ export async function startStubEntra(): Promise<StubEntra> {
       if (codeChallenge && createHash('sha256').update(verifier).digest('base64url') !== codeChallenge) {
         return json(400, { error: 'invalid_grant', error_description: 'The code_verifier does not match' });
       }
-      const idToken = issue ? await issue(claims, nonce) : await stub.idToken(claims, nonce);
+      const withRoles = admins.has(claims.oid) ? { ...claims, roles: ['amp_admin'] } : claims;
+      const idToken = issue ? await issue(withRoles, nonce) : await stub.idToken(withRoles, nonce);
       return json(200, { id_token: idToken, expires_in: 3600 });
     }
     if (req.url === '/backend/session' && req.method === 'POST') {
@@ -176,7 +177,6 @@ export async function startStubEntra(): Promise<StubEntra> {
         userReference,
         entraObjectId: objectId,
         status: 'ACTIVE',
-        role: admins.has(objectId) ? 'ADMIN' : 'USER',
         createdAt: now,
         lastLoginAt: now,
       });
