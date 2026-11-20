@@ -161,7 +161,7 @@ describe('Consumer onboarding journey', () => {
 
       const subscriptions = [...stubEntra().marketplace.subscriptions.entries()];
       expect(
-        subscriptions.map(([name]) => name).every(name => /^amp-user\d{3}-[a-z0-9-]+-(hearing|defendant)$/.test(name))
+        subscriptions.map(([name]) => name).every(name => /^amp-consumer-[a-z0-9-]+-(hearing|defendant)$/.test(name))
       ).to.equal(true);
       expect(subscriptions.map(([, subscription]) => subscription.productId)).to.deep.equal([
         'cp-crime-hearing',
@@ -195,7 +195,7 @@ describe('Consumer onboarding journey', () => {
       await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent.post('/account/applications/new/check-answers').expect(res => {
         expect(res.status).to.equal(400);
-        expect(res.text).to.contain('You already have an application called case tracker');
+        expect(res.text).to.contain('An application called case tracker already exists. Choose another name.');
       });
       expect(stubEntra().marketplace.applications.size).to.equal(1);
     });

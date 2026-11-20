@@ -134,7 +134,7 @@ describe('Applications', () => {
           ok({
             title: 'API one',
             productId: 'try-it-now-one',
-            subscriptionName: 'amp-user001-case-viewer-one',
+            subscriptionName: 'amp-consumer-case-viewer-one',
             subscriptionKey: 'c5212ea63015c827b1a0f713fdbf42d6',
           }),
       });
@@ -156,8 +156,8 @@ describe('Applications', () => {
       ]);
       expect(created.application).toMatchObject({ id: BACKEND_APP.clientId, accessGranted: false });
       expect(created.application.apis.map(api => api.subscriptionName)).toEqual([
-        'amp-user001-case-viewer-one',
-        'amp-user001-case-viewer-one',
+        'amp-consumer-case-viewer-one',
+        'amp-consumer-case-viewer-one',
       ]);
       expect(created.failedApis).toEqual([]);
     });
@@ -169,7 +169,7 @@ describe('Applications', () => {
           ok({
             title: 'Court Schedule',
             productId: 'try-it-now-cp-crime-schedulingandlisting',
-            subscriptionName: 'amp-user001-case-viewer-one',
+            subscriptionName: 'amp-consumer-case-viewer-one',
             subscriptionKey: 'k',
           }),
       });
@@ -179,7 +179,7 @@ describe('Applications', () => {
       expect(created.application.apis[0]).toMatchObject({
         apiTitle: 'Court Schedule',
         publisherId: 'try-it-now-cp-crime-schedulingandlisting',
-        subscriptionName: 'amp-user001-case-viewer-one',
+        subscriptionName: 'amp-consumer-case-viewer-one',
       });
     });
 
@@ -209,11 +209,14 @@ describe('Applications', () => {
     });
 
     test('a_refusal_to_register_should_be_thrown_with_the_backends_status_and_message', async () => {
-      answer({ 'POST /applications': () => refused(409, 'You already have an application called Case Viewer.') });
+      answer({
+        'POST /applications': () =>
+          refused(409, 'An application called Case Viewer already exists. Choose another name.'),
+      });
 
       await expect(createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE)).rejects.toMatchObject({
         status: 409,
-        message: 'You already have an application called Case Viewer.',
+        message: 'An application called Case Viewer already exists. Choose another name.',
       });
     });
 
@@ -299,7 +302,7 @@ describe('Applications', () => {
           shortCode: 'one',
           apiTitle: 'API one',
           publisherId: 'one',
-          subscriptionName: 'amp-user001-case-viewer-one',
+          subscriptionName: 'amp-consumer-case-viewer-one',
           subscribedAt: '',
         },
       ],

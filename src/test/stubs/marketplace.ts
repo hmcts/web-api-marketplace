@@ -140,7 +140,7 @@ interface StubApplication {
 export interface StubMarketplace {
   applications: Map<string, StubApplication>;
   productionRequests: Map<string, StubProductionRequest>;
-  subscriptions: Map<string, { productId: string; displayName: string; primaryKey: string }>;
+  subscriptions: Map<string, { owner: string; productId: string; displayName: string; primaryKey: string }>;
   /** The next n role grants answer 404, as Entra does for a service principal seconds old. */
   roleNotAssignableFor(times: number): void;
   /** Role grants answer this status, as Graph does when a permission is missing. */
@@ -162,7 +162,10 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
 } {
   const applications = new Map<string, StubApplication>();
   const productionRequests = new Map<string, StubProductionRequest>();
-  const subscriptions = new Map<string, { productId: string; displayName: string; primaryKey: string }>();
+  const subscriptions = new Map<
+    string,
+    { owner: string; productId: string; displayName: string; primaryKey: string }
+  >();
   let notAssignable = 0;
   let refuseRolesWith: number | undefined;
   let failSubscriptionsWith: number | undefined;
@@ -317,8 +320,8 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
         const appname = name.trim().toLowerCase().replace(/\s+/g, '-');
         if (!NAME_PATTERN.test(name)) {
           json(400, { error: 'Use letters, digits and spaces only, 8 to 50 characters.' });
-        } else if ([...applications.values()].some(a => a.owner === user && a.appname === appname)) {
-          json(409, { error: `You already have an application called ${name}.` });
+        } else if ([...applications.values()].some(a => a.appname === appname)) {
+          json(409, { error: `An application called ${name} already exists. Choose another name.` });
         } else {
           const secret = `${crypto.randomBytes(2).toString('hex').slice(0, 3)}8Q~${crypto.randomBytes(30).toString('base64url').slice(0, 34)}`;
           const created: StubApplication = {
@@ -431,15 +434,14 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
         });
         return true;
       }
-      const prefix = `amp-user${String(id).padStart(3, '0')}-`;
       const [, name, values] = keyPath;
-      const existing =
-        name && decodeURIComponent(name).startsWith(prefix) ? subscriptions.get(decodeURIComponent(name)) : undefined;
+      const found = name ? subscriptions.get(decodeURIComponent(name)) : undefined;
+      const existing = found?.owner === requestingUserId?.toLowerCase() ? found : undefined;
       if (!name && method === 'POST') {
         const request = JSON.parse(body || '{}') as { clientId: string; shortCode: string };
         const application = applications.get(request.clientId);
         const api = CATALOGUE[request.shortCode];
-        const subscriptionName = application && `${prefix}${application.appname}-${request.shortCode}`;
+        const subscriptionName = application && `amp-consumer-${application.appname}-${request.shortCode}`;
         if (!request.clientId || !request.shortCode) {
           json(400, { error: 'Choose which API to subscribe to. Say which application the subscription is for.' });
         } else if (!application || application.owner !== requestingUserId?.toLowerCase()) {
@@ -453,6 +455,7 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
         } else {
           const primaryKey = crypto.randomBytes(16).toString('hex');
           subscriptions.set(subscriptionName as string, {
+            owner: application.owner,
             productId: api.productId,
             displayName: application.name,
             primaryKey,
