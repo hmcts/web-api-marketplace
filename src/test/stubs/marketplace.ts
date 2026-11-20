@@ -85,17 +85,6 @@ const catalogueDetail = (shortCode: string, api: StubApi) => ({
   role: api.role,
 });
 
-/** Each API's own resource application, which is what /products carries for the token scope. */
-const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
-  shortCode,
-  title: api.title,
-  catalogueName: api.catalogueName,
-  productId: api.productId,
-  gatewayPath: `amp/${shortCode}`,
-  role: api.role,
-  resourceAppId: api.resourceAppId,
-}));
-
 const TRIAGE_ORGANISATION_TYPES = ['hmcts', 'moj', 'other-government', 'external'];
 const TRIAGE_RECIPIENTS = [
   'own-team',
@@ -395,11 +384,6 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       } else {
         return false;
       }
-      return true;
-    }
-
-    if (path === '/products' && method === 'GET') {
-      json(200, PRODUCTS);
       return true;
     }
 
