@@ -19,6 +19,11 @@ export interface EntraClaims {
   oid: string;
   email?: string;
   name?: string;
+  /**
+   * App roles this person holds on this app registration, assigned to them in the directory.
+   * Absent when they hold none, which is every ordinary user.
+   */
+  roles?: string[];
 }
 
 /**
@@ -130,7 +135,21 @@ export async function verifiedClaims(idToken: string, expectedNonce: string | un
     // External ID returns an array in some configurations.
     email: (payload.email as string | undefined) || emails?.[0],
     name: payload.name as string | undefined,
+    roles: rolesIn(payload.roles),
   };
+}
+
+/**
+ * App roles arrive as an array of strings, or not at all. Anything else is treated as nothing
+ * rather than coerced: this claim decides who may use the admin screens, and it has come out of a
+ * token verified above, so the only sensible answer to a surprising shape is no roles.
+ */
+function rolesIn(claim: unknown): string[] | undefined {
+  if (!Array.isArray(claim)) {
+    return undefined;
+  }
+  const roles = claim.filter((role): role is string => typeof role === 'string');
+  return roles.length ? roles : undefined;
 }
 
 /**

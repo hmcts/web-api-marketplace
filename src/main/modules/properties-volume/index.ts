@@ -7,11 +7,11 @@ export class PropertiesVolume {
   enableFor(server: Application): void {
     if (server.locals.ENV !== 'development') {
       propertiesVolume.addTo(config);
-      this.setSecret('secrets.amp.APP_INSIGHTS_CONNECTION_STRING', 'appInsights.app-insights-connection-string');
       // Load whichever vaults the chart mounted
       this.mountedVaults().forEach(vault => {
         this.setSessionSecrets(vault);
         this.setEntraSecrets(vault);
+        this.setAppInsightsSecret(vault);
       });
     }
   }
@@ -26,6 +26,11 @@ export class PropertiesVolume {
     this.setSecret(`secrets.${vault}.ENTRA_CLIENT_ID`, 'entra.clientId');
     this.setSecret(`secrets.${vault}.ENTRA_CLIENT_SECRET`, 'entra.clientSecret');
     this.setSecret(`secrets.${vault}.ENTRA_TENANT_ID`, 'entra.tenantId');
+  }
+
+  // AppInsights reads the shared vault's key, whichever vault the environment actually mounts.
+  private setAppInsightsSecret(vault: string): void {
+    this.setSecret(`secrets.${vault}.APP_INSIGHTS_CONNECTION_STRING`, 'secrets.amp.APP_INSIGHTS_CONNECTION_STRING');
   }
 
   private setSessionSecrets(vault: string): void {

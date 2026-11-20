@@ -6712,12 +6712,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"awilix@npm:13.0.6":
-  version: 13.0.6
-  resolution: "awilix@npm:13.0.6"
+"awilix@npm:13.0.7":
+  version: 13.0.7
+  resolution: "awilix@npm:13.0.7"
   dependencies:
     fast-glob: "npm:^3.3.3"
-  checksum: 10/1f37c986e7bb63ac0ed7a9d951abb5ec83daa1c3bfeebc876432eed8c72ae4aaead56301ee3006ee06a74839f16ccb2dc5e4680dba04855cf1c2eead0eff457e
+  checksum: 10/5a60cd6b3ead9fe56ba2cc970624b71e427bfca6dab9f9bbddf6f75e1c435df4482623adddb80708240d4def4b5a7060712a96a5ae6c52e7bf17baac65c3f967
   languageName: node
   linkType: hard
 
@@ -9000,15 +9000,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"express-rate-limit@npm:8.7.3":
-  version: 8.7.3
-  resolution: "express-rate-limit@npm:8.7.3"
+"express-rate-limit@npm:8.7.4":
+  version: 8.7.4
+  resolution: "express-rate-limit@npm:8.7.4"
   dependencies:
     debug: "npm:^4.4.3"
     ip-address: "npm:^10.2.0"
   peerDependencies:
     express: ">= 4.11"
-  checksum: 10/a92c767dfa5fb86bb68cf789d0c789c429c8fc273d27218e9fff498049cdc7138b7d07fa29ac9185dc8f50fe320dfa51bbe461d9c5b8e9cf823e783b5787c3aa
+  checksum: 10/82b20bddaa5dd1860d44f75ce15209e56a44be7568f3f79fc059b5c35ff888ba79d278642f0f9de78fa09f10505163712e7072ee210363c8d656157728774ab7
   languageName: node
   linkType: hard
 
@@ -9389,13 +9389,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"follow-redirects@npm:1.16.2":
-  version: 1.16.2
-  resolution: "follow-redirects@npm:1.16.2"
+"follow-redirects@npm:1.16.3":
+  version: 1.16.3
+  resolution: "follow-redirects@npm:1.16.3"
   peerDependenciesMeta:
     debug:
       optional: true
-  checksum: 10/3303addfa9aaf145022c2faa76ecba8052fe325bce00f3992ca2b13f3295590d6a64828c128cfcbc9678569f2f98fbd190d6ca5f505857b07eea9867008a38a3
+  checksum: 10/ac3b15f7d18c26be8b38fb314d271b8def49f710388eea76079721792ef1b828fdb6696cacc92962f54bcd2462479fdcf33497502dc20ed0a5a8be1afb092215
   languageName: node
   linkType: hard
 
@@ -9711,14 +9711,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:14.0.4, glob@npm:glob@14.0.4":
-  version: 14.0.4
-  resolution: "glob@npm:14.0.4"
+"glob@npm:14.0.6, glob@npm:glob@14.0.6":
+  version: 14.0.6
+  resolution: "glob@npm:14.0.6"
   dependencies:
     minimatch: "npm:^11.0.5"
     minipass: "npm:^7.1.3"
     path-scurry: "npm:^3.0.0"
-  checksum: 10/d43e532cc85bd2e26bc3a0064a809ed57f2581999fb0bf2b6bafe7d394358fac2693331c313d6eccc9952e0f2bfdd78f53c88ad06a657dc47c6bc99745e470e2
+  checksum: 10/6674454c61d4146ce33c9bfa7980273c16f14893538805ca4c38ca4de7fc1823f01ea4db10da8db4e2d18391fa58c9ad6b72b59b0598ac60b8bce746429e84ea
   languageName: node
   linkType: hard
 
@@ -15945,7 +15945,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:8.64.0"
     applicationinsights: "npm:3.17.1"
     async-mutex: "npm:0.5.0"
-    awilix: "npm:13.0.6"
+    awilix: "npm:13.0.7"
     awilix-express: "npm:11.0.1"
     axios: "npm:1.21.1"
     babel-jest: "npm:30.4.1"
@@ -15964,10 +15964,10 @@ __metadata:
     eslint-plugin-jest: "npm:29.17.0"
     eslint-plugin-playwright: "npm:2.12.2"
     express: "npm:5.3.0"
-    express-rate-limit: "npm:8.7.3"
+    express-rate-limit: "npm:8.7.4"
     express-session: "npm:^1.19.0"
     get-port: "npm:^7.2.0"
-    glob: "npm:14.0.4"
+    glob: "npm:14.0.6"
     globals: "npm:17.14.0"
     govuk-frontend: "npm:5.14.0"
     helmet: "npm:8.3.0"

@@ -19,6 +19,6 @@ export function toSignedInUser(claims: EntraClaims, id: number, userReference: s
     oid: claims.oid,
     email: normalise(claims.email ?? ''),
     name: (claims.name ?? '').trim(),
-    role,
+    roles: claims.roles,
   };
 }
