@@ -67,6 +67,21 @@ describe('Logger', () => {
     expect(delegateLogger.warn).toHaveBeenCalledWith('Application warning');
   });
 
+  test('an_event_should_send_its_properties_to_application_insights_without_losing_the_logger_name', () => {
+    Logger.getLogger('security').event('warn', 'SIGN_IN_FAILED reason=cancelled', {
+      event: 'SIGN_IN_FAILED',
+      reason: 'cancelled',
+      loggerName: 'not-this',
+    });
+
+    expect(delegateLogger.warn).toHaveBeenCalledWith('SIGN_IN_FAILED reason=cancelled');
+    expect(trackTrace).toHaveBeenCalledWith({
+      message: 'SIGN_IN_FAILED reason=cancelled',
+      severity: 'Warning',
+      properties: { event: 'SIGN_IN_FAILED', reason: 'cancelled', loggerName: 'security' },
+    });
+  });
+
   describe('during a request', () => {
     test('adds the correlation ID as metadata and to Application Insights', () => {
       runWithCorrelationId('abc-123', () => Logger.getLogger('app').info('Application created'));

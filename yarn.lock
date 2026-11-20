@@ -15928,6 +15928,7 @@ __metadata:
     "@hmcts/nodejs-logging": "npm:4.0.4"
     "@hmcts/playwright-common": "npm:^1.1.2"
     "@hmcts/properties-volume": "npm:1.4.1"
+    "@opentelemetry/api": "npm:^1.9.0"
     "@playwright/test": "npm:1.61.1"
     "@types/babel__preset-env": "npm:7.10.0"
     "@types/chai": "npm:5.2.3"

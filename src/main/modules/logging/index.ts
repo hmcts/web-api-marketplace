@@ -56,7 +56,12 @@ class TelemetryLogger {
     this.write('error', args);
   }
 
-  private write(level: LogLevel, args: unknown[]): void {
+  /** A log line whose properties also reach App Insights as custom dimensions, so it can be queried by field. */
+  public event(level: LogLevel, message: string, properties: Record<string, string>): void {
+    this.write(level, [message], properties);
+  }
+
+  private write(level: LogLevel, args: unknown[], properties: Record<string, string> = {}): void {
     const correlationId = getCorrelationId();
     this.delegate[level](...(correlationId ? withCorrelationId(args, correlationId) : args));
 
@@ -65,6 +70,7 @@ class TelemetryLogger {
         message: formatLogMessage(args),
         severity: severityByLevel[level],
         properties: {
+          ...properties,
           loggerName: this.name,
           ...(correlationId && { correlationId }),
         },
