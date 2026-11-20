@@ -181,6 +181,24 @@ export async function startStubEntra(): Promise<StubEntra> {
         lastLoginAt: now,
       });
     }
+    if (req.url?.startsWith('/backend/admin/users') && req.method === 'GET') {
+      const caller = String(req.headers.requestinguserid ?? '');
+      if (!admins.has(caller)) {
+        return json(403, { error: 'Admins only.' });
+      }
+      const now = new Date().toISOString();
+      const listed = [...savedUsers.values()]
+        .reverse()
+        .map(user => ({ ...user, createdAt: now, lastLoginAt: now, applicationCount: 0 }));
+      const id = req.url.slice('/backend/admin/users/'.length);
+      if (!id) {
+        return json(200, listed);
+      }
+      const found = listed.find(user => String(user.id) === id);
+      return found
+        ? json(200, { ...found, status: 'ACTIVE', organisation: null, applications: [], productionRequests: [] })
+        : json(404, { error: `No user ${id}.` });
+    }
     if (req.url?.startsWith('/backend/')) {
       const path = req.url.slice('/backend'.length);
       const userId = req.headers.requestingUserId ?? req.headers.requestinguserid;

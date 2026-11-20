@@ -1,0 +1,85 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = (user.name if user else "User") + " - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "admin" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Admin", href: "/admin" },
+  { text: "Users", href: "/admin/users" }
+] %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if couldNotLoad %}
+        <h1 class="govuk-heading-xl">User</h1>
+        {{ govukWarningText({
+          text: "This user could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "user-unavailable" }
+        }) }}
+      {% else %}
+        <span class="govuk-caption-l">User</span>
+        <h1 class="govuk-heading-xl">{{ user.name }}</h1>
+
+        {{ govukSummaryList({
+          rows: [
+            { key: { text: "Name" }, value: { text: user.name } },
+            { key: { text: "Email" }, value: { text: user.email } },
+            { key: { text: "Organisation" }, value: { text: user.organisation } },
+            { key: { text: "Status" }, value: { text: user.status } },
+            { key: { text: "Joined" }, value: { text: user.joined } },
+            { key: { text: "Last signed in" }, value: { text: user.lastSignedIn } }
+          ]
+        }) }}
+
+        <h2 class="govuk-heading-l">Applications</h2>
+        {% if applications.length %}
+          {% set rows = [] %}
+          {% for application in applications %}
+            {% set rows = (rows.push([
+              { text: application.name },
+              { text: application.apis },
+              { text: application.created }
+            ]), rows) %}
+          {% endfor %}
+          {{ govukTable({
+            caption: "Applications",
+            captionClasses: "govuk-visually-hidden",
+            head: [{ text: "Application" }, { text: "APIs" }, { text: "Created" }],
+            rows: rows,
+            attributes: { id: "user-applications" }
+          }) }}
+        {% else %}
+          <p class="govuk-body">This user has not created any applications.</p>
+        {% endif %}
+
+        <h2 class="govuk-heading-l">Production credentials requests</h2>
+        {% if productionRequests.length %}
+          {% set rows = [] %}
+          {% for request in productionRequests %}
+            {% set rows = (rows.push([
+              { text: request.reference },
+              { text: request.applicationName },
+              { text: request.status },
+              { text: request.submitted }
+            ]), rows) %}
+          {% endfor %}
+          {{ govukTable({
+            caption: "Production credentials requests",
+            captionClasses: "govuk-visually-hidden",
+            head: [{ text: "Reference" }, { text: "Application" }, { text: "Status" }, { text: "Submitted" }],
+            rows: rows,
+            attributes: { id: "user-production-requests" }
+          }) }}
+        {% else %}
+          <p class="govuk-body">This user has not asked for production credentials.</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
