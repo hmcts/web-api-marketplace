@@ -4,6 +4,8 @@ import { AddressInfo } from 'node:net';
 
 import { JWTPayload, SignJWT, exportJWK, generateKeyPair } from 'jose';
 
+import { AMP_ADMIN } from '../../main/services/AdminRole';
+
 import { StubMarketplace, stubMarketplace } from './marketplace';
 
 /**
@@ -159,7 +161,7 @@ export async function startStubEntra(): Promise<StubEntra> {
       if (codeChallenge && createHash('sha256').update(verifier).digest('base64url') !== codeChallenge) {
         return json(400, { error: 'invalid_grant', error_description: 'The code_verifier does not match' });
       }
-      const withRoles = admins.has(claims.oid) ? { ...claims, roles: ['amp_admin'] } : claims;
+      const withRoles = admins.has(claims.oid) ? { ...claims, roles: [AMP_ADMIN] } : claims;
       const idToken = issue ? await issue(withRoles, nonce) : await stub.idToken(withRoles, nonce);
       return json(200, { id_token: idToken, expires_in: 3600 });
     }
