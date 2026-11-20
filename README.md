@@ -203,10 +203,9 @@ The consumer onboarding journey, end to end:
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
 | Request production credentials, follow it    | `/account/production-credentials`, `.../:reference`      |
 
-The site lists only the feed's APIs named in `catalogue.listedApis` (`CATALOGUE_LISTED_APIS`,
-a JSON array; empty means every API in the feed), in the catalogue and for applications alike.
-The page of an API outside the list is not found. An application that already has one keeps
-seeing it on its "change APIs" page, so saving does not revoke it.
+The catalogue lists the APIs the backend marks as listed (`/catalogue`); the page of any other
+API is not found. An application that already has an API no longer listed keeps seeing it on its
+"change APIs" page, so saving does not revoke it.
 
 A user can hold at most `applications.maxPerUser` applications (`APPLICATIONS_MAX_PER_USER`,
 default 5; set it in an environment's cnp-flux-config values to change it there, e.g. prod). At
@@ -219,7 +218,7 @@ On an application's page, each API in **APIs added** has a collapsible panel rig
 row, "How to get an access token and call {API title}". It shows that API's Publisher ID
 (scope), then a curl command to get a token. The token endpoint uses the tenant the backend
 returns (`tenantId`), and the scope is the Publisher ID followed by `/.default`. The Publisher
-ID is the API's own Entra app (`resourceAppId` on the backend's `/products`). If the
+ID is the API's own Entra app (`resourceAppId` on the backend's `/catalogue/{shortCode}`). If the
 marketplace cannot be reached, it shows `{publisher_id}`.
 
 The panel does not list the API's endpoints. Under "Run try it now in developer portal" it links
