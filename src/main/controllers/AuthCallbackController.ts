@@ -8,6 +8,7 @@ import { isMarketplaceAdmin } from '../services/AdminRole';
 import { EntraClaims, exchangeCodeForIdToken, verifiedClaims } from '../services/Entra';
 import { EntraUser, saveEntraUser } from '../services/EntraUsers';
 import { toSignedInUser } from '../services/Profiles';
+import { recordSignInFailure } from '../services/SecurityEvents';
 
 import { SignInProblem, short, signInProblem } from './SignInController';
 
@@ -42,6 +43,7 @@ export default class AuthCallbackController {
     if (error) {
       // Most often the user chose to go back rather than sign in.
       logger.info(`Entra refused: ${error} - ${errorDescription || '(no description)'}`);
+      recordSignInFailure('cancelled');
       this.problem(req, res, 400, 'cancelled');
       return;
     }
@@ -51,6 +53,7 @@ export default class AuthCallbackController {
       logger.error(
         `State mismatch  query=${state ? short(state) : 'MISSING'}  session=${started ? short(started.state) : 'MISSING'}`
       );
+      recordSignInFailure('state_mismatch');
       this.problem(req, res, 400, 'expired');
       return;
     }
@@ -60,6 +63,7 @@ export default class AuthCallbackController {
       idToken = await exchangeCodeForIdToken(code, started.codeVerifier);
     } catch (err) {
       logger.error(`Token exchange failed: ${(err as Error).message}`);
+      recordSignInFailure('token_exchange_failed');
       this.problem(req, res, 502, 'unavailable');
       return;
     }
@@ -69,6 +73,7 @@ export default class AuthCallbackController {
       claims = await verifiedClaims(idToken, started.nonce);
     } catch (err) {
       logger.error(`ID token rejected: ${(err as Error).message}`);
+      recordSignInFailure('token_rejected');
       this.problem(req, res, 401, 'rejected');
       return;
     }
@@ -78,6 +83,7 @@ export default class AuthCallbackController {
       user = await saveEntraUser(claims);
     } catch (err) {
       logger.error(`Could not save the user  oid=${claims.oid}: ${(err as Error).message}`);
+      recordSignInFailure('user_not_saved');
       this.problem(req, res, 503, 'unavailable');
       return;
     }
@@ -108,6 +114,7 @@ export function startSession(
   req.session.regenerate(error => {
     if (error) {
       logger.error(`Could not start a session: ${error.message}`);
+      recordSignInFailure('session_not_started');
       signInProblem(req, res, 500, 'unavailable');
       return;
     }

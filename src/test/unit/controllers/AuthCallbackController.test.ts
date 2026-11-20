@@ -1,9 +1,12 @@
 import AuthCallbackController from '../../../main/controllers/AuthCallbackController';
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
 import { newPkce } from '../../../main/services/Entra';
+import { recordSignInFailure } from '../../../main/services/SecurityEvents';
 import { ADA, StubEntra, codeFor, startStubEntra } from '../../stubs/entra';
 import { anonymous } from '../helpers/consumer';
 import { mockResponse } from '../mocks/mockResponse';
+
+jest.mock('../../../main/services/SecurityEvents', () => ({ recordSignInFailure: jest.fn() }));
 
 const PKCE = newPkce();
 const STARTED = { state: 'the-state', nonce: 'the-nonce', codeVerifier: PKCE.verifier };
@@ -28,13 +31,17 @@ const callback = async (req = backFromEntra({ code: CODE, state: STARTED.state }
 };
 
 describe('AuthCallbackController', () => {
-  beforeEach(() => useDataStore(new MemoryStore()));
+  beforeEach(() => {
+    useDataStore(new MemoryStore());
+    jest.mocked(recordSignInFailure).mockClear();
+  });
   afterEach(() => entra.reset());
 
   test('a_first_sign_in_should_start_a_session_as_the_entra_user_and_go_to_the_account', async () => {
     const { req, res } = await callback();
 
     expect(res.redirected).toBe('/account');
+    expect(recordSignInFailure).not.toHaveBeenCalled();
     expect(req.session.user).toEqual({
       id: entra.savedUsers.get(ADA.oid)?.id,
       userReference: `user${String(entra.savedUsers.get(ADA.oid)?.id).padStart(3, '0')}`,
@@ -94,6 +101,7 @@ describe('AuthCallbackController', () => {
     expect(res.statusCode).toBe(503);
     expect(res.data?.problem).toBe('unavailable');
     expect(req.session.user).toBeUndefined();
+    expect(recordSignInFailure).toHaveBeenCalledWith('user_not_saved');
   });
 
   test('a_code_brought_back_to_a_session_with_another_verifier_should_not_sign_anyone_in', async () => {
@@ -121,6 +129,7 @@ describe('AuthCallbackController', () => {
     expect(res.view).toBe('sign-in');
     expect(res.data?.problem).toBe('cancelled');
     expect(req.session.user).toBeUndefined();
+    expect(recordSignInFailure).toHaveBeenCalledWith('cancelled');
   });
 
   test.each([
@@ -134,6 +143,7 @@ describe('AuthCallbackController', () => {
     expect(res.statusCode).toBe(400);
     expect(res.data?.problem).toBe('expired');
     expect(req.session.user).toBeUndefined();
+    expect(recordSignInFailure).toHaveBeenCalledWith('state_mismatch');
   });
 
   test('entra_failing_to_swap_the_code_should_be_reported_as_an_outage', async () => {
@@ -144,6 +154,7 @@ describe('AuthCallbackController', () => {
     expect(res.statusCode).toBe(502);
     expect(res.data?.problem).toBe('unavailable');
     expect(req.session.user).toBeUndefined();
+    expect(recordSignInFailure).toHaveBeenCalledWith('token_exchange_failed');
   });
 
   test('a_token_that_cannot_be_trusted_should_not_sign_anyone_in', async () => {
@@ -154,5 +165,6 @@ describe('AuthCallbackController', () => {
     expect(res.statusCode).toBe(401);
     expect(res.data?.problem).toBe('rejected');
     expect(req.session.user).toBeUndefined();
+    expect(recordSignInFailure).toHaveBeenCalledWith('token_rejected');
   });
 });
