@@ -120,7 +120,7 @@
     ].concat(
       [{ href: "/account/applications", text: nav.applications, active: section == "applications" }] if user else []
     ).concat(
-      [{ href: "/admin", text: nav.admin, active: section == "admin" }] if user and user.role == "ADMIN" else []
+      [{ href: "/admin", text: nav.admin, active: section == "admin" }] if user and user.roles and "amp_admin" in user.roles else []
     ).concat([
       {
         href: "/account" if user else "/sign-in",

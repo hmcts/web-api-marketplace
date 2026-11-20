@@ -42,7 +42,6 @@ describe('AuthCallbackController', () => {
       oid: ADA.oid,
       email: 'ada@example.com',
       name: 'Ada Lovelace',
-      role: 'USER',
     });
   });
 
@@ -50,7 +49,15 @@ describe('AuthCallbackController', () => {
     entra.admins.add(ADA.oid);
     const { req } = await callback();
 
-    expect(req.session.user?.role).toBe('ADMIN');
+    expect(req.session.user?.roles).toEqual(['amp_admin']);
+    expect(req.session.adminToken).toBeDefined();
+  });
+
+  test('an_ordinary_user_should_hold_no_admin_token', async () => {
+    const { req } = await callback();
+
+    expect(req.session.user?.roles).toBeUndefined();
+    expect(req.session.adminToken).toBeUndefined();
   });
 
   test('a_later_sign_in_should_go_to_the_account', async () => {
