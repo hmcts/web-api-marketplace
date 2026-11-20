@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
+import { isMarketplaceAdmin } from '../services/AdminRole';
 import { EntraClaims, exchangeCodeForIdToken, verifiedClaims } from '../services/Entra';
 import { EntraUser, saveEntraUser } from '../services/EntraUsers';
 import { toSignedInUser } from '../services/Profiles';
@@ -82,7 +83,7 @@ export default class AuthCallbackController {
     }
 
     logger.info(`Signed in  oid=${claims.oid}  userId=${user.id}`);
-    startSession(req, res, claims, user);
+    startSession(req, res, claims, user, idToken);
   }
 
   private problem(req: AppRequest, res: Response, status: number, problem: SignInProblem): void {
@@ -90,8 +91,20 @@ export default class AuthCallbackController {
   }
 }
 
-/** Shared with the Entra bypass, so both regenerate the session id the same way. */
-export function startSession(req: AppRequest, res: Response, claims: EntraClaims, user: EntraUser): void {
+/**
+ * Shared with the Entra bypass, so both regenerate the session id the same way.
+ *
+ * `idToken` is the token this sign in verified. It is kept only when the person holds the
+ * admin role, because the admin API verifies the token itself instead of trusting a header,
+ * and a session with no admin pages to call has no use for one. The bypass passes none.
+ */
+export function startSession(
+  req: AppRequest,
+  res: Response,
+  claims: EntraClaims,
+  user: EntraUser,
+  idToken?: string
+): void {
   req.session.regenerate(error => {
     if (error) {
       logger.error(`Could not start a session: ${error.message}`);
@@ -99,7 +112,10 @@ export function startSession(req: AppRequest, res: Response, claims: EntraClaims
       return;
     }
 
-    req.session.user = toSignedInUser(claims, user.id, user.userReference, user.role);
+    req.session.user = toSignedInUser(claims, user.id, user.userReference);
+    if (idToken && isMarketplaceAdmin(req.session.user)) {
+      req.session.adminToken = idToken;
+    }
     // Every sign in lands on the account page, whichever page asked for it.
     req.session.save(() => res.redirect('/account'));
   });

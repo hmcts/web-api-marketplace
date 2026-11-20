@@ -16,6 +16,12 @@ declare module 'express-session' {
     entraSignIn?: { state: string; nonce: string; codeVerifier: string };
     /** The last email "sent", for the page that follows to preview — see services/Notify. */
     outbox?: Email;
+    /**
+     * The ID token this sign in returned, kept only for someone holding the admin role and
+     * only on the server: the admin API verifies it itself rather than trusting a header.
+     * Nobody else's session has a use for one, so nobody else's holds one.
+     */
+    adminToken?: string;
     /** A one-off banner for the next page rendered, then cleared. */
     notice?: { success: boolean; title: string; text: string };
     /** Answers collected so far by the multi-page journeys, until they are submitted. */
