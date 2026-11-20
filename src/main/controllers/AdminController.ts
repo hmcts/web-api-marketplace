@@ -34,13 +34,18 @@ export default class AdminController {
     }
 
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    let users: AdminUser[] = [];
+    let users: AdminUser[] | undefined = [];
     let couldNotLoad = false;
     try {
       users = await listAdminUsers(ownerOf(req.session.user as SignedInUser));
     } catch (error) {
       logger.error(`Could not list users for an admin: ${(error as Error).message}`);
       couldNotLoad = true;
+    }
+
+    if (!users) {
+      next();
+      return;
     }
 
     const rows = users

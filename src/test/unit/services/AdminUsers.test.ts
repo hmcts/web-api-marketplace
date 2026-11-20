@@ -47,6 +47,13 @@ describe('AdminUsers', () => {
     await expect(getAdminUser(ADMIN, 999)).resolves.toBeUndefined();
   });
 
+  test('a_refusal_should_be_undefined_for_both_calls', async () => {
+    mockedRequest.mockRejectedValue(rejection(403));
+
+    await expect(listAdminUsers(ADMIN)).resolves.toBeUndefined();
+    await expect(getAdminUser(ADMIN, 2)).resolves.toBeUndefined();
+  });
+
   test('any_other_failure_should_be_thrown', async () => {
     mockedRequest.mockRejectedValue(rejection(500));
 

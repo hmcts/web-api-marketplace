@@ -243,6 +243,15 @@ describe('AdminController users page', () => {
     expect(data.count).toBe(0);
   });
 
+  test('a_backend_refusal_should_be_handed_on_to_not_found', async () => {
+    (listAdminUsers as jest.Mock).mockResolvedValue(undefined);
+
+    const { res, next } = await usersPage();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+  });
+
   test('a_non_admin_should_be_handed_on_to_not_found', async () => {
     const { res, next } = await usersPage({}, { user });
 

@@ -48,6 +48,8 @@
             ]), rows) %}
           {% endfor %}
           {{ govukTable({
+            caption: "Applications",
+            captionClasses: "govuk-visually-hidden",
             head: [{ text: "Application" }, { text: "APIs" }, { text: "Created" }],
             rows: rows,
             attributes: { id: "user-applications" }
@@ -68,6 +70,8 @@
             ]), rows) %}
           {% endfor %}
           {{ govukTable({
+            caption: "Production credentials requests",
+            captionClasses: "govuk-visually-hidden",
             head: [{ text: "Reference" }, { text: "Application" }, { text: "Status" }, { text: "Submitted" }],
             rows: rows,
             attributes: { id: "user-production-requests" }

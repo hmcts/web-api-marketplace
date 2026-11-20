@@ -49,6 +49,8 @@
             ]), rows) %}
           {% endfor %}
           {{ govukTable({
+            caption: "Registered users",
+            captionClasses: "govuk-visually-hidden",
             head: [
               { text: "Name" },
               { text: "Email" },

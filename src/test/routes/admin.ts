@@ -113,6 +113,15 @@ describe('The registered users page', () => {
     await agent.get('/admin/users/999').expect(res => expect(res.status).to.equal(404));
   });
 
+  test('an_admin_whose_role_was_removed_after_sign_in_should_be_told_both_pages_are_not_found', async () => {
+    const agent = await signedInAs(ADMIN);
+    const adminId = stubEntra().savedUsers.get(ADMIN.oid)?.id;
+    stubEntra().admins.delete(ADMIN.oid);
+
+    await agent.get('/admin/users').expect(res => expect(res.status).to.equal(404));
+    await agent.get(`/admin/users/${adminId}`).expect(res => expect(res.status).to.equal(404));
+  });
+
   test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_users_page', async () => {
     await request(app)
       .get('/admin/users')

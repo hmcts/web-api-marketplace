@@ -59,6 +59,10 @@ describe('Admin user page', () => {
     expect(html).toContain('PCR-ABCD2345');
     expect(html).not.toMatch(/<a [^>]*>Case Viewer<\/a>/);
     expect(html).not.toContain('This user has not created any applications.');
+    expect(html).toContain('<caption class="govuk-table__caption govuk-visually-hidden">Applications</caption>');
+    expect(html).toContain(
+      '<caption class="govuk-table__caption govuk-visually-hidden">Production credentials requests</caption>'
+    );
   });
 
   test('the_breadcrumbs_should_lead_back_to_the_users', () => {

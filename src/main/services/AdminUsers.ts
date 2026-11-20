@@ -36,18 +36,28 @@ export interface AdminUserDetail {
 
 const PATH = '/admin/users';
 
-export async function listAdminUsers(owner: Owner): Promise<AdminUser[]> {
-  return callBackend<AdminUser[]>(owner, { method: 'GET', url: PATH });
-}
-
-/** Undefined when the backend answers 404: the caller is an admin, so the user id is unknown. */
-export async function getAdminUser(owner: Owner, id: number): Promise<AdminUserDetail | undefined> {
+export async function listAdminUsers(owner: Owner): Promise<AdminUser[] | undefined> {
   try {
-    return await callBackend<AdminUserDetail>(owner, { method: 'GET', url: `${PATH}/${id}` });
+    return await callBackend<AdminUser[]>(owner, { method: 'GET', url: PATH });
   } catch (error) {
-    if (error instanceof BackendError && error.status === 404) {
+    if (hasStatus(error, 403)) {
       return undefined;
     }
     throw error;
   }
+}
+
+export async function getAdminUser(owner: Owner, id: number): Promise<AdminUserDetail | undefined> {
+  try {
+    return await callBackend<AdminUserDetail>(owner, { method: 'GET', url: `${PATH}/${id}` });
+  } catch (error) {
+    if (hasStatus(error, 403, 404)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function hasStatus(error: unknown, ...statuses: number[]): boolean {
+  return error instanceof BackendError && error.status !== undefined && statuses.includes(error.status);
 }
