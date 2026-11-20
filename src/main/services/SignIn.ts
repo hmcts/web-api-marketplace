@@ -8,8 +8,13 @@ export interface SignedInUser {
   oid?: string;
   email: string;
   name: string;
+  role?: string;
   /** Set while the backend has no requests: submissions go to the data store. */
   local?: boolean;
   /** App roles read out of the verified ID token. Nothing here is held in this service. */
   roles?: string[];
+}
+
+export function isAdmin(user?: SignedInUser): boolean {
+  return user?.role === 'ADMIN';
 }
