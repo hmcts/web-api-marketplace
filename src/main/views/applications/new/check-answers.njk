@@ -33,6 +33,7 @@
     </p>
 
     <form method="post" action="/account/applications/new/check-answers" novalidate id="create-application-form">
+      {{ csrfField() }}
       {{ govukButton({
         text: "Create application",
         preventDoubleClick: true,

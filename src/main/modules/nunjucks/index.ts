@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as express from 'express';
 import * as nunjucks from 'nunjucks';
 
+import { csrfFieldHtml } from '../csrf';
 import { Logger } from '../logging';
 
 export interface DynatraceOptions {
@@ -13,6 +14,13 @@ export interface DynatraceOptions {
 }
 
 const logger = Logger.getLogger('nunjucks');
+
+/** `{{ csrfField() }}` in every POST form: the session's token from the page's own data (see modules/csrf). */
+export function addCsrfField(env: nunjucks.Environment): void {
+  env.addGlobal('csrfField', function (this: { ctx: { csrfToken?: string } }) {
+    return new nunjucks.runtime.SafeString(csrfFieldHtml(this.ctx.csrfToken ?? ''));
+  });
+}
 
 export class Nunjucks {
   private readonly jstag: string;
@@ -45,6 +53,7 @@ export class Nunjucks {
       express: app,
     });
     env.addGlobal('govukRebrand', true);
+    addCsrfField(env);
     // "2 October 2026" from a stored ISO timestamp, the GOV.UK style for dates.
     env.addFilter('date', (value: string) => {
       const date = new Date(value);

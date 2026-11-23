@@ -23,6 +23,7 @@
     }) }}
 
     <form method="post" action="/account/applications/{{ application.id }}/delete" novalidate>
+      {{ csrfField() }}
       <input type="hidden" name="confirm" value="yes">
       <div class="govuk-button-group">
         {{ govukButton({ text: "Yes, delete application", classes: "govuk-button--warning", attributes: { id: "confirm-delete" } }) }}
