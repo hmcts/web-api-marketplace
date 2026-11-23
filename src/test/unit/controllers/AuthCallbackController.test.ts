@@ -1,5 +1,6 @@
 import AuthCallbackController from '../../../main/controllers/AuthCallbackController';
 import { MemoryStore, useDataStore } from '../../../main/modules/store';
+import { AMP_ADMIN } from '../../../main/services/AdminRole';
 import { newPkce } from '../../../main/services/Entra';
 import { recordSignInFailure } from '../../../main/services/SecurityEvents';
 import { ADA, StubEntra, codeFor, startStubEntra } from '../../stubs/entra';
@@ -56,7 +57,7 @@ describe('AuthCallbackController', () => {
     entra.admins.add(ADA.oid);
     const { req } = await callback();
 
-    expect(req.session.user?.roles).toEqual(['amp_admin']);
+    expect(req.session.user?.roles).toEqual([AMP_ADMIN]);
     expect(req.session.adminToken).toBeDefined();
   });
 
