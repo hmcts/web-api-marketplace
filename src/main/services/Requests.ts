@@ -2,7 +2,7 @@ import axios from 'axios';
 
 import { Logger } from '../modules/logging';
 
-import { submissionEndpoint } from './submissions';
+import { authHeaders, submissionEndpoint } from './submissions';
 
 const logger = Logger.getLogger('requests');
 
@@ -23,14 +23,14 @@ export interface RequestsResult {
   requests: RequestSummary[];
 }
 
-export async function getRequestsFor(userId: number): Promise<RequestsResult> {
+export async function getRequestsFor(userId: number, token?: string): Promise<RequestsResult> {
   const url = submissionEndpoint(REQUESTS_PATH);
 
   try {
     const response = await axios.get<RequestSummary[]>(url, {
       timeout: 10000,
       validateStatus: () => true,
-      headers: { requestingUserId: String(userId) },
+      headers: authHeaders(String(userId), token),
     });
 
     if (response.status !== 200) {

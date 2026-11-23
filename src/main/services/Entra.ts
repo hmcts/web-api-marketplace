@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { JWTVerifyGetKey, createRemoteJWKSet, jwtVerify } from 'jose';
+import { JWTPayload, JWTVerifyGetKey, createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose';
 
 import { entraConfig } from '../modules/entra/config';
 
@@ -73,7 +73,13 @@ export function authorizeUrl(state: string, nonce: string, codeChallenge: string
 }
 
 /** The back channel: this service to Microsoft, with the client secret and PKCE verifier. */
-export async function exchangeCodeForIdToken(code: string, codeVerifier: string): Promise<string> {
+export interface ExchangedTokens {
+  idToken: string;
+  /** Present when the tenant honoured offline_access. Nothing here spends it yet. */
+  refreshToken?: string;
+}
+
+export async function exchangeCodeForTokens(code: string, codeVerifier: string): Promise<ExchangedTokens> {
   const response = await fetch(entraConfig.tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -87,13 +93,18 @@ export async function exchangeCodeForIdToken(code: string, codeVerifier: string)
       scope: entraConfig.scope,
     }),
   });
-  const body = (await response.json()) as { id_token?: string; error?: string; error_description?: string };
+  const body = (await response.json()) as {
+    id_token?: string;
+    refresh_token?: string;
+    error?: string;
+    error_description?: string;
+  };
 
   if (!response.ok || !body.id_token) {
     // Entra's error code and description, never the request: that carried the secret and verifier.
     throw new Error(`${response.status} ${body.error ?? 'no id_token'}: ${body.error_description ?? ''}`.trim());
   }
-  return body.id_token;
+  return { idToken: body.id_token, refreshToken: body.refresh_token };
 }
 
 /**
@@ -114,6 +125,24 @@ export async function exchangeCodeForIdToken(code: string, codeVerifier: string)
  * nothing once the keys are cached, and it means this is safe wherever the token came from.
  */
 export async function verifiedClaims(idToken: string, expectedNonce: string | undefined): Promise<EntraClaims> {
+  const payload = await verifiedPayload(idToken);
+
+  if (!expectedNonce || payload.nonce !== expectedNonce) {
+    throw new Error('nonce does not match this sign in');
+  }
+  return claimsFrom(payload);
+}
+
+/**
+ * A refreshed token, which no sign in is waiting for and so carries no nonce of ours. The nonce
+ * guards against a token from another sign in being replayed into this browser; a refresh is a
+ * server-to-server call made with our own client secret, so there is nothing to replay.
+ */
+export async function refreshedClaims(idToken: string): Promise<EntraClaims> {
+  return claimsFrom(await verifiedPayload(idToken));
+}
+
+async function verifiedPayload(idToken: string): Promise<JWTPayload> {
   const { issuer, keys } = await tenant();
   const { payload } = await jwtVerify(idToken, keys, {
     algorithms: ['RS256'],
@@ -121,10 +150,10 @@ export async function verifiedClaims(idToken: string, expectedNonce: string | un
     audience: entraConfig.clientId,
     clockTolerance: 60,
   });
+  return payload;
+}
 
-  if (!expectedNonce || payload.nonce !== expectedNonce) {
-    throw new Error('nonce does not match this sign in');
-  }
+function claimsFrom(payload: JWTPayload): EntraClaims {
   if (typeof payload.oid !== 'string' || !payload.oid) {
     throw new Error('no oid claim');
   }
@@ -137,6 +166,44 @@ export async function verifiedClaims(idToken: string, expectedNonce: string | un
     name: payload.name as string | undefined,
     roles: rolesIn(payload.roles),
   };
+}
+
+/** When a token already verified above stops being good for anything, in epoch seconds. */
+export function expiryOf(idToken: string): number | undefined {
+  try {
+    return decodeJwt(idToken).exp;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Trades the refresh token for a fresh ID token. Entra rotates refresh tokens, so the one that
+ * comes back replaces the one spent - drop it and the next refresh has nothing to spend.
+ */
+export async function refreshTokens(refreshToken: string): Promise<ExchangedTokens> {
+  const response = await fetch(entraConfig.tokenEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: entraConfig.clientId,
+      client_secret: entraConfig.clientSecret ?? '',
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+      scope: entraConfig.scope,
+    }),
+  });
+  const body = (await response.json()) as {
+    id_token?: string;
+    refresh_token?: string;
+    error?: string;
+    error_description?: string;
+  };
+
+  if (!response.ok || !body.id_token) {
+    throw new Error(`${response.status} ${body.error ?? 'no id_token'}: ${body.error_description ?? ''}`.trim());
+  }
+  return { idToken: body.id_token, refreshToken: body.refresh_token };
 }
 
 /**

@@ -56,7 +56,7 @@ export async function postSubmission(
     const response = await axios.post(url, body, {
       timeout: 10000,
       validateStatus: () => true,
-      headers: { requestingUserId: String(requesterId) },
+      headers: authHeaders(String(requesterId)),
     });
 
     if (response.status === 201) {
@@ -72,4 +72,12 @@ export async function postSubmission(
     logger.error(`${label} to ${url} failed: ${reason}`);
     return { ok: false };
   }
+}
+
+/**
+ * Both identities the API may use: the header it has always read, and the token it can verify
+ * for itself. Sessions started before the token was kept carry only the header.
+ */
+export function authHeaders(requestingUserId: string, token?: string): Record<string, string> {
+  return token ? { requestingUserId, Authorization: `Bearer ${token}` } : { requestingUserId };
 }

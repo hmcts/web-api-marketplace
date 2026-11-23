@@ -7,6 +7,7 @@ import { dataStore } from '../modules/store';
 import { CatalogueApi } from './ApiCatalogue';
 import { SignedInUser } from './SignIn';
 import { FieldError } from './answers';
+import { authHeaders } from './submissions';
 
 /** Which subscriptions belong to an application, and whether its role is granted, are not held by the backend yet. */
 
@@ -46,11 +47,17 @@ export interface ApplicationDraft {
 export interface Owner {
   oid: string;
   userReference: string;
+  /** The ID token this session signed in with, for the API to verify the caller itself. */
+  token?: string;
 }
 
 /** Sessions started before the backend returned userReference carry only the id it is formatted from. */
-export function ownerOf(user: SignedInUser): Owner {
-  return { oid: user.oid ?? '', userReference: user.userReference ?? `user${String(user.id).padStart(3, '0')}` };
+export function ownerOf(user: SignedInUser, token?: string): Owner {
+  return {
+    oid: user.oid ?? '',
+    userReference: user.userReference ?? `user${String(user.id).padStart(3, '0')}`,
+    token,
+  };
 }
 
 export class BackendError extends Error {
@@ -337,7 +344,7 @@ export async function callBackend<T = unknown>(owner: Owner, request: AxiosReque
       ...request,
       baseURL,
       timeout,
-      headers: { requestingUserId: owner.oid },
+      headers: authHeaders(owner.oid, owner.token),
     });
     return response.data;
   } catch (error) {

@@ -67,7 +67,9 @@ export const entraConfig = {
   get postLogoutRedirectUri(): string {
     return process.env.ENTRA_POST_LOGOUT_REDIRECT_URI || config.get<string>('entra.postLogoutRedirectUri');
   },
-  scope: 'openid profile email',
+  // offline_access asks for a refresh token alongside the ID token, so a session can outlive
+  // the hour the ID token is good for.
+  scope: 'openid profile email offline_access',
 };
 
 /**

@@ -58,14 +58,14 @@ describe('AuthCallbackController', () => {
     const { req } = await callback();
 
     expect(req.session.user?.roles).toEqual([AMP_ADMIN]);
-    expect(req.session.adminToken).toBeDefined();
+    expect(req.session.idToken).toBeDefined();
   });
 
-  test('an_ordinary_user_should_hold_no_admin_token', async () => {
+  test('an_ordinary_user_should_hold_a_token_and_no_roles', async () => {
     const { req } = await callback();
 
     expect(req.session.user?.roles).toBeUndefined();
-    expect(req.session.adminToken).toBeUndefined();
+    expect(req.session.idToken).toBeDefined();
   });
 
   test('a_later_sign_in_should_go_to_the_account', async () => {

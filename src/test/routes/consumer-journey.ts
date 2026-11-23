@@ -522,4 +522,14 @@ describe('Consumer onboarding journey', () => {
         .expect(res => expect(res.text).to.contain('The go-live date must be in the future'));
     });
   });
+
+  describe('what a backend call carries', () => {
+    test('a_signed_in_consumer_should_send_the_id_token_as_well_as_the_user_id', async () => {
+      const agent = await signedInConsumer('ada@example.com');
+
+      await createdApplication(agent, 'Token carrier');
+
+      expect(stubEntra().lastBackendAuthorization).to.match(/^Bearer \S+\.\S+\.\S+$/);
+    });
+  });
 });

@@ -54,11 +54,11 @@ describe('requireMarketplaceAdmin', () => {
 
 describe('adminRequestHeaders', () => {
   it('forwards the session token as a bearer token, and nothing else', () => {
-    const req = { session: { adminToken: 'the-id-token' } } as AppRequest;
+    const req = { session: { idToken: 'the-id-token' } } as AppRequest;
     expect(adminRequestHeaders(req)).toEqual({ Authorization: 'Bearer the-id-token' });
   });
 
   it('refuses to build headers for a session with no token', () => {
-    expect(() => adminRequestHeaders(request(user([AMP_ADMIN])))).toThrow(/no admin token/);
+    expect(() => adminRequestHeaders(request(user([AMP_ADMIN])))).toThrow(/no ID token/);
   });
 });
