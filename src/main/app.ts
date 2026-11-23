@@ -13,6 +13,7 @@ import { AppRequest } from './interfaces/AppRequest';
 import { AppInsights } from './modules/appinsights';
 import { Container } from './modules/awilix';
 import { Correlation } from './modules/correlation';
+import { Csrf } from './modules/csrf';
 import { Helmet } from './modules/helmet';
 import { I18next } from './modules/i18next';
 import { Logger } from './modules/logging';
@@ -77,6 +78,8 @@ app.use(((req: AppRequest, res: express.Response, next: express.NextFunction) =>
   res.locals.user = req.session?.user;
   next();
 }) as express.RequestHandler);
+
+new Csrf(config.get<boolean>('useCSRFProtection')).enableFor(app);
 
 new I18next().enableFor(app);
 

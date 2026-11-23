@@ -47,5 +47,18 @@ export async function signInThroughEntra(agent: Agent, claims: StubClaims): Prom
   const nonce = sentTo.searchParams.get('nonce') as string;
   const challenge = sentTo.searchParams.get('code_challenge') as string;
 
-  return agent.get(`/auth/callback?code=${codeFor(claims, nonce, challenge)}&state=${state}`);
+  const signedIn = await agent.get(`/auth/callback?code=${codeFor(claims, nonce, challenge)}&state=${state}`);
+  if (signedIn.headers.location === '/account') {
+    await useCsrfToken(agent);
+  }
+  return signedIn;
+}
+
+/** Sends this session's CSRF token with every later request, as each form on a page would. */
+export async function useCsrfToken(agent: Agent): Promise<void> {
+  const account = await agent.get('/account');
+  const token = account.text.match(/name="_csrf" value="([^"]+)"/)?.[1];
+  if (token) {
+    agent.set('X-CSRF-Token', token);
+  }
 }

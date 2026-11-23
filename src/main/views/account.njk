@@ -26,6 +26,7 @@
 
         {# POST, so no link or prefetcher can sign the user out. #}
         <form method="post" action="/sign-out">
+          {{ csrfField() }}
           {{ govukButton({ text: signOutButton, classes: "govuk-button--secondary", attributes: { id: "sign-out" } }) }}
         </form>
 
