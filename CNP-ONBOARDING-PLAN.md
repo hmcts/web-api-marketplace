@@ -11,32 +11,32 @@ Status: ✅ done · ⏳ waiting on someone else · ○ to do · ⚠️ check fir
 ## Names reference
 
 > **Moved from `apim` to `amp` (AMP-1244).** The names reference below is current. The phases
-> record the original onboarding under `apim`, so the names in them are the `apim` ones. The
-> `cnp-flux-config` overlays are still under `apps/apim/` until the Flux move lands, and the
-> public DNS and Front Door entries in Phase 5 are for the `apim-` hosts. The vault's resource
-> group is `amp-marketplace-{env}`.
+> record the original onboarding under `apim`, so the names in them are the `apim` ones,
+> including the public DNS and Front Door entries in Phase 5, which now use the
+> `amp-marketplace-web` hosts. The `cnp-flux-config` overlays have moved to `apps/amp/`. The
+> vault's resource group is `amp-marketplace-{env}`.
 
 All deployment names derive from `{product}-{component}` = `amp-marketplace-web`.
 The repo name is deliberately different — it follows the team's `{type}-{name}` convention,
 matching `service-api-marketplace`.
 
-| What                            | Name                                                                      |
-| ------------------------------- | ------------------------------------------------------------------------- |
-| **GitHub repo**                 | `web-api-marketplace`                                                     |
-| **GitHub topic**                | `jenkins-cft-j-z`                                                         |
-| **Jenkins job path**            | `HMCTS_j_to_z/web-api-marketplace`                                        |
-| **Jenkins product / component** | `amp` / `marketplace-web`                                                 |
-| **Kubernetes namespace**        | `amp` (shared with `service-api-marketplace`)                             |
-| **Helm chart / release**        | `amp-marketplace-web`                                                     |
-| **Docker image**                | `hmctsprod.azurecr.io/amp/marketplace-web`                                |
-| **Flux config path**            | `apps/amp/amp-marketplace-web/`                                           |
-| **Azure Key Vault**             | `amp-{env}` (`amp-sbox` in sandbox), created by `service-api-marketplace` |
-| **Managed identity**            | `amp-{env}-mi`, created by try-slc                                        |
-| **Ingress (AAT)**               | `amp-marketplace-web.aat.platform.hmcts.net`                              |
-| **Preview**                     | `amp-marketplace-web-pr-{N}.preview.platform.hmcts.net`                   |
-| **AAD group / Backstage owner** | `DTS API Marketplace` / `group:dts-api-marketplace`                       |
-| **Slack**                       | `#api-marketplace-tech`                                                   |
-| **Sonar key**                   | `web-api-marketplace`                                                     |
+| What                            | Name                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **GitHub repo**                 | `web-api-marketplace`                                                                             |
+| **GitHub topic**                | `jenkins-cft-j-z`                                                                                 |
+| **Jenkins job path**            | `HMCTS_j_to_z/web-api-marketplace`                                                                |
+| **Jenkins product / component** | `amp` / `marketplace-web`                                                                         |
+| **Kubernetes namespace**        | `amp` (shared with `service-api-marketplace`)                                                     |
+| **Helm chart / release**        | `amp-marketplace-web`                                                                             |
+| **Docker image**                | `hmctsprod.azurecr.io/amp/marketplace-web`                                                        |
+| **Flux config path**            | `apps/amp/amp-marketplace-web/`                                                                   |
+| **Azure Key Vault**             | `amp-marketplace-{env}` (`amp-marketplace-sbox` in sandbox), created by `service-api-marketplace` |
+| **Managed identity**            | `amp-{env}-mi`, managed by `amp-try-it-now` (non-prod) and `service-api-marketplace` (prod)       |
+| **Ingress (AAT)**               | `amp-marketplace-web.aat.platform.hmcts.net`                                                      |
+| **Preview**                     | `amp-marketplace-web-pr-{N}.preview.platform.hmcts.net`                                           |
+| **AAD group / Backstage owner** | `DTS API Marketplace` / `group:dts-api-marketplace`                                               |
+| **Slack**                       | `#api-marketplace-tech`                                                                           |
+| **Sonar key**                   | `web-api-marketplace`                                                                             |
 
 > **Why `marketplace-web` and not `frontend`:** `apim-frontend` reads as "a frontend for
 > Azure APIM", which is a real and unhelpful collision. Keeping `marketplace` in the
