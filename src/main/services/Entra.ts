@@ -75,36 +75,17 @@ export function authorizeUrl(state: string, nonce: string, codeChallenge: string
 /** The back channel: this service to Microsoft, with the client secret and PKCE verifier. */
 export interface ExchangedTokens {
   idToken: string;
-  /** Present when the tenant honoured offline_access. Nothing here spends it yet. */
+  /** Present when the tenant honoured offline_access. Rotated on every refresh. */
   refreshToken?: string;
 }
 
 export async function exchangeCodeForTokens(code: string, codeVerifier: string): Promise<ExchangedTokens> {
-  const response = await fetch(entraConfig.tokenEndpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: entraConfig.clientId,
-      client_secret: entraConfig.clientSecret ?? '',
-      code,
-      code_verifier: codeVerifier,
-      redirect_uri: entraConfig.redirectUri,
-      grant_type: 'authorization_code',
-      scope: entraConfig.scope,
-    }),
+  return tokensFrom({
+    code,
+    code_verifier: codeVerifier,
+    redirect_uri: entraConfig.redirectUri,
+    grant_type: 'authorization_code',
   });
-  const body = (await response.json()) as {
-    id_token?: string;
-    refresh_token?: string;
-    error?: string;
-    error_description?: string;
-  };
-
-  if (!response.ok || !body.id_token) {
-    // Entra's error code and description, never the request: that carried the secret and verifier.
-    throw new Error(`${response.status} ${body.error ?? 'no id_token'}: ${body.error_description ?? ''}`.trim());
-  }
-  return { idToken: body.id_token, refreshToken: body.refresh_token };
 }
 
 /**
@@ -182,15 +163,22 @@ export function expiryOf(idToken: string): number | undefined {
  * comes back replaces the one spent - drop it and the next refresh has nothing to spend.
  */
 export async function refreshTokens(refreshToken: string): Promise<ExchangedTokens> {
+  return tokensFrom({ refresh_token: refreshToken, grant_type: 'refresh_token' });
+}
+
+/**
+ * The tenant's token endpoint, for whichever grant is being spent. The client credentials and
+ * the scope are the same either way, so only the grant and what it carries differ.
+ */
+async function tokensFrom(grant: Record<string, string>): Promise<ExchangedTokens> {
   const response = await fetch(entraConfig.tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: entraConfig.clientId,
       client_secret: entraConfig.clientSecret ?? '',
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
       scope: entraConfig.scope,
+      ...grant,
     }),
   });
   const body = (await response.json()) as {
@@ -201,6 +189,8 @@ export async function refreshTokens(refreshToken: string): Promise<ExchangedToke
   };
 
   if (!response.ok || !body.id_token) {
+    // Entra's error code and description, never the request: that carried the secret and the
+    // credential being spent.
     throw new Error(`${response.status} ${body.error ?? 'no id_token'}: ${body.error_description ?? ''}`.trim());
   }
   return { idToken: body.id_token, refreshToken: body.refresh_token };
