@@ -21,6 +21,7 @@ import { Nunjucks } from './modules/nunjucks';
 import { PropertiesVolume } from './modules/properties-volume';
 import { Session } from './modules/session';
 import { configureDataStore } from './modules/store';
+import { refreshExpiringToken } from './services/TokenRefresh';
 
 const env = process.env.NODE_ENV || 'development';
 const developmentMode = env === 'development';
@@ -56,6 +57,10 @@ app.get('/favicon.ico', limiter, (req, res) => {
   res.sendFile(path.join(__dirname, '/public/assets/rebrand/images/favicon.ico'));
 });
 
+// Ahead of the session, so a page's css, scripts and images are not each parsed for a body,
+// handed a session and checked for an expiring token. A file on disk needs none of it.
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -64,6 +69,12 @@ app.set('trust proxy', 1);
 app.use(cookieParser());
 new Session(config.get('session')).enableFor(app);
 configureDataStore(config.get('session.redis'));
+
+// Before anything reads the session: a token close to expiring is renewed here, so a page and
+// the API calls it makes are working from one that will still be good when they land.
+app.use(((req: AppRequest, _res: express.Response, next: express.NextFunction) => {
+  refreshExpiringToken(req).then(() => next(), next);
+}) as express.RequestHandler);
 
 // Every page's navigation needs to know whether anyone is signed in, so the user goes on
 // res.locals rather than being passed by each controller that happens to render.
@@ -87,8 +98,6 @@ new Correlation().enableFor(app);
 
 app.use(scopePerRequest(app.locals.container));
 app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
-
-app.use(express.static(path.join(__dirname, 'public')));
 
 setupDev(app, developmentMode);
 // returning "not found" for requests with paths not resolved by the router

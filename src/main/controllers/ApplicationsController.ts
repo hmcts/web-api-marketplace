@@ -380,7 +380,7 @@ export default class ApplicationsController {
   // ---------------------------------------------------------------------- helpers
 
   private owner(req: AppRequest): Owner {
-    return ownerOf(req.session.user as SignedInUser);
+    return ownerOf(req.session.user as SignedInUser, req.session.idToken);
   }
 
   private async find(req: AppRequest, res: Response, next: NextFunction): Promise<Application | undefined> {
