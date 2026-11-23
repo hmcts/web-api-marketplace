@@ -2,7 +2,8 @@ import axios from 'axios';
 
 import { Logger } from '../modules/logging';
 
-import { authHeaders, submissionEndpoint } from './submissions';
+import { authHeaders } from './BackendAuth';
+import { submissionEndpoint } from './submissions';
 
 const logger = Logger.getLogger('requests');
 

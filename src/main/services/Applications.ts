@@ -5,9 +5,9 @@ import { Logger } from '../modules/logging';
 import { dataStore } from '../modules/store';
 
 import { CatalogueApi } from './ApiCatalogue';
+import { authHeaders } from './BackendAuth';
 import { SignedInUser } from './SignIn';
 import { FieldError } from './answers';
-import { authHeaders } from './submissions';
 
 /** Which subscriptions belong to an application, and whether its role is granted, are not held by the backend yet. */
 

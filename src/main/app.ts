@@ -57,6 +57,10 @@ app.get('/favicon.ico', limiter, (req, res) => {
   res.sendFile(path.join(__dirname, '/public/assets/rebrand/images/favicon.ico'));
 });
 
+// Ahead of the session, so a page's css, scripts and images are not each parsed for a body,
+// handed a session and checked for an expiring token. A file on disk needs none of it.
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -94,8 +98,6 @@ new Correlation().enableFor(app);
 
 app.use(scopePerRequest(app.locals.container));
 app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
-
-app.use(express.static(path.join(__dirname, 'public')));
 
 setupDev(app, developmentMode);
 // returning "not found" for requests with paths not resolved by the router
