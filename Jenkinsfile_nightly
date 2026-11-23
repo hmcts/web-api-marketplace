@@ -9,7 +9,7 @@ parameters([
 ])
 ])
 
-@Library("Infrastructure@2.13.4")
+@Library("Infrastructure@2.13.6")
 
 def type = "nodejs"
 def product = "amp"
@@ -35,7 +35,7 @@ withNightlyPipeline(type, product, component) {
   enableSecurityScan(
     urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$' " +
       "-config globalexcludeurl.url_list.url\\(1\\).enabled=true " +
-      "-config globalexcludeurl.url_list.url\\(2\\).regex='^https?:\\/\\/.*\\/api-catalogue\\/(?!(api-cp-crime-schedulingandlisting-courtschedule|api-cp-refdata-courthearing-courthouses)\$).+\$' " +
+      "-config globalexcludeurl.url_list.url\\(2\\).regex='^https?:\\/\\/.*\\/api-catalogue\\/(?!(slc|rcc)\$).+\$' " +
       "-config globalexcludeurl.url_list.url\\(2\\).enabled=true"
   )
 }

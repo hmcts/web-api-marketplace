@@ -1,5 +1,7 @@
 import { Logger as HmctsLogger } from '@hmcts/nodejs-logging';
 
+import { getCorrelationId } from '../correlation/context';
+
 type LogLevel = 'silly' | 'debug' | 'verbose' | 'info' | 'warn' | 'error';
 
 type LoggerDelegate = Record<LogLevel, (...args: unknown[]) => unknown>;
@@ -54,15 +56,23 @@ class TelemetryLogger {
     this.write('error', args);
   }
 
-  private write(level: LogLevel, args: unknown[]): void {
-    this.delegate[level](...args);
+  /** A log line whose properties also reach App Insights as custom dimensions, so it can be queried by field. */
+  public event(level: LogLevel, message: string, properties: Record<string, string>): void {
+    this.write(level, [message], properties);
+  }
+
+  private write(level: LogLevel, args: unknown[], properties: Record<string, string> = {}): void {
+    const correlationId = getCorrelationId();
+    this.delegate[level](...(correlationId ? withCorrelationId(args, correlationId) : args));
 
     try {
       appInsightsClient?.trackTrace({
         message: formatLogMessage(args),
         severity: severityByLevel[level],
         properties: {
+          ...properties,
           loggerName: this.name,
+          ...(correlationId && { correlationId }),
         },
       });
     } catch {
@@ -88,6 +98,18 @@ export class Logger {
     loggerCache.set(name, logger);
     return logger;
   }
+}
+
+function withCorrelationId(args: unknown[], correlationId: string): unknown[] {
+  const last = args[args.length - 1];
+  if (isPlainObject(last)) {
+    return [...args.slice(0, -1), { ...last, correlationId }];
+  }
+  return [...args, { correlationId }];
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
 }
 
 function formatLogMessage(args: unknown[]): string {

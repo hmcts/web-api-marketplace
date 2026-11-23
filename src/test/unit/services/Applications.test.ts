@@ -15,7 +15,6 @@ import {
   maxApplicationsPerUser,
   ownerOf,
   setApis,
-  shortCodeFor,
   subscriptionKey,
   validateApis,
   validateName,
@@ -79,8 +78,8 @@ describe('Applications', () => {
 
     test('at_least_one_api_from_the_catalogue_should_be_chosen', () => {
       expect(validateApis([], CATALOGUE)).toHaveLength(1);
-      expect(validateApis(['api-unknown'], CATALOGUE)).toHaveLength(1);
-      expect(validateApis(['api-one'], CATALOGUE)).toEqual([]);
+      expect(validateApis(['unknown'], CATALOGUE)).toHaveLength(1);
+      expect(validateApis(['one'], CATALOGUE)).toEqual([]);
     });
 
     test('the_owner_should_carry_the_users_reference_or_one_formatted_from_their_id', () => {
@@ -92,9 +91,7 @@ describe('Applications', () => {
       expect(ownerOf({ id: 1234, oid: 'o', email: '', name: '' }).userReference).toBe('user1234');
     });
 
-    test('an_api_the_marketplace_holds_should_map_to_its_short_code_and_the_secret_should_be_masked', () => {
-      expect(shortCodeFor('api-one')).toBe('one');
-      expect(shortCodeFor('api-not-in-the-marketplace')).toBeUndefined();
+    test('a_secret_should_be_masked_down_to_its_hint', () => {
       expect(maskSecret('Uc6')).toBe('Uc6****');
     });
   });
@@ -142,11 +139,7 @@ describe('Applications', () => {
           }),
       });
 
-      const created = await createApplication(
-        OWNER,
-        { name: ' Case Viewer ', apis: ['api-one', 'api-two'] },
-        CATALOGUE
-      );
+      const created = await createApplication(OWNER, { name: ' Case Viewer ', apis: ['one', 'two'] }, CATALOGUE);
 
       expect(call(0)).toMatchObject({
         method: 'POST',
@@ -181,7 +174,7 @@ describe('Applications', () => {
           }),
       });
 
-      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE);
+      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE);
 
       expect(created.application.apis[0]).toMatchObject({
         apiTitle: 'Court Schedule',
@@ -190,13 +183,16 @@ describe('Applications', () => {
       });
     });
 
-    test('an_api_the_marketplace_does_not_offer_should_be_reported_without_being_called', async () => {
-      answer({ 'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }) });
+    test('an_api_the_marketplace_does_not_hold_should_be_reported_rather_than_fail_the_whole_creation', async () => {
+      answer({
+        'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
+        'POST /apim/subscription-keys': () => refused(404, 'No API with short code three.'),
+      });
 
-      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-three'] }, CATALOGUE);
+      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['three'] }, CATALOGUE);
 
-      expect(request).toHaveBeenCalledTimes(1);
-      expect(created.failedApis).toEqual(['api-three']);
+      expect(created.application.apis).toEqual([]);
+      expect(created.failedApis).toEqual(['three']);
     });
 
     test('an_api_that_cannot_be_subscribed_should_be_reported_without_losing_the_secret', async () => {
@@ -205,7 +201,7 @@ describe('Applications', () => {
         'POST /apim/subscription-keys': () => refused(502, 'APIM could not be reached.'),
       });
 
-      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE);
+      const created = await createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE);
 
       expect(created.clientSecret).toBe('Uc6Q~secret');
       expect(created.failedApis).toEqual(['API one']);
@@ -215,9 +211,7 @@ describe('Applications', () => {
     test('a_refusal_to_register_should_be_thrown_with_the_backends_status_and_message', async () => {
       answer({ 'POST /applications': () => refused(409, 'You already have an application called Case Viewer.') });
 
-      await expect(
-        createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE)
-      ).rejects.toMatchObject({
+      await expect(createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE)).rejects.toMatchObject({
         status: 409,
         message: 'You already have an application called Case Viewer.',
       });
@@ -226,7 +220,7 @@ describe('Applications', () => {
     test('an_unreachable_backend_should_throw_with_no_status', async () => {
       request.mockRejectedValue(new Error('connect ECONNREFUSED'));
 
-      const error = (await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE).catch(
+      const error = (await createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE).catch(
         e => e
       )) as BackendError;
 
@@ -243,12 +237,12 @@ describe('Applications', () => {
         'POST /apim/subscription-keys': () => ok({ primaryKey: 'k' }),
         'GET /applications': () => ok([BACKEND_APP]),
       });
-      await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE);
+      await createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE);
 
       const [listed] = await listApplications(OWNER);
 
       expect(listed).toMatchObject({ id: BACKEND_APP.clientId, name: 'Case Viewer', secretHint: 'Uc6' });
-      expect(listed.apis.map(api => api.apiName)).toEqual(['api-one']);
+      expect(listed.apis.map(api => api.shortCode)).toEqual(['one']);
     });
 
     test('the_tenant_should_come_from_the_backend_and_be_empty_while_it_sends_none', async () => {
@@ -302,7 +296,7 @@ describe('Applications', () => {
       createdAt: '',
       apis: [
         {
-          apiName: 'api-one',
+          shortCode: 'one',
           apiTitle: 'API one',
           publisherId: 'one',
           subscriptionName: 'amp-user001-case-viewer-one',
@@ -359,7 +353,7 @@ describe('Applications', () => {
         'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 's' }),
         'POST /apim/subscription-keys': () => ok({ primaryKey: 'k' }),
       });
-      return (await createApplication(OWNER, { name: 'Case Viewer', apis: ['api-one'] }, CATALOGUE)).application;
+      return (await createApplication(OWNER, { name: 'Case Viewer', apis: ['one'] }, CATALOGUE)).application;
     }
 
     test('changing_apis_should_revoke_the_removed_and_subscribe_the_added', async () => {
@@ -370,9 +364,9 @@ describe('Applications', () => {
         'POST /apim/subscription-keys': () => ok({ primaryKey: 'k2' }),
       });
 
-      const changes = await setApis(OWNER, application, ['api-two'], CATALOGUE);
+      const changes = await setApis(OWNER, application, ['two'], CATALOGUE);
 
-      expect(changes).toEqual({ added: ['api-two'], removed: ['api-one'], failed: [] });
+      expect(changes).toEqual({ added: ['two'], removed: ['one'], failed: [] });
       expect(call(0)).toMatchObject({
         method: 'DELETE',
         url: `/apim/subscription-keys/${application.apis[0].subscriptionName}`,
@@ -384,7 +378,7 @@ describe('Applications', () => {
       request.mockReset();
       answer({ 'POST /apim/subscription-keys': () => refused(502) });
 
-      const changes = await setApis(OWNER, application, ['api-one', 'api-two'], CATALOGUE);
+      const changes = await setApis(OWNER, application, ['one', 'two'], CATALOGUE);
 
       expect(changes).toEqual({ added: [], removed: [], failed: ['API two'] });
     });

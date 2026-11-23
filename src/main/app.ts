@@ -12,6 +12,7 @@ import { setupDev } from './development';
 import { AppRequest } from './interfaces/AppRequest';
 import { AppInsights } from './modules/appinsights';
 import { Container } from './modules/awilix';
+import { Correlation } from './modules/correlation';
 import { Helmet } from './modules/helmet';
 import { I18next } from './modules/i18next';
 import { Logger } from './modules/logging';
@@ -78,6 +79,8 @@ app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate, no-store');
   next();
 });
+
+new Correlation().enableFor(app);
 
 app.use(scopePerRequest(app.locals.container));
 app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));

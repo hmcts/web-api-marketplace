@@ -23,6 +23,9 @@ const DETAIL = {
   goLiveDate: '2027-03-27',
   callVolume: 'low',
   dataRequest: 'Hearing outcomes for listed cases.',
+  organisationType: 'external',
+  dataRecipients: ['own-team'],
+  dataCombined: 'no',
   proposedOutputs: 'A weekly outcomes report.',
 };
 
@@ -32,6 +35,9 @@ const SUBMISSION = {
   goLiveDate: '2027-03-27',
   callVolume: 'low',
   dataRequest: 'Hearing outcomes for listed cases.',
+  organisationType: 'external',
+  dataRecipients: ['own-team'],
+  dataCombined: 'no',
   proposedOutputs: 'A weekly outcomes report.',
 };
 

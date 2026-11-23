@@ -15,7 +15,7 @@ import {
   submitProductionRequest,
 } from '../services/ProductionRequests';
 import { SignedInUser } from '../services/SignIn';
-import { FieldError, SummaryRow, toAnswerText } from '../services/answers';
+import { FieldError, SummaryRow, toAnswerList, toAnswerText } from '../services/answers';
 
 const logger = Logger.getLogger('production-credentials');
 
@@ -24,6 +24,37 @@ const CALL_VOLUMES = [
   { value: 'low', text: 'Low', hint: { text: 'Under 1,000 calls per day' } },
   { value: 'medium', text: 'Medium', hint: { text: '1,000 to 100,000 calls per day' } },
   { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
+];
+
+/** "Organisation", which helps the Data Access Team triage a request. */
+const ORGANISATION_TYPES = [
+  { value: 'hmcts', text: 'HMCTS' },
+  { value: 'moj', text: 'Ministry of Justice' },
+  { value: 'other-government', text: 'Other government department/public body' },
+  { value: 'external', text: 'Other external organisation' },
+];
+
+/**
+ * "Who will have access to, or receive, the data?". Any number of options can be chosen. Choosing
+ * only the first means nobody else receives the data, so nothing needs explaining; choosing any
+ * other option, with or without the first, asks for an explanation.
+ */
+const OWN_TEAM_ONLY = 'own-team';
+const DATA_RECIPIENTS = [
+  { value: OWN_TEAM_ONLY, text: 'Me/my immediate team only' },
+  { value: 'other-hmcts', text: 'Other HMCTS teams' },
+  { value: 'wider-moj', text: 'Wider MOJ' },
+  { value: 'other-government', text: 'Another government department/public body' },
+  { value: 'supplier', text: 'Supplier/contract/delivery partner' },
+  { value: 'external', text: 'Other external organisation' },
+  { value: 'public', text: 'The data will be published or used in a public-facing service' },
+];
+
+/** "Will you combine or link the API data with other data?". Yes or Unsure asks what it is combined with. */
+const DATA_COMBINED = [
+  { value: 'no', text: 'No' },
+  { value: 'yes', text: 'Yes' },
+  { value: 'unsure', text: 'Unsure' },
 ];
 
 /** The two questions about the data being requested and what comes out of using it. */
@@ -175,13 +206,17 @@ export default class ProductionCredentialsController {
     const text = (name: string) => toAnswerText(body, name);
     return {
       application: text('application'),
+      'organisation-type': text('organisation-type'),
       organisation: text('organisation'),
       'go-live-day': text('go-live-day'),
       'go-live-month': text('go-live-month'),
       'go-live-year': text('go-live-year'),
       'call-volume': text('call-volume'),
       'data-request': text('data-request'),
-      'proposed-outputs': text('proposed-outputs'),
+      'data-recipients': toAnswerList(body['data-recipients']),
+      'data-recipients-explanation': text('data-recipients-explanation'),
+      'data-combined': text('data-combined'),
+      'data-combined-description': text('data-combined-description'),
     };
   }
 
@@ -198,8 +233,14 @@ export default class ProductionCredentialsController {
         text: `${chosen.name} already has a production access request`,
       });
     }
+    if (!ORGANISATION_TYPES.some(type => type.value === text('organisation-type'))) {
+      errors.push({ name: 'organisation-type', text: 'Select your organisation' });
+    }
     if (!text('organisation')) {
-      errors.push({ name: 'organisation', text: 'Enter your organisation or team name' });
+      errors.push({
+        name: 'organisation',
+        text: 'Enter your team name (and organisation if external to HMCTS)',
+      });
     }
     const goLive = this.goLiveDate(answers);
     if (!goLive) {
@@ -213,7 +254,7 @@ export default class ProductionCredentialsController {
     if (!text('data-request')) {
       errors.push({
         name: 'data-request',
-        text: 'Describe the data request, how you plan to use it and why you need it',
+        text: 'Explain why you need access and how you will use the data',
       });
     } else if (text('data-request').length > DATA_ANSWER_MAX_LENGTH) {
       errors.push({
@@ -221,16 +262,58 @@ export default class ProductionCredentialsController {
         text: `Your description must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
       });
     }
-    if (!text('proposed-outputs')) {
-      errors.push({ name: 'proposed-outputs', text: 'Describe the proposed outputs from this data use' });
-    } else if (text('proposed-outputs').length > DATA_ANSWER_MAX_LENGTH) {
-      errors.push({
-        name: 'proposed-outputs',
-        text: `Your description must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
-      });
-    }
-
+    errors.push(...this.validateRecipients(answers), ...this.validateCombined(answers));
     return errors;
+  }
+
+  private validateRecipients(answers: Answers): FieldError[] {
+    const chosen = Array.isArray(answers['data-recipients']) ? answers['data-recipients'] : [];
+    const explanation =
+      typeof answers['data-recipients-explanation'] === 'string' ? answers['data-recipients-explanation'] : '';
+
+    if (!chosen.length || !chosen.every(value => DATA_RECIPIENTS.some(option => option.value === value))) {
+      return [{ name: 'data-recipients', text: 'Select who will have access to, or receive, the data' }];
+    }
+    const others = chosen.filter(value => value !== OWN_TEAM_ONLY);
+    if (others.length && !explanation) {
+      return [{ name: 'data-recipients-explanation', text: 'Briefly explain who will receive the data and why' }];
+    }
+    if (explanation.length > DATA_ANSWER_MAX_LENGTH) {
+      return [
+        {
+          name: 'data-recipients-explanation',
+          text: `Your explanation must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
+        },
+      ];
+    }
+    return [];
+  }
+
+  private validateCombined(answers: Answers): FieldError[] {
+    const chosen = typeof answers['data-combined'] === 'string' ? answers['data-combined'] : '';
+    const description =
+      typeof answers['data-combined-description'] === 'string' ? answers['data-combined-description'] : '';
+
+    if (!DATA_COMBINED.some(option => option.value === chosen)) {
+      return [{ name: 'data-combined', text: 'Select whether you will combine or link the API data with other data' }];
+    }
+    if (chosen !== 'no' && !description) {
+      return [
+        {
+          name: 'data-combined-description',
+          text: 'Briefly describe the other data and what the combined data will be used for',
+        },
+      ];
+    }
+    if (description.length > DATA_ANSWER_MAX_LENGTH) {
+      return [
+        {
+          name: 'data-combined-description',
+          text: `Your description must be ${DATA_ANSWER_MAX_LENGTH} characters or fewer`,
+        },
+      ];
+    }
+    return [];
   }
 
   private goLiveDate(answers: Answers): Date | undefined {
@@ -275,7 +358,8 @@ export default class ProductionCredentialsController {
         value: application?.name ?? '',
       },
       { key: 'APIs', value: application?.apis.map(api => api.apiTitle).join(', ') || 'None' },
-      { key: 'Organisation or team name', value: String(answers.organisation ?? '') },
+      { key: 'Organisation', value: label(ORGANISATION_TYPES, answers['organisation-type']) },
+      { key: 'Team name (and organisation if external to HMCTS?)', value: String(answers.organisation ?? '') },
       {
         key: 'Go-live date',
         value: goLive
@@ -289,7 +373,27 @@ export default class ProductionCredentialsController {
       },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, answers['call-volume']) },
       { key: 'Data request', value: String(answers['data-request'] ?? '') },
-      { key: 'Proposed outputs', value: String(answers['proposed-outputs'] ?? '') },
+      {
+        key: 'Who will have access to, or receive, the data?',
+        value: (Array.isArray(answers['data-recipients']) ? answers['data-recipients'] : [])
+          .map(value => label(DATA_RECIPIENTS, value))
+          .join(', '),
+      },
+      ...(answers['data-recipients-explanation']
+        ? [{ key: 'Who will receive the data and why', value: String(answers['data-recipients-explanation']) }]
+        : []),
+      {
+        key: 'Will you combine or link the API data with other data?',
+        value: label(DATA_COMBINED, answers['data-combined']),
+      },
+      ...(answers['data-combined'] !== 'no' && answers['data-combined-description']
+        ? [
+            {
+              key: 'Other data and what the combined data will be used for',
+              value: String(answers['data-combined-description']),
+            },
+          ]
+        : []),
     ];
   }
 
@@ -297,13 +401,21 @@ export default class ProductionCredentialsController {
     const text = (name: string) => (typeof answers[name] === 'string' ? (answers[name] as string) : '');
     const goLive = this.goLiveDate(answers) as Date;
 
+    // The two explanations are left out when empty rather than sent blank, so a request the
+    // backend holds carries an answer only where one was asked for.
     return {
       clientId: text('application'),
       organisation: text('organisation'),
       goLiveDate: goLive.toISOString().slice(0, 10),
       callVolume: text('call-volume'),
       dataRequest: text('data-request'),
-      proposedOutputs: text('proposed-outputs'),
+      organisationType: text('organisation-type'),
+      dataRecipients: Array.isArray(answers['data-recipients']) ? answers['data-recipients'] : [],
+      dataCombined: text('data-combined'),
+      ...(text('data-recipients-explanation')
+        ? { dataRecipientsExplanation: text('data-recipients-explanation') }
+        : {}),
+      ...(text('data-combined-description') ? { dataCombinedDescription: text('data-combined-description') } : {}),
     };
   }
 
@@ -311,13 +423,45 @@ export default class ProductionCredentialsController {
     const label = (options: { value: string; text: string }[], value: string) =>
       options.find(option => option.value === value)?.text ?? value;
 
+    // Every triage answer is optional here: requests made before the questions were added
+    // carry none of them, and proposedOutputs is the question they carry instead.
     return [
       { key: 'Application', value: request.applicationName },
-      { key: 'Organisation or team name', value: request.organisation },
+      ...(request.organisationType
+        ? [{ key: 'Organisation', value: label(ORGANISATION_TYPES, request.organisationType) }]
+        : []),
+      { key: 'Team name (and organisation if external to HMCTS?)', value: request.organisation },
       { key: 'Go-live date', value: this.formatDate(request.goLiveDate) },
       { key: 'Expected call volume', value: label(CALL_VOLUMES, request.callVolume) },
       { key: 'Data request', value: request.dataRequest },
-      { key: 'Proposed outputs', value: request.proposedOutputs },
+      ...(request.dataRecipients?.length
+        ? [
+            {
+              key: 'Who will have access to, or receive, the data?',
+              value: request.dataRecipients.map(value => label(DATA_RECIPIENTS, value)).join(', '),
+            },
+          ]
+        : []),
+      ...(request.dataRecipientsExplanation
+        ? [{ key: 'Who will receive the data and why', value: request.dataRecipientsExplanation }]
+        : []),
+      ...(request.dataCombined
+        ? [
+            {
+              key: 'Will you combine or link the API data with other data?',
+              value: label(DATA_COMBINED, request.dataCombined),
+            },
+          ]
+        : []),
+      ...(request.dataCombinedDescription
+        ? [
+            {
+              key: 'Other data and what the combined data will be used for',
+              value: request.dataCombinedDescription,
+            },
+          ]
+        : []),
+      ...(request.proposedOutputs ? [{ key: 'Proposed outputs', value: request.proposedOutputs }] : []),
     ];
   }
 
@@ -358,6 +502,19 @@ export default class ProductionCredentialsController {
         },
       })),
       callVolumes: CALL_VOLUMES,
+      organisationTypeItems: ORGANISATION_TYPES.map(type => ({
+        ...type,
+        checked: type.value === answers['organisation-type'],
+      })),
+      dataRecipientItems: DATA_RECIPIENTS.map(option => ({
+        ...option,
+        checked: Array.isArray(answers['data-recipients']) && answers['data-recipients'].includes(option.value),
+        attributes: option.value === OWN_TEAM_ONLY ? { 'data-explanation-not-needed': 'true' } : undefined,
+      })),
+      dataCombinedItems: DATA_COMBINED.map(option => ({
+        ...option,
+        checked: option.value === answers['data-combined'],
+      })),
       dataAnswerMaxLength: DATA_ANSWER_MAX_LENGTH,
     };
   }

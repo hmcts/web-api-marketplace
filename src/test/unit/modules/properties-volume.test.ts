@@ -49,6 +49,14 @@ describe('PropertiesVolume', () => {
     expect(get(store, 'session.secret')).toBe('a-shared-secret');
   });
 
+  test('the_app_insights_connection_string_mounted_from_the_sandbox_vault_should_reach_app_insights', () => {
+    store.secrets = { 'amp-marketplace-sbox': { APP_INSIGHTS_CONNECTION_STRING: 'InstrumentationKey=abc' } };
+
+    enable('sandbox');
+
+    expect(get(store, 'secrets.amp.APP_INSIGHTS_CONNECTION_STRING')).toBe('InstrumentationKey=abc');
+  });
+
   test('secrets_mounted_from_the_shared_vault_should_reach_the_session_config', () => {
     store.secrets = mounted('amp');
 

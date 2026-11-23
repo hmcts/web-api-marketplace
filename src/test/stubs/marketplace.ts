@@ -7,17 +7,35 @@ const ANSWER_MAX_LENGTH = 2000;
 /** Every application is registered in the one tenant the backend is configured with. */
 export const STUB_TENANT_ID = 'd44f885c-4fac-47bf-afde-d7d861ec4d7b';
 
+interface StubApi {
+  title: string;
+  catalogueName: string;
+  productId: string;
+  role: string;
+  resourceAppId: string;
+  summary: string;
+  description: string;
+  team: string;
+  domain: string;
+  platform: string;
+}
+
+export const stubPortalUrl = (shortCode: string): string =>
+  `https://amp-portal.example.net/api-details#api=stub-${shortCode}`;
+
 /** marketplace_api, which is what a short code resolves to. */
-const CATALOGUE: Record<
-  string,
-  { title: string; catalogueName: string; productId: string; role: string; resourceAppId: string }
-> = {
+const CATALOGUE: Record<string, StubApi> = {
   hearing: {
     title: 'CP Crime Hearing API',
     catalogueName: 'api-cp-crime-hearing',
     productId: 'cp-crime-hearing',
     role: 'app.read',
     resourceAppId: '11111111-1111-1111-1111-111111111111',
+    summary: 'Hearing lifecycle data.',
+    description: 'Hearing lifecycle data.\n\nEvery stage of a hearing, from listing to outcome.',
+    team: 'api-marketplace',
+    domain: 'Hearings',
+    platform: 'Common Platform',
   },
   defendant: {
     title: 'Defendant Details',
@@ -25,6 +43,11 @@ const CATALOGUE: Record<
     productId: 'cp-crime-defendant-details',
     role: 'app.read',
     resourceAppId: '22222222-2222-2222-2222-222222222222',
+    summary: 'Defendant details for a case.',
+    description: 'Defendant details for a case.',
+    team: 'api-marketplace',
+    domain: 'Case administration',
+    platform: 'Common Platform',
   },
   slc: {
     title: 'Scheduling and Listing Court Schedule',
@@ -32,19 +55,46 @@ const CATALOGUE: Record<
     productId: 'try-it-now-cp-crime-schedulingandlisting',
     role: 'app.read',
     resourceAppId: '33333333-3333-3333-3333-333333333333',
+    summary: 'The court hearing schedule for a case.',
+    description: 'The court hearing schedule for a case.',
+    team: 'api-marketplace',
+    domain: 'Scheduling and listing',
+    platform: 'Common Platform',
   },
 };
 
-/** Each API's own resource application, which is what /products carries for the token scope. */
-const PRODUCTS = Object.entries(CATALOGUE).map(([shortCode, api]) => ({
+const catalogueEntry = (shortCode: string, api: StubApi) => ({
   shortCode,
   title: api.title,
+  summary: api.summary,
+  team: api.team,
+  domain: api.domain,
+  platform: api.platform,
+  subscribable: true,
+});
+
+const catalogueDetail = (shortCode: string, api: StubApi) => ({
+  ...catalogueEntry(shortCode, api),
   catalogueName: api.catalogueName,
-  productId: api.productId,
+  description: api.description,
+  docsUrl: `https://hmcts.github.io/${api.catalogueName}/`,
+  repoUrl: `https://github.com/hmcts/${api.catalogueName}`,
   gatewayPath: `amp/${shortCode}`,
-  role: api.role,
+  portalUrl: stubPortalUrl(shortCode),
   resourceAppId: api.resourceAppId,
-}));
+  role: api.role,
+});
+
+const TRIAGE_ORGANISATION_TYPES = ['hmcts', 'moj', 'other-government', 'external'];
+const TRIAGE_RECIPIENTS = [
+  'own-team',
+  'other-hmcts',
+  'wider-moj',
+  'other-government',
+  'supplier',
+  'external',
+  'public',
+];
 
 interface StubProductionRequest {
   owner: string;
@@ -57,7 +107,12 @@ interface StubProductionRequest {
   goLiveDate: string;
   callVolume: string;
   dataRequest: string;
-  proposedOutputs: string;
+  organisationType?: string;
+  dataRecipients?: string[];
+  dataRecipientsExplanation?: string;
+  dataCombined?: string;
+  dataCombinedDescription?: string;
+  proposedOutputs?: string;
 }
 
 interface StubApplication {
@@ -142,6 +197,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
     goLiveDate: request.goLiveDate,
     callVolume: request.callVolume,
     dataRequest: request.dataRequest,
+    organisationType: request.organisationType,
+    dataRecipients: request.dataRecipients,
+    dataRecipientsExplanation: request.dataRecipientsExplanation,
+    dataCombined: request.dataCombined,
+    dataCombinedDescription: request.dataCombinedDescription,
     proposedOutputs: request.proposedOutputs,
   });
 
@@ -158,7 +218,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
   function submitProductionRequest(user: string, body: string, json: Json): void {
     const request = JSON.parse(body || '{}') as Record<string, unknown>;
     const text = (name: string) => String(request[name] ?? '').trim();
+    const list = (name: string) => (Array.isArray(request[name]) ? (request[name] as string[]) : []);
     const application = applications.get(text('clientId'));
+    const recipients = list('dataRecipients');
+    const leavesTheTeam = recipients.some(recipient => recipient !== 'own-team');
+    const combines = ['yes', 'unsure'].includes(text('dataCombined'));
 
     const requested = [...productionRequests.values()].find(held => held.clientId === text('clientId'));
 
@@ -174,8 +238,20 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       json(400, { error: 'Call volume must be low, medium or high.' });
     } else if (!text('dataRequest') || text('dataRequest').length > ANSWER_MAX_LENGTH) {
       json(400, { error: 'Describe the data request, how you plan to use it and why you need it.' });
-    } else if (!text('proposedOutputs') || text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
-      json(400, { error: 'Describe the proposed outputs from this data use.' });
+    } else if (text('proposedOutputs').length > ANSWER_MAX_LENGTH) {
+      // The form no longer asks this, and the backend no longer requires it. Requests made
+      // before it was dropped still carry an answer, which is why the length still matters.
+      json(400, { error: 'Proposed outputs must be 2000 characters or fewer.' });
+    } else if (!TRIAGE_ORGANISATION_TYPES.includes(text('organisationType'))) {
+      json(400, { error: 'Organisation type must be hmcts, moj, other-government or external.' });
+    } else if (!recipients.length || !recipients.every(value => TRIAGE_RECIPIENTS.includes(value))) {
+      json(400, { error: 'Data recipients must be from the published list.' });
+    } else if (leavesTheTeam && !text('dataRecipientsExplanation')) {
+      json(400, { error: 'Explain who will receive the data and why.' });
+    } else if (!['no', 'yes', 'unsure'].includes(text('dataCombined'))) {
+      json(400, { error: 'Data combined must be no, yes or unsure.' });
+    } else if (combines && !text('dataCombinedDescription')) {
+      json(400, { error: 'Describe the other data and what the combined data will be used for.' });
     } else {
       const stored: StubProductionRequest = {
         owner: user,
@@ -188,6 +264,11 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
         goLiveDate: text('goLiveDate'),
         callVolume: text('callVolume'),
         dataRequest: text('dataRequest'),
+        organisationType: text('organisationType'),
+        dataRecipients: recipients,
+        dataRecipientsExplanation: text('dataRecipientsExplanation') || undefined,
+        dataCombined: text('dataCombined'),
+        dataCombinedDescription: text('dataCombinedDescription') || undefined,
         proposedOutputs: text('proposedOutputs'),
       };
       productionRequests.set(stored.reference, stored);
@@ -306,8 +387,22 @@ export function stubMarketplace(knownUsers: () => Map<string, number>): {
       return true;
     }
 
-    if (path === '/products' && method === 'GET') {
-      json(200, PRODUCTS);
+    const cataloguePath = /^\/catalogue(?:\/([^/]+))?$/.exec(path);
+    if (cataloguePath && method === 'GET') {
+      const [, shortCode] = cataloguePath;
+      if (!shortCode) {
+        json(
+          200,
+          Object.entries(CATALOGUE).map(([code, api]) => catalogueEntry(code, api))
+        );
+      } else {
+        const api = CATALOGUE[decodeURIComponent(shortCode)];
+        if (api) {
+          json(200, catalogueDetail(decodeURIComponent(shortCode), api));
+        } else {
+          json(404, { error: `No API with short code ${shortCode}.` });
+        }
+      }
       return true;
     }
 

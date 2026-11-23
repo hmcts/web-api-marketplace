@@ -6,14 +6,14 @@ Express 5 + TypeScript + Nunjucks + GOV.UK Frontend, deployed to CNP (CFT) by Je
 Derived from [fact-public-frontend](https://github.com/hmcts/fact-public-frontend), which
 remains the reference for the module and testing patterns used here.
 
-|                     |                                                         |
-| ------------------- | ------------------------------------------------------- |
-| Product / component | `amp` / `marketplace-web`                               |
-| Helm chart          | `amp-marketplace-web`                                   |
-| Image               | `hmctsprod.azurecr.io/amp/marketplace-web`              |
-| Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic) |
-| Key vault           | `amp-{env}` — created by `service-api-marketplace`      |
-| Local port          | 3344 (HTTPS in development)                             |
+|                     |                                                                |
+| ------------------- | -------------------------------------------------------------- |
+| Product / component | `amp` / `marketplace-web`                                      |
+| Helm chart          | `amp-marketplace-web`                                          |
+| Image               | `hmctsprod.azurecr.io/amp/marketplace-web`                     |
+| Jenkins folder      | `HMCTS_j_to_z` (via the `jenkins-cft-j-z` GitHub topic)        |
+| Key vault           | `amp-marketplace-{env}` — created by `service-api-marketplace` |
+| Local port          | 3344 (HTTPS in development)                                    |
 
 ## Running locally
 
@@ -203,10 +203,9 @@ The consumer onboarding journey, end to end:
 | Regenerate client secret, delete             | `/account/applications/:id/client-secret`, `.../delete`  |
 | Request production credentials, follow it    | `/account/production-credentials`, `.../:reference`      |
 
-The site lists only the feed's APIs named in `catalogue.listedApis` (`CATALOGUE_LISTED_APIS`,
-a JSON array; empty means every API in the feed), in the catalogue and for applications alike.
-The page of an API outside the list is not found. An application that already has one keeps
-seeing it on its "change APIs" page, so saving does not revoke it.
+The catalogue lists the APIs the backend marks as listed (`/catalogue`); the page of any other
+API is not found. An application that already has an API no longer listed keeps seeing it on its
+"change APIs" page, so saving does not revoke it.
 
 A user can hold at most `applications.maxPerUser` applications (`APPLICATIONS_MAX_PER_USER`,
 default 5; set it in an environment's cnp-flux-config values to change it there, e.g. prod). At
@@ -215,21 +214,23 @@ sends the user back to it with the reason. The count is taken again before an ap
 created, so one started in another tab cannot go over. Only this app enforces the limit: it counts
 the user's applications from the backend's list.
 
-On an application's page, the Scheduling and Listing Court Schedule row has a collapsible panel
-right under it, "How to get an access token and call an API". It shows the Publisher ID (scope),
-then curl commands to get a token and to call SLC and its scenarios. The token endpoint uses the
-tenant the backend returns (`tenantId`), and the scope is the Publisher ID followed by
-`/.default`. The Publisher ID (`apiEndpoints.publisherId`) is the marketplace API's app
-registration in Entra, the same for every API.
+On an application's page, each API in **APIs added** has a collapsible panel right under its
+row, "How to get an access token and call {API title}". It shows that API's Publisher ID
+(scope), then a curl command to get a token. The token endpoint uses the tenant the backend
+returns (`tenantId`), and the scope is the Publisher ID followed by `/.default`. The Publisher
+ID is the API's own Entra app (`resourceAppId` on the backend's `/catalogue/{shortCode}`). If the
+marketplace cannot be reached, it shows `{publisher_id}`.
 
-The calls go to the environment's API Management gateway (e.g.
-`https://sps-api-mgmt.sandbox.api.hmcts.net`). The page adds SLC's path, `/amp/try/slc`, then
-`/case/{case_urn}/courtschedule` or `/scenarios`. The gateways are in
-`apiEndpoints.apimBaseUrls` in `config/default.json`, one per environment, and nothing is set
-in cnp-flux-config. The environment is `PLATFORM_ENVIRONMENT`, which the chart sets from
-`global.environment`; locally it is `sandbox`, from `config/development.json`. Changing a
-gateway, or adding one for a new environment, needs a release. An environment with no gateway
-leaves the calls out and shows only the token request.
+The panel does not list the API's endpoints. Under "Run try it now in developer portal" it links
+to "{API title} API reference", the API's page in the APIM developer portal (for example
+`https://amp-portal.sandbox.api.hmcts.net/api-details#api=<apim-name>`). The backend builds that
+link from `DEVELOPER_PORTAL_URL` and the API's APIM name, and returns it as `portalUrl` on
+`/catalogue/{shortCode}`. That endpoint reads the portal on every call, so this app caches each
+link for 10 minutes. Where the backend returns no link, or can't be reached, the panel leaves the
+portal section out.
+
+The "Application created" page shows the client ID and the secret, which is shown only there.
+The Publisher ID and subscription keys are on the application's page.
 
 `src/test/routes/links.ts` crawls every internal link signed out and signed in, and fails the
 build on any that do not work.
@@ -295,16 +296,15 @@ set, otherwise memory for that one process.
 These are known gaps from the initial AMP-1031 onboarding, not oversights:
 
 - **App Insights is stubbed.** `APPLICATIONINSIGHTS_ENABLED: 'false'` in the chart. There is
-  no `azurerm_application_insights` resource for the `amp` product, and the `amp-{env}`
-  vault holds only the `marketplace-POSTGRES-*` secrets. Once a connection string exists in
-  the vault and the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName`
-  and `keyVaults` back to `charts/amp-marketplace-web/values.yaml`.
-- **Entra in sandbox** is wired in cnp-flux-config (`apps/apim/apim-marketplace-web/sbox.yaml`,
-  still under `apim` until the Flux move lands): `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and
-  `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`, where hmcts/external-entra-id writes them,
-  and read with the pod's workload identity (`workloadClientID` `775648eb-…`, `apim-sandbox-mi`;
-  `amp-sandbox-mi`, with a new client ID, once Flux moves). `modules/properties-volume` maps them
-  into the Entra config.
+  no `azurerm_application_insights` resource for the `amp` product, and the
+  `amp-marketplace-{env}` vault holds no connection string. Once one exists in the vault and
+  the managed identity has _Key Vault Secrets User_ on it, add `aadIdentityName` and
+  `keyVaults` back to `charts/amp-marketplace-web/values.yaml`.
+- **Entra in sandbox** is wired in cnp-flux-config (`apps/amp/amp-marketplace-web/sbox.yaml`):
+  `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `ENTRA_TENANT_ID` are mounted from `kvspsextidsbox`,
+  where hmcts/external-entra-id writes them, and read with the pod's workload identity
+  (`workloadClientID` `fb098a2c-…`, `amp-sandbox-mi`). `modules/properties-volume` maps them into
+  the Entra config.
 - **Entra in AAT and demo** is switched off (`ENTRA_ENABLED=false` in cnp-flux-config's
   `aat.yaml` and `demo.yaml`, and in `values.aat.template.yaml` for the pipeline's AAT deploy),
   so sign in there says it is unavailable. Switching it on needs a tenant (`stg` or `prod` in external-entra-id, vaults `kv-entra-stg` and

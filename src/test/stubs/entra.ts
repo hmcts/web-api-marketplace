@@ -4,6 +4,8 @@ import { AddressInfo } from 'node:net';
 
 import { JWTPayload, SignJWT, exportJWK, generateKeyPair } from 'jose';
 
+import { AMP_ADMIN } from '../../main/services/AdminRole';
+
 import { StubMarketplace, stubMarketplace } from './marketplace';
 
 /**
@@ -57,6 +59,8 @@ export interface StubEntra {
   failTokenRequests(status: number): void;
   /** Every user saved through the backend's POST /session, by oid. */
   savedUsers: Map<string, { id: number; email: string; name: string }>;
+  /** The oids whose ID token carries the admin app role, until `reset()`. */
+  admins: Set<string>;
   /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
   failUserSaves(status: number): void;
   /** The backend's /applications and /apim/subscription-keys. */
@@ -80,6 +84,7 @@ export async function startStubEntra(): Promise<StubEntra> {
   let failWith: number | undefined;
   let failSavesWith: number | undefined;
   const savedUsers: StubEntra['savedUsers'] = new Map();
+  const admins = new Set<string>();
   const marketplace = stubMarketplace(() => new Map([...savedUsers].map(([oid, user]) => [oid, user.id])));
 
   const server = http.createServer((req, res) => {
@@ -105,10 +110,12 @@ export async function startStubEntra(): Promise<StubEntra> {
     answerTokenRequestsWith: answer => (issue = answer),
     failTokenRequests: status => (failWith = status),
     savedUsers,
+    admins,
     failUserSaves: status => (failSavesWith = status),
     marketplace: marketplace.state,
     reset: () => {
       marketplace.state.reset();
+      admins.clear();
       issue = undefined;
       failWith = undefined;
       failSavesWith = undefined;
@@ -154,7 +161,8 @@ export async function startStubEntra(): Promise<StubEntra> {
       if (codeChallenge && createHash('sha256').update(verifier).digest('base64url') !== codeChallenge) {
         return json(400, { error: 'invalid_grant', error_description: 'The code_verifier does not match' });
       }
-      const idToken = issue ? await issue(claims, nonce) : await stub.idToken(claims, nonce);
+      const withRoles = admins.has(claims.oid) ? { ...claims, roles: [AMP_ADMIN] } : claims;
+      const idToken = issue ? await issue(withRoles, nonce) : await stub.idToken(withRoles, nonce);
       return json(200, { id_token: idToken, expires_in: 3600 });
     }
     if (req.url === '/backend/session' && req.method === 'POST') {

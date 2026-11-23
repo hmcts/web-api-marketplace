@@ -1,26 +1,42 @@
-import { tokenScopes } from '../../../main/services/ApiCatalogue';
-import { SLC_API_NAME, instructionsFor, slcBaseUrl } from '../../../main/services/ApiInstructions';
+import { getCatalogueApi } from '../../../main/services/ApiCatalogue';
+import { instructionsFor } from '../../../main/services/ApiInstructions';
 import { ApiSubscription, Application } from '../../../main/services/Applications';
 
-jest.mock('../../../main/services/ApiCatalogue');
+jest.mock('../../../main/services/ApiCatalogue', () => ({
+  ...jest.requireActual('../../../main/services/ApiCatalogue'),
+  getCatalogueApi: jest.fn(),
+}));
 
-const mockedScopes = tokenScopes as jest.MockedFunction<typeof tokenScopes>;
+const mockedApi = getCatalogueApi as jest.MockedFunction<typeof getCatalogueApi>;
 
-/** SLC's own Entra resource application, which the marketplace holds against the API. */
-const RESOURCE_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
-/** Stood in only when the marketplace cannot be reached. */
-const CONFIGURED_FALLBACK = '30288840-e345-4543-99ee-f9253d789339';
+const SLC_SHORT_CODE = 'slc';
+const RCC_SHORT_CODE = 'rcc';
 
-const subscription = (apiName: string, publisherId: string): ApiSubscription => ({
-  apiName,
-  apiTitle: `${apiName} title`,
-  publisherId,
-  subscriptionName: `amp-temp-${publisherId}`,
+/** Each API's own Entra resource application, which the catalogue holds against it. */
+const SLC_APP_ID = 'c4c8974c-2800-4fe6-964f-dcd4c0820507';
+const RCC_APP_ID = '97c20454-55c1-45b0-88cd-268db572f615';
+
+const CATALOGUE: Record<string, { resourceAppId?: string; portalUrl?: string }> = {
+  [SLC_SHORT_CODE]: {
+    resourceAppId: SLC_APP_ID,
+    portalUrl: 'https://amp-portal.example.net/api-details#api=stub-slc',
+  },
+  [RCC_SHORT_CODE]: {
+    resourceAppId: RCC_APP_ID,
+    portalUrl: 'https://amp-portal.example.net/api-details#api=stub-rcc',
+  },
+};
+
+const subscription = (shortCode: string, apiTitle: string): ApiSubscription => ({
+  shortCode,
+  apiTitle,
+  publisherId: 'apim-product',
+  subscriptionName: `amp-temp-${shortCode}`,
   subscribedAt: '2026-10-15T12:00:00',
 });
 
-const SLC = subscription(SLC_API_NAME, 'cp-crime-schedulingandlisting');
-const RCC = subscription('api-cp-refdata-courthearing-courthouses', 'cp-refdata-courthearing-courthouses');
+const SLC = subscription(SLC_SHORT_CODE, 'Scheduling and Listing Court Schedule');
+const RCC = subscription(RCC_SHORT_CODE, 'Refdata Court Hearing Courthouses');
 
 const application = (apis: ApiSubscription[], tenantId = 'tenant-1'): Application => ({
   id: 'client-1',
@@ -35,85 +51,73 @@ const application = (apis: ApiSubscription[], tenantId = 'tenant-1'): Applicatio
 });
 
 describe('ApiInstructions', () => {
-  const environment = process.env.PLATFORM_ENVIRONMENT;
-
   beforeEach(() => {
-    process.env.PLATFORM_ENVIRONMENT = 'sandbox';
-    mockedScopes.mockReset();
-    mockedScopes.mockResolvedValue({ [SLC_API_NAME]: `${RESOURCE_APP_ID}/.default` });
+    mockedApi.mockReset();
+    mockedApi.mockImplementation(async shortCode => ({ shortCode, title: shortCode, ...CATALOGUE[shortCode] }));
   });
 
-  afterAll(() => {
-    if (environment === undefined) {
-      delete process.env.PLATFORM_ENVIRONMENT;
-    } else {
-      process.env.PLATFORM_ENVIRONMENT = environment;
-    }
+  test('there_should_be_instructions_for_each_api_the_application_has_and_no_other', async () => {
+    expect(Object.keys(await instructionsFor(application([SLC, RCC])))).toEqual([SLC_SHORT_CODE, RCC_SHORT_CODE]);
+    expect(await instructionsFor(application([]))).toEqual({});
   });
 
-  test.each([
-    ['sandbox', 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc'],
-    ['preview', 'https://sps-api-mgmt.preview.api.hmcts.net/amp/try/slc'],
-    ['aat', 'https://sps-api-mgmt.aat.api.hmcts.net/amp/try/slc'],
-    ['demo', 'https://sps-api-mgmt.demo.hmcts.net/amp/try/slc'],
-  ])('the_slc_url_in_%s_should_be_its_apim_gateway_with_slcs_path_appended', (name, url) => {
-    process.env.PLATFORM_ENVIRONMENT = name;
+  test('each_api_should_carry_its_own_title', async () => {
+    const all = await instructionsFor(application([SLC, RCC]));
 
-    expect(slcBaseUrl()).toBe(url);
+    expect(all[SLC_SHORT_CODE].apiTitle).toBe('Scheduling and Listing Court Schedule');
+    expect(all[RCC_SHORT_CODE].apiTitle).toBe('Refdata Court Hearing Courthouses');
   });
 
-  test('an_environment_with_no_gateway_should_have_no_address', () => {
-    process.env.PLATFORM_ENVIRONMENT = 'prod';
+  test('each_api_should_have_its_own_publisher_id_and_scope', async () => {
+    const all = await instructionsFor(application([SLC, RCC]));
 
-    expect(slcBaseUrl()).toBeUndefined();
-  });
-
-  test('without_platform_environment_it_should_fall_back_to_config_which_deployed_environments_leave_empty', () => {
-    delete process.env.PLATFORM_ENVIRONMENT;
-
-    // config/test.json, like default.json, names no environment: only development.json does.
-    expect(slcBaseUrl()).toBeUndefined();
-  });
-
-  test('the_token_request_should_name_the_tenant_client_and_the_apis_own_resource_app', async () => {
-    expect((await instructionsFor(application([SLC]))).token).toEqual({
+    expect(all[SLC_SHORT_CODE].token).toEqual({
       url: 'https://login.microsoftonline.com/tenant-1/oauth2/v2.0/token',
       clientId: 'client-1',
       clientSecret: '<client_secret>',
-      publisherId: RESOURCE_APP_ID,
-      scope: `${RESOURCE_APP_ID}/.default`,
+      publisherId: SLC_APP_ID,
+      scope: `${SLC_APP_ID}/.default`,
     });
+    expect(all[RCC_SHORT_CODE].token.publisherId).toBe(RCC_APP_ID);
+    expect(all[RCC_SHORT_CODE].token.scope).toBe(`${RCC_APP_ID}/.default`);
   });
 
-  test('a_marketplace_that_cannot_be_reached_should_fall_back_to_the_configured_resource_app', async () => {
-    mockedScopes.mockResolvedValue({});
+  test('one_read_of_the_catalogue_should_serve_both_the_scope_and_the_portal_link', async () => {
+    const all = await instructionsFor(application([SLC]));
 
-    expect((await instructionsFor(application([SLC]))).token.scope).toBe(`${CONFIGURED_FALLBACK}/.default`);
-  });
-
-  test('the_scope_should_be_the_one_the_instructions_are_for_whichever_apis_the_application_has', async () => {
-    for (const apis of [[SLC], [RCC], [RCC, SLC], []]) {
-      expect((await instructionsFor(application(apis))).token.scope).toBe(`${RESOURCE_APP_ID}/.default`);
-    }
+    expect(mockedApi).toHaveBeenCalledTimes(1);
+    expect(mockedApi).toHaveBeenCalledWith(SLC_SHORT_CODE);
+    expect(all[SLC_SHORT_CODE].token.publisherId).toBe(SLC_APP_ID);
+    expect(all[SLC_SHORT_CODE].portalUrl).toBe(CATALOGUE[SLC_SHORT_CODE].portalUrl);
   });
 
   test('without_a_tenant_from_the_backend_the_request_should_keep_a_placeholder', async () => {
-    expect((await instructionsFor(application([SLC], ''))).token.url).toBe(
+    expect((await instructionsFor(application([SLC], '')))[SLC_SHORT_CODE].token.url).toBe(
       'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
     );
   });
 
-  test('an_application_with_slc_should_get_the_court_schedule_and_scenarios_urls', async () => {
-    expect((await instructionsFor(application([SLC]))).slc).toEqual({
-      courtScheduleUrl: 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc/case/{case_urn}/courtschedule',
-      scenariosUrl: 'https://sps-api-mgmt.sandbox.api.hmcts.net/amp/try/slc/scenarios',
-    });
+  test('an_api_with_no_resource_app_should_show_a_placeholder_rather_than_another_apis_id', async () => {
+    mockedApi.mockResolvedValue({ shortCode: RCC_SHORT_CODE, title: 'Courthouses' });
+
+    const token = (await instructionsFor(application([RCC])))[RCC_SHORT_CODE].token;
+
+    expect(token.publisherId).toBe('{publisher_id}');
+    expect(token.scope).toBe('{publisher_id}/.default');
   });
 
-  test('the_slc_instructions_should_be_left_out_without_slc_or_without_a_url_for_the_environment', async () => {
-    expect((await instructionsFor(application([RCC]))).slc).toBeUndefined();
+  test('an_api_the_catalogue_no_longer_lists_should_leave_the_portal_link_out', async () => {
+    mockedApi.mockResolvedValue(undefined);
 
-    process.env.PLATFORM_ENVIRONMENT = 'somewhere-else';
-    expect((await instructionsFor(application([SLC]))).slc).toBeUndefined();
+    expect((await instructionsFor(application([RCC])))[RCC_SHORT_CODE].portalUrl).toBeUndefined();
+  });
+
+  test('the_instructions_should_hold_no_endpoint_urls_of_their_own', async () => {
+    expect(Object.keys((await instructionsFor(application([RCC])))[RCC_SHORT_CODE]).sort()).toEqual([
+      'apiTitle',
+      'portalUrl',
+      'shortCode',
+      'token',
+    ]);
   });
 });

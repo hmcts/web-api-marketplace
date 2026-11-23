@@ -1,25 +1,18 @@
 import { expect } from 'chai';
 import request from 'supertest';
 
-jest.mock('../../main/services/ApiSpecs', () => ({
-  ...jest.requireActual('../../main/services/ApiSpecs'),
-  getSpecDescription: jest.fn().mockResolvedValue(undefined),
-}));
-
-jest.mock('../../main/services/ApiCatalogue', () => ({
-  ...jest.requireActual('../../main/services/ApiCatalogue'),
-  getCatalogueApis: jest.fn(),
-}));
-
 import { MemoryStore, useDataStore } from '../../main/modules/store';
-import { STUB_TENANT_ID } from '../stubs/marketplace';
+import { clearCatalogueCache } from '../../main/services/ApiCatalogue';
+import { STUB_TENANT_ID, stubPortalUrl } from '../stubs/marketplace';
 
 import { CATALOGUE, createdApplication, newAgent, signedInConsumer, testServer } from './helpers/consumer';
 import { claimsFor, signInThroughEntra, stubEntra } from './helpers/entra';
 
-const { getCatalogueApis } = require('../../main/services/ApiCatalogue');
-
-const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'Scheduling and Listing Court Schedule' };
+const SLC = {
+  shortCode: 'slc',
+  title: 'Scheduling and Listing Court Schedule',
+  catalogueName: 'api-cp-crime-schedulingandlisting-courtschedule',
+};
 
 /**
  * The consumer onboarding journey end to end, through the real app: create an account,
@@ -29,7 +22,7 @@ const SLC = { name: 'api-cp-crime-schedulingandlisting-courtschedule', title: 'S
 describe('Consumer onboarding journey', () => {
   beforeEach(() => {
     useDataStore(new MemoryStore());
-    (getCatalogueApis as jest.Mock).mockResolvedValue(CATALOGUE);
+    clearCatalogueCache();
   });
 
   describe('creating an account', () => {
@@ -141,7 +134,7 @@ describe('Consumer onboarding journey', () => {
       await agent
         .post('/account/applications/new/apis')
         .type('form')
-        .send({ apis: [CATALOGUE[0].name, CATALOGUE[1].name] });
+        .send({ apis: [CATALOGUE[0].shortCode, CATALOGUE[1].shortCode] });
 
       await agent.get('/account/applications/new/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
@@ -158,10 +151,11 @@ describe('Consumer onboarding journey', () => {
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       expect(created.text).to.contain('Application created');
-      expect(created.text).to.contain('id="publisher-id">33333333-3333-3333-3333-333333333333<');
       expect(created.text).to.contain('You will not be able to see it again');
       expect(secret).to.match(/^.{3}8Q~.{34}$/);
-      expect(created.text.match(/Subscription key: <span class="apim-credential">[0-9a-f]{32}</g)).to.have.length(2);
+      // The Publisher ID and subscription keys are on the application's page, not here.
+      expect(created.text).to.not.contain('Publisher ID');
+      expect(created.text).to.not.contain('Subscription key');
       expect(created.text).to.contain('These credentials will not work yet');
       expect(created.text).to.contain(`data-access-url="/account/applications/${id}/access"`);
 
@@ -177,9 +171,14 @@ describe('Consumer onboarding journey', () => {
       await agent.get(`/account/applications/${id}`).expect(res => {
         expect(res.text).to.contain(`${secret.slice(0, 3)}****`);
         expect(res.text).to.not.contain(secret);
-        // Neither API is SLC, so there are no instructions, Publisher ID included, to fold away.
-        expect(res.text).to.not.contain('id="publisher-id"');
-        expect(res.text).to.not.contain('id="api-instructions"');
+        // Each API has its own instructions, with its own Publisher ID.
+        expect(res.text).to.contain(
+          `id="publisher-id-${CATALOGUE[0].shortCode}">11111111-1111-1111-1111-111111111111<`
+        );
+        expect(res.text).to.contain(
+          `id="publisher-id-${CATALOGUE[1].shortCode}">22222222-2222-2222-2222-222222222222<`
+        );
+        expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
       });
 
       await agent.post('/account/applications/new/check-answers').expect(302);
@@ -193,7 +192,7 @@ describe('Consumer onboarding journey', () => {
       await createdApplication(agent, 'Case tracker');
 
       await agent.post('/account/applications/new/details').type('form').send({ name: 'case tracker' }).expect(302);
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent.post('/account/applications/new/check-answers').expect(res => {
         expect(res.status).to.equal(400);
         expect(res.text).to.contain('You already have an application called case tracker');
@@ -216,7 +215,7 @@ describe('Consumer onboarding journey', () => {
       await agent.get('/account/applications/new').expect(302).expect('Location', '/account/applications');
       await agent.get('/account/applications').expect(res => expect(res.text).to.contain('id="notice"'));
       await agent.post('/account/applications/new/details').type('form').send({ name: 'One too many' });
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent
         .post('/account/applications/new/check-answers')
         .expect(302)
@@ -272,7 +271,7 @@ describe('Consumer onboarding journey', () => {
       stubEntra().marketplace.failSubscriptions(502);
 
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Case tracker' });
-      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].name });
+      await agent.post('/account/applications/new/apis').type('form').send({ apis: CATALOGUE[0].shortCode });
       await agent.post('/account/applications/new/check-answers').expect(res => {
         expect(res.status).to.equal(200);
         expect(res.text).to.match(/id="client-secret"[^>]*>.{3}8Q~/);
@@ -280,33 +279,47 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('the_instructions_should_fold_away_right_under_the_slc_row_and_no_other', async () => {
-      (getCatalogueApis as jest.Mock).mockResolvedValue([...CATALOGUE, SLC]);
+    test('each_apis_instructions_should_fold_away_right_under_its_own_row', async () => {
       const agent = await signedInConsumer('ada@example.com');
       await agent.post('/account/applications/new/details').type('form').send({ name: 'Court tracker' });
       await agent
         .post('/account/applications/new/apis')
         .type('form')
-        .send({ apis: [CATALOGUE[0].name, SLC.name] });
+        .send({ apis: [CATALOGUE[0].shortCode, SLC.shortCode] });
       const created = await agent.post('/account/applications/new/check-answers').expect(200);
       const id = /href="\/account\/applications\/([0-9a-f-]{36})"/.exec(created.text)?.[1] as string;
 
       await agent.get(`/account/applications/${id}`).expect(res => {
         const rows = res.text.split('<tr class="govuk-table__row">').slice(2);
         const slcRow = rows.findIndex(row => row.includes(`>${SLC.title}<`));
+        const hearingRow = rows.findIndex(row => row.includes(`>${CATALOGUE[0].title}<`));
+        const slcPanel = rows[slcRow + 1];
+        const hearingPanel = rows[hearingRow + 1];
 
-        expect(res.text.match(/id="api-instructions"/g)).to.have.length(1);
-        expect(rows[slcRow + 1]).to.match(/colspan="2"[\s\S]*id="api-instructions"/);
-        expect(rows[slcRow + 1]).to.match(/<summary[\s\S]*?How to get an access token and call an API/);
-        expect(rows[slcRow + 1]).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
-        expect(rows[slcRow + 1]).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
-        // The Publisher ID is at the top of the panel, before the token request, and nowhere else.
-        expect(rows[slcRow + 1]).to.match(
-          /id="publisher-id">33333333-3333-3333-3333-333333333333<[\s\S]*id="token-request"/
+        expect(res.text.match(/id="api-instructions-/g)).to.have.length(2);
+        expect(slcPanel).to.match(new RegExp(`colspan="2"[\\s\\S]*id="api-instructions-${SLC.shortCode}"`));
+        expect(slcPanel).to.match(new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${SLC.title}`));
+        expect(hearingPanel).to.match(
+          new RegExp(`<summary[\\s\\S]*?How to get an access token and call ${CATALOGUE[0].title}`)
         );
-        expect(res.text.match(/id="publisher-id"/g)).to.have.length(1);
-        expect(rows[slcRow + 1]).to.contain('client_secret=&lt;client_secret&gt;');
-        expect(rows.filter(row => row.includes('id="api-instructions"'))).to.have.length(1);
+        expect(slcPanel).to.contain(`https://login.microsoftonline.com/${STUB_TENANT_ID}/oauth2/v2.0/token`);
+        expect(slcPanel).to.contain('client_secret=&lt;client_secret&gt;');
+        // Each panel has its own Publisher ID at the top, before its token request, and not the other's.
+        expect(slcPanel).to.match(
+          new RegExp(
+            `id="publisher-id-${SLC.shortCode}">33333333-3333-3333-3333-333333333333<[\\s\\S]*id="token-request-`
+          )
+        );
+        expect(slcPanel).to.contain('scope=33333333-3333-3333-3333-333333333333/.default');
+        expect(slcPanel).to.not.contain('11111111-1111-1111-1111-111111111111');
+        expect(hearingPanel).to.contain('scope=11111111-1111-1111-1111-111111111111/.default');
+        expect(hearingPanel).to.not.contain('33333333-3333-3333-3333-333333333333');
+        // Each panel shows the token request alone and sends the consumer to that API's own page
+        // in the developer portal.
+        expect(slcPanel).to.contain(`href="${stubPortalUrl(SLC.shortCode)}"`);
+        expect(hearingPanel).to.contain(`href="${stubPortalUrl(CATALOGUE[0].shortCode)}"`);
+        expect(res.text).to.not.contain('hmcts.github.io');
+        expect(slcPanel).to.not.contain('curl --request GET');
       });
     });
 
@@ -315,7 +328,7 @@ describe('Consumer onboarding journey', () => {
       const id = await createdApplication(agent);
       const [subscription] = [...stubEntra().marketplace.subscriptions.values()];
 
-      await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].name}`).expect(res => {
+      await agent.get(`/account/applications/${id}/apis/${CATALOGUE[0].shortCode}`).expect(res => {
         expect(res.status).to.equal(200);
         expect(res.text).to.not.contain('Publisher ID');
         expect(res.text).to.contain(`id="subscription-key">${subscription.primaryKey}<`);
@@ -331,7 +344,7 @@ describe('Consumer onboarding journey', () => {
       await agent
         .post(`/account/applications/${id}/apis`)
         .type('form')
-        .send({ apis: CATALOGUE[1].name })
+        .send({ apis: CATALOGUE[1].shortCode })
         .expect(res => expect(res.headers.location).to.equal(`/account/applications/${id}`));
 
       await agent.get(`/account/applications/${id}`).expect(res => {
@@ -407,10 +420,20 @@ describe('Consumer onboarding journey', () => {
 
       await agent.get(`/account/production-credentials?application=${id}`).expect(res => {
         expect(res.text).to.contain(`value="${id}" checked`);
-        expect(res.text).to.contain('Organisation or team name');
+        expect(res.text).to.contain('Submitting this form does not give you access to the API or its data.');
+        expect(res.text).to.contain('We aim to tell');
+        expect(res.text).to.contain('type="radio" value="moj"');
+        expect(res.text).to.not.contain('<select');
+        expect(res.text).to.contain('Team name (and organisation if external to HMCTS?)');
         expect(res.text).to.contain('name="data-request"');
-        expect(res.text).to.contain('name="proposed-outputs"');
-        expect(res.text.split('for each API selected in the above application')).to.have.length(3);
+        expect(res.text).to.contain('Who will have access to, or receive, the data?');
+        expect(res.text).to.contain('Briefly explain who will receive the data and why');
+        expect(res.text).to.contain('Will you combine or link the API data with other data?');
+        expect(res.text).to.contain('Briefly describe the other data and what the combined data will be used for?');
+        expect(res.text).not.to.contain('proposed-outputs');
+        expect(res.text).to.contain('Why do you need access and how will you use the data?');
+        expect(res.text).to.contain('For each API, briefly describe the business purpose');
+        expect(res.text).to.not.contain('for each API selected in the above application');
         expect(res.text).to.not.contain('name="dpia"');
         expect(res.text).to.not.contain('name="declaration"');
         expect(res.text).to.not.contain('name="dsa"');
@@ -424,35 +447,47 @@ describe('Consumer onboarding journey', () => {
         .expect(res => {
           expect(res.status).to.equal(400);
           expect(res.text).to.contain('Select the application you need production credentials for');
-          expect(res.text).to.contain('Describe the proposed outputs from this data use');
+          expect(res.text).to.contain('Select who will have access to, or receive, the data');
         });
       await agent
         .post('/account/production-credentials')
         .type('form')
         .send({
           application: id,
+          'organisation-type': 'external',
           organisation: 'Analytical Engines Ltd',
           'go-live-day': '1',
           'go-live-month': '4',
           'go-live-year': String(new Date().getFullYear() + 1),
           'call-volume': 'medium',
           'data-request': 'Hearing outcomes, used with court listings.',
-          'proposed-outputs': 'A case summary shown inside our own service.',
+          'data-recipients': ['own-team', 'supplier'],
+          'data-recipients-explanation': 'Our delivery partner runs the ingest.',
+          'data-combined': 'yes',
+          'data-combined-description': 'Joined to our case tracker to measure turnaround.',
         })
         .expect(res => expect(res.headers.location).to.equal('/account/production-credentials/check-answers'));
 
       await agent.get('/account/production-credentials/check-answers').expect(res => {
         expect(res.text).to.contain('Case tracker');
         expect(res.text).to.contain('1 April');
+        expect(res.text).to.contain('Other external organisation');
+        expect(res.text).to.contain('Me/my immediate team only');
       });
 
       const confirmation = await agent.post('/account/production-credentials/check-answers').expect(200);
       const reference = /id="confirmation-reference">(PCR-[A-Z2-9]{8})</.exec(confirmation.text)?.[1] as string;
       expect(reference).to.be.a('string');
 
+      // The triage answers are read back from the backend rather than the session, so this is
+      // what catches a field the submission names differently from the one the backend stores.
       await agent.get(`/account/production-credentials/${reference}`).expect(res => {
         expect(res.text).to.contain(reference);
         expect(res.text).to.contain('Submitted');
+        expect(res.text).to.contain('Other external organisation');
+        expect(res.text).to.contain('Supplier/contract/delivery partner');
+        expect(res.text).to.contain('Our delivery partner runs the ingest.');
+        expect(res.text).to.contain('Joined to our case tracker to measure turnaround.');
       });
       await agent.get('/account').expect(res => {
         expect(res.text).to.contain(`href="/account/production-credentials/${reference}"`);

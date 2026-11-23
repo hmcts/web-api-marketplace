@@ -1,10 +1,5 @@
-import config from 'config';
-
-import { tokenScopes } from './ApiCatalogue';
-import { Application } from './Applications';
-
-/** Scheduling and Listing Court Schedule, the API the call and scenario instructions are for. */
-export const SLC_API_NAME = 'api-cp-crime-schedulingandlisting-courtschedule';
+import { getCatalogueApi } from './ApiCatalogue';
+import { ApiSubscription, Application } from './Applications';
 
 export interface TokenInstructions {
   url: string;
@@ -16,82 +11,46 @@ export interface TokenInstructions {
   scope: string;
 }
 
-export interface SlcInstructions {
-  courtScheduleUrl: string;
-  scenariosUrl: string;
-}
-
 export interface Instructions {
   /** The API they are shown under, folded away below its row. */
-  apiName: string;
+  shortCode: string;
+  apiTitle: string;
   token: TokenInstructions;
-  /** Only for an application with SLC, in an environment that has an SLC address. */
-  slc?: SlcInstructions;
+  /** The API's page in the developer portal, where it can be tried. Absent where there is none. */
+  portalUrl?: string;
 }
 
-/** Where SLC sits on the API Management gateway. */
-const SLC_PATH = '/amp/try/slc';
+/** Shown where the catalogue holds no resource app for an API, rather than another API's ID. */
+const PUBLISHER_PLACEHOLDER = '{publisher_id}';
 
 /**
- * Which platform environment this is: sandbox, preview, aat, demo or prod. The chart sets
- * PLATFORM_ENVIRONMENT from global.environment. Read on every use, as entraConfig is, since
- * NODE_ENV is production in all of them and cannot tell them apart.
+ * How a consumer gets a token for this application for each of its APIs, by short code, and
+ * where each API can be tried in the developer portal. Values the page knows are filled in;
+ * the secret stays a placeholder.
  */
-function platformEnvironment(): string {
-  return process.env.PLATFORM_ENVIRONMENT || config.get<string>('apiEndpoints.environment');
+export async function instructionsFor(application: Application): Promise<Record<string, Instructions>> {
+  const all: Record<string, Instructions> = {};
+  for (const api of application.apis) {
+    all[api.shortCode] = await instructionsForApi(application, api);
+  }
+  return all;
 }
 
-/**
- * This environment's API Management gateway, e.g. https://sps-api-mgmt.sandbox.api.hmcts.net,
- * from apiEndpoints.apimBaseUrls, or undefined where it has none yet. The gateways are written
- * without a trailing slash, so each API's path can be appended as it is.
- */
-function apimBaseUrl(): string | undefined {
-  return config.get<Record<string, string>>('apiEndpoints.apimBaseUrls')[platformEnvironment()] || undefined;
-}
-
-/** Where SLC is called in this environment, or undefined where it has no gateway yet. */
-export function slcBaseUrl(): string | undefined {
-  const gateway = apimBaseUrl();
-  return gateway ? `${gateway}${SLC_PATH}` : undefined;
-}
-
-/**
- * The Entra application an API's roles belong to, which is what a consumer asks for a token on.
- * Each API has its own, so it is read from the marketplace rather than configured here;
- * apiEndpoints.publisherId stands in only when the marketplace cannot be reached.
- */
-export async function publisherId(apiName: string = SLC_API_NAME): Promise<string> {
-  const scope = (await tokenScopes())[apiName];
-  return scope ? scope.replace(/\/\.default$/, '') : config.get<string>('apiEndpoints.publisherId');
-}
-
-/**
- * How a consumer gets a token for this application and calls SLC with it. Values the page
- * knows are filled in; the secret, the token and the case URN stay as placeholders.
- */
-export async function instructionsFor(application: Application): Promise<Instructions> {
-  const slc = application.apis.find(api => api.apiName === SLC_API_NAME);
-  const tenant = application.tenantId || '{tenant_id}';
-  const base = slc ? slcBaseUrl() : undefined;
-  const resourceAppId = await publisherId(SLC_API_NAME);
+async function instructionsForApi(application: Application, api: ApiSubscription): Promise<Instructions> {
+  const catalogue = await getCatalogueApi(api.shortCode);
+  // The Entra application the API's roles belong to, which is what a consumer asks a token on.
+  const resourceAppId = catalogue?.resourceAppId || PUBLISHER_PLACEHOLDER;
 
   return {
-    apiName: SLC_API_NAME,
+    shortCode: api.shortCode,
+    apiTitle: api.apiTitle,
     token: {
-      url: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+      url: `https://login.microsoftonline.com/${application.tenantId || '{tenant_id}'}/oauth2/v2.0/token`,
       clientId: application.clientId,
       clientSecret: '<client_secret>',
       publisherId: resourceAppId,
       scope: `${resourceAppId}/.default`,
     },
-    ...(base
-      ? {
-          slc: {
-            courtScheduleUrl: `${base}/case/{case_urn}/courtschedule`,
-            scenariosUrl: `${base}/scenarios`,
-          },
-        }
-      : {}),
+    ...(catalogue?.portalUrl ? { portalUrl: catalogue.portalUrl } : {}),
   };
 }

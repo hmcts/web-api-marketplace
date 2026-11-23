@@ -1,0 +1,102 @@
+{% extends "template.njk" %}
+
+{% set pageTitle = "Producer Onboarding - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "documentation" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Documentation", href: "/documentation" }
+] %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Producer Onboarding</h1>
+
+    <p class="govuk-body-l">
+      Publish your API on the HMCTS API Marketplace so that other teams and partners can find it, try
+      it safely, and request access. This page explains what you need before you start, and what
+      happens next.
+    </p>
+
+    <h2 class="govuk-heading-m" id="before-you-start">Before you start</h2>
+
+    <p class="govuk-body">
+      You need all six of these before onboarding can start. If anything is missing, fix it first.
+    </p>
+
+    <ol class="govuk-list govuk-list--number">
+      <li>A clear description of your API, written as an OpenAPI specification, with sample responses
+        &mdash; including what errors look like. Samples must not contain real data.</li>
+      <li>Security checks in your API. It checks the security token on every call.</li>
+      <li>System-to-system sign-in (OAuth 2.0). The applications that call your API sign in, not
+        people.</li>
+      <li>Your API running in each environment we connect to: a test environment with no live data,
+        and a live environment.</li>
+      <li>Approval to share it with people outside your team.</li>
+      <li>A private connection. The marketplace can reach your API privately, agreed with our platform
+        team.</li>
+    </ol>
+
+    <h2 class="govuk-heading-m" id="how-it-fits-together">How it fits together</h2>
+
+    <p class="govuk-body">
+      Your API stays with your team. The marketplace puts the catalogue, the security checks and
+      Try it now in front of it. For a consumer, it works like this:
+    </p>
+
+    <ol class="govuk-list govuk-list--number">
+      <li>They find your API in the catalogue and sign up.</li>
+      <li>They build and test their integration using Try it now: a practice copy of your API that
+        returns your sample responses.</li>
+      <li>Once approved, their calls reach your real API.</li>
+    </ol>
+
+    <p class="govuk-body">
+      Every call goes through our secure gateway, which checks who is calling before anything
+      reaches you.
+    </p>
+
+    <h2 class="govuk-heading-m" id="how-onboarding-works">How onboarding works</h2>
+
+    <p class="govuk-body">
+      Unless a step says otherwise, you and the API Marketplace team do it together.
+    </p>
+
+    <ol class="govuk-list govuk-list--number">
+      <li><strong>Check you are ready.</strong> Go through the
+        <a class="govuk-link" href="#before-you-start">Before you start</a> list above. You do this.</li>
+      <li><strong>Agree the basics.</strong> <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">Email us</a>.
+        We agree a short name for your API, which environments we connect to, and how we connect.</li>
+      <li><strong>Set up secure access.</strong> We create your API's security identity. Your team sets
+        your API to accept tokens from it.</li>
+      <li><strong>Connect.</strong> We register your API on our gateway and open the private
+        connection to it.</li>
+      <li><strong>Add your API to Try it now.</strong> Your team adds your API to Try it now.</li>
+      <li><strong>List it and test it.</strong> Your API appears in the catalogue, and we test the
+        whole journey together.</li>
+      <li><strong>Go live.</strong> We release it on the live gateway, then your team publishes the
+        API version.</li>
+    </ol>
+
+    <h2 class="govuk-heading-m" id="what-you-get">What you get</h2>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>A listing in the API Marketplace catalogue, with your documentation.</li>
+      <li>Self-service sign-up, so consumers can register without emailing you.</li>
+      <li>Try it now, so consumers can build and test against sample data before getting real access.</li>
+      <li>A secure gateway that checks identity and limits traffic before calls reach you.</li>
+    </ul>
+
+    <h2 class="govuk-heading-m" id="get-in-touch">Get in touch</h2>
+
+    <p class="govuk-body">
+      To start onboarding, or if you have a question, email the API Marketplace team at
+      <a class="govuk-link" href="mailto:APIMarketplace@hmcts.net">APIMarketplace@hmcts.net</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

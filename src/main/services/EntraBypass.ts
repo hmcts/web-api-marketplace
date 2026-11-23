@@ -1,3 +1,4 @@
+import { AMP_ADMIN } from './AdminRole';
 import { EntraClaims } from './Entra';
 
 const JOHN_DOE: EntraClaims = {
@@ -17,12 +18,18 @@ export const entraBypass = {
   },
 
   get claims(): EntraClaims {
-    return JOHN_DOE;
+    return asksForAdmin() ? { ...JOHN_DOE, roles: [AMP_ADMIN] } : JOHN_DOE;
   },
 };
 
 function askedFor(): boolean {
   return process.env.BYPASS_ENTRA === 'true';
+}
+
+// A second variable of its own, so turning the bypass on to look at a page cannot quietly hand out
+// an admin session Entra never authorised. It only has any effect where the bypass itself works.
+function asksForAdmin(): boolean {
+  return process.env.BYPASS_ENTRA_ADMIN === 'true';
 }
 
 // Explicitly, not by default: nothing deployed sets NODE_ENV, so a default of development

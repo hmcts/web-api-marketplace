@@ -14,8 +14,8 @@ export const LOCAL_USER = {
 };
 
 export const CATALOGUE = [
-  { name: 'api-one', title: 'API one', description: 'The first API.', team: 'team-one' },
-  { name: 'api-two', title: 'API two' },
+  { shortCode: 'one', title: 'API one', summary: 'The first API.', team: 'team-one', domain: 'Reference data' },
+  { shortCode: 'two', title: 'API two' },
 ];
 
 interface RequestParts {

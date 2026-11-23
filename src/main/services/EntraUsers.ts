@@ -13,6 +13,7 @@ export interface EntraUser {
   email: string;
   name: string;
   status: string;
+  role?: string;
   createdAt: string;
   lastLoginAt: string;
 }
