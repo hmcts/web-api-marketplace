@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import { AppLogger } from '../modules/logging';
 
+import { authHeaders } from './BackendAuth';
 import { backendUrl } from './BackendHealth';
 
 /**
@@ -56,7 +57,7 @@ export async function postSubmission(
     const response = await axios.post(url, body, {
       timeout: 10000,
       validateStatus: () => true,
-      headers: { requestingUserId: String(requesterId) },
+      headers: authHeaders(String(requesterId)),
     });
 
     if (response.status === 201) {

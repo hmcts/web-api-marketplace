@@ -3,7 +3,7 @@ import { generateKeyPair } from 'jose';
 import { assertEntraConfigured } from '../../../main/modules/entra/config';
 import {
   authorizeUrl,
-  exchangeCodeForIdToken,
+  exchangeCodeForTokens,
   isEntraPrompt,
   logoutUrl,
   newPkce,
@@ -30,7 +30,7 @@ describe('Entra', () => {
       expect(sentTo.origin + sentTo.pathname).toBe(entra.authorizeEndpoint);
       expect(sentTo.searchParams.get('response_type')).toBe('code');
       expect(sentTo.searchParams.get('client_id')).toBe(CLIENT_ID);
-      expect(sentTo.searchParams.get('scope')).toBe('openid profile email');
+      expect(sentTo.searchParams.get('scope')).toBe('openid profile email offline_access');
       expect(sentTo.searchParams.get('state')).toBe('the-state');
       expect(sentTo.searchParams.get('nonce')).toBe('the-nonce');
       expect(sentTo.searchParams.has('prompt')).toBe(false);
@@ -80,20 +80,22 @@ describe('Entra', () => {
     test('a_code_exchanged_with_its_verifier_should_be_answered_with_a_token', async () => {
       const pkce = newPkce();
 
-      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier)).resolves.toMatch(/\./);
+      await expect(exchangeCodeForTokens(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier)).resolves.toEqual(
+        expect.objectContaining({ idToken: expect.stringMatching(/\./) })
+      );
     });
 
     test('a_code_exchanged_with_the_wrong_verifier_should_be_refused', async () => {
       const pkce = newPkce();
 
-      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), newPkce().verifier)).rejects.toThrow(
+      await expect(exchangeCodeForTokens(codeFor(ADA, 'n1', pkce.challenge), newPkce().verifier)).rejects.toThrow(
         /400 invalid_grant/
       );
     });
 
     test('a_good_token_should_yield_the_oid_name_and_email', async () => {
       const pkce = newPkce();
-      const idToken = await exchangeCodeForIdToken(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier);
+      const { idToken } = await exchangeCodeForTokens(codeFor(ADA, 'n1', pkce.challenge), pkce.verifier);
 
       await expect(verifiedClaims(idToken, 'n1')).resolves.toEqual({
         oid: ADA.oid,
@@ -111,7 +113,7 @@ describe('Entra', () => {
     test('a_failed_token_exchange_should_throw_with_entras_reason', async () => {
       entra.failTokenRequests(503);
 
-      await expect(exchangeCodeForIdToken(codeFor(ADA, 'n1'), 'v')).rejects.toThrow(/503 temporarily_unavailable/);
+      await expect(exchangeCodeForTokens(codeFor(ADA, 'n1'), 'v')).rejects.toThrow(/503 temporarily_unavailable/);
     });
   });
 

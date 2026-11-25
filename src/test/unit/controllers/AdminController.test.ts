@@ -1,4 +1,6 @@
 import AdminController from '../../../main/controllers/AdminController';
+import { AMP_ADMIN } from '../../../main/services/AdminRole';
+import { BackendError } from '../../../main/services/Applications';
 import { mockRequest } from '../mocks/mockRequest';
 import { mockResponse } from '../mocks/mockResponse';
 
@@ -28,7 +30,7 @@ const GRACE_DETAIL = {
   ],
 };
 
-const userPage = async (id: string, session: Record<string, unknown> = { user: admin }) => {
+const userPage = async (id: string, session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }) => {
   const req = mockRequest({}, session);
   req.params = { id };
   const res = mockResponse();
@@ -47,6 +49,7 @@ describe('AdminController user page', () => {
     const { res, data } = await userPage('2');
 
     expect(res.view).toBe('admin/user');
+    expect((getAdminUser as jest.Mock).mock.calls[0][0].token).toBe(ID_TOKEN);
     expect((getAdminUser as jest.Mock).mock.calls[0][1]).toBe(2);
     expect(data.user).toEqual({
       name: 'Grace Hopper',
@@ -127,11 +130,20 @@ describe('AdminController user page', () => {
     expect(data.couldNotLoad).toBe(true);
   });
 
-  test('a_non_admin_should_be_handed_on_to_not_found_from_a_user_page', async () => {
-    const { res, next } = await userPage('2', { user });
+  test('a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in_from_a_user_page', async () => {
+    (getAdminUser as jest.Mock).mockRejectedValue(new BackendError('The backend answered 401', 401));
 
-    expect(next).toHaveBeenCalled();
+    const { res } = await userPage('2');
+
+    expect(res.redirected).toBe('/sign-in');
     expect(res.view).toBeUndefined();
+  });
+
+  test('a_non_admin_should_be_told_a_user_page_is_not_found', async () => {
+    const { res } = await userPage('2', { user });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.view).toBe('not-found');
     expect(getAdminUser).not.toHaveBeenCalled();
   });
 
@@ -143,8 +155,9 @@ describe('AdminController user page', () => {
   });
 });
 
-const admin = { id: 1, email: 'ada@example.com', name: 'Ada Admin', role: 'ADMIN' };
-const user = { id: 2, email: 'joe@example.com', name: 'Joe Bloggs', role: 'USER' };
+const ID_TOKEN = 'header.payload.signature';
+const admin = { id: 1, email: 'ada@example.com', name: 'Ada Admin', roles: [AMP_ADMIN] };
+const user = { id: 2, email: 'joe@example.com', name: 'Joe Bloggs' };
 
 const ADA = {
   id: 1,
@@ -163,7 +176,10 @@ const GRACE = {
   applicationCount: 0,
 };
 
-const usersPage = async (query: Record<string, string> = {}, session: Record<string, unknown> = { user: admin }) => {
+const usersPage = async (
+  query: Record<string, string> = {},
+  session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }
+) => {
   const req = mockRequest({}, session);
   req.query = query;
   const res = mockResponse();
@@ -197,10 +213,12 @@ describe('AdminController users page', () => {
     expect(data.couldNotLoad).toBe(false);
   });
 
-  test('the_users_page_should_ask_the_backend_as_the_signed_in_admin', async () => {
-    await usersPage({}, { user: { ...admin, oid: 'aaaaaaaa-1111-2222-3333-444444444444' } });
+  test('the_users_page_should_ask_the_backend_with_the_signed_in_admins_token', async () => {
+    await usersPage({}, { user: { ...admin, oid: 'aaaaaaaa-1111-2222-3333-444444444444' }, idToken: ID_TOKEN });
 
-    expect((listAdminUsers as jest.Mock).mock.calls[0][0].oid).toBe('aaaaaaaa-1111-2222-3333-444444444444');
+    const owner = (listAdminUsers as jest.Mock).mock.calls[0][0];
+    expect(owner.oid).toBe('aaaaaaaa-1111-2222-3333-444444444444');
+    expect(owner.token).toBe(ID_TOKEN);
   });
 
   test('a_user_who_has_never_signed_in_should_show_not_known', async () => {
@@ -252,11 +270,20 @@ describe('AdminController users page', () => {
     expect(res.view).toBeUndefined();
   });
 
-  test('a_non_admin_should_be_handed_on_to_not_found', async () => {
-    const { res, next } = await usersPage({}, { user });
+  test('a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in', async () => {
+    (listAdminUsers as jest.Mock).mockRejectedValue(new BackendError('The backend answered 401', 401));
 
-    expect(next).toHaveBeenCalled();
-    expect(res.view).toBeUndefined();
+    const { res, data } = await usersPage();
+
+    expect(res.redirected).toBe('/sign-in');
+    expect(data).toBeUndefined();
+  });
+
+  test('a_non_admin_should_be_told_the_users_page_is_not_found', async () => {
+    const { res } = await usersPage({}, { user });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.view).toBe('not-found');
     expect(listAdminUsers).not.toHaveBeenCalled();
   });
 
@@ -272,32 +299,27 @@ describe('AdminController users page', () => {
 describe('AdminController', () => {
   test('an_admin_should_see_the_admin_page', () => {
     const res = mockResponse();
-    const next = jest.fn();
 
-    new AdminController().get(mockRequest({}, { user: admin }), res, next);
+    new AdminController().get(mockRequest({}, { user: admin }), res);
 
     expect(res.view).toBe('admin');
-    expect(next).not.toHaveBeenCalled();
   });
 
-  test('a_user_should_be_handed_on_to_not_found', () => {
+  test('a_user_should_be_told_the_page_is_not_found', () => {
     const res = mockResponse();
-    const next = jest.fn();
 
-    new AdminController().get(mockRequest({}, { user }), res, next);
+    new AdminController().get(mockRequest({}, { user }), res);
 
-    expect(next).toHaveBeenCalled();
-    expect(res.view).toBeUndefined();
+    expect(res.statusCode).toBe(404);
+    expect(res.view).toBe('not-found');
   });
 
   test('a_signed_out_visitor_should_be_redirected_to_sign_in', () => {
     const res = mockResponse();
-    const next = jest.fn();
 
-    new AdminController().get(mockRequest({}), res, next);
+    new AdminController().get(mockRequest({}), res);
 
     expect(res.redirected).toBe('/sign-in');
-    expect(next).not.toHaveBeenCalled();
     expect(res.view).toBeUndefined();
   });
 });

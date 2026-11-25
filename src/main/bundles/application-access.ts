@@ -5,10 +5,11 @@ const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms
 /** Retries the role grant, which Entra refuses for a minute or two after the application is created. */
 export async function watchApplicationAccess(
   container: HTMLElement,
-  post: (url: string) => Promise<AccessState> = postForJson,
+  post: (url: string, csrfToken: string) => Promise<AccessState> = postForJson,
   pause: (ms: number) => Promise<void> = wait
 ): Promise<void> {
   const url = container.dataset.accessUrl ?? '';
+  const csrfToken = container.dataset.csrfToken ?? '';
   const attempts = Number(container.dataset.attempts) || 1;
   const intervalMs = (Number(container.dataset.interval) || 15) * 1000;
   const status = container.querySelector<HTMLElement>('#access-status');
@@ -22,7 +23,7 @@ export async function watchApplicationAccess(
     show(`Setting up access… (attempt ${attempt} of ${attempts})`);
     let result: AccessState;
     try {
-      result = await post(url);
+      result = await post(url, csrfToken);
     } catch {
       result = { state: 'failed', message: 'The service could not be reached. Try again later.' };
     }
@@ -44,10 +45,10 @@ export async function watchApplicationAccess(
   show('Access is taking longer than expected. Use "Check access" to try again.');
 }
 
-async function postForJson(url: string): Promise<AccessState> {
+async function postForJson(url: string, csrfToken: string): Promise<AccessState> {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json', 'X-CSRF-Token': csrfToken },
     credentials: 'same-origin',
   });
   return (await response.json()) as AccessState;

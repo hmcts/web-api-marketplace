@@ -39,16 +39,13 @@ Designs: `Users view.png` and `User details.png` (from the team, not in the repo
 
 ## Existing state
 
-- `marketplace_user.role` is `USER` or `ADMIN` (service-api-marketplace#234). Admins are granted
-  by migration.
-- web-api-marketplace#238 (merged) keeps the role in the session, shows an **Admin** tab to
-  admins, and adds `/admin`: signed out goes to sign in, signed in but not an admin falls
-  through to the app's own 404. This work starts from master.
-- The web app calls the backend with the signed-in user's Entra object id in the
-  `requestingUserId` header. The backend trusts the web app with that header (in-cluster only).
-- Backend `GET /users` and `GET /users/{userId}` return name, email, status, role, `createdAt`
-  and `lastLoginAt`. They are open to any signed-in user by design (see their spec text). This
-  work leaves them as they are.
+- Admin means holding the `amp_admin` app role, assigned in Entra and carried in the verified ID
+  token's `roles` claim. The session keeps the roles, and the **Admin** tab shows to those who
+  hold it.
+- `/admin` is guarded by `requireMarketplaceAdmin`: signed out goes to sign in, signed in without
+  the role gets the app's 404 page.
+- The session keeps the ID token and refreshes it before it expires. A refresh re-reads the
+  roles, so removing the role in Entra takes effect within minutes.
 - Applications: `application` (owner `user_id`, `name`, `created_at`), with its APIs in
   `application_api`. Production requests: `production_request` (`user_id`, `reference`,
   `application_name`, `status`, `submitted_at`, `organisation`).
@@ -66,14 +63,15 @@ tag `admin`:
   `submittedAt`, newest first). Any status, so a user reached by id is still shown.
 - `organisation` is the `organisation` of the user's most recent production request, or null
   when they have none (decided).
-- Both take `requestingUserId`. Unknown or missing caller: as the other endpoints (400/404).
-  A caller who is not an `ADMIN`: **403**. Unknown `userId`: 404.
+- Both need the caller's ID token as `Authorization: Bearer`, verified by the backend
+  (signature, issuer, audience). No valid token: **401**. A token without `amp_admin`: **403**.
+  Unknown `userId`: 404.
 - No secrets, client ids, object ids or subscription names in either response.
 
 ## Web (hmcts/web-api-marketplace)
 
-All under `/admin`, with the same guard as `/admin` today: signed out → sign in, not an admin →
-the app's 404.
+All under `/admin`, guarded by `requireMarketplaceAdmin` as `/admin` is. Every backend call sends
+the session's ID token as `Authorization: Bearer`.
 
 - `/admin` (dashboard): adds a **Registered users** link to `/admin/users`.
 - `/admin/users` (`Users view.png`):
@@ -93,7 +91,9 @@ the app's 404.
     with status worded as on the user's own account page (`statusText`). None: "This user has
     not asked for production credentials."
   - A user id the backend does not know: the app's 404.
-- The backend being unreachable or refusing: the pages say the users could not be loaded, as the
+- The backend answering 401: the session is cleared and the person signs in again.
+- The backend answering 403 (the role was removed in Entra): the app's 404.
+- The backend being unreachable or failing: the pages say the users could not be loaded, as the
   account page does, rather than erroring.
 - The **Admin** nav item stays highlighted on all three pages.
 
@@ -101,8 +101,7 @@ the app's 404.
 
 - `lastLoginAt` is `not null` in the database but stays nullable in the spec, and the web shows
   "Not known" for a missing value, as the design does.
-- A 404 from `GET /admin/users/{userId}` is shown as the app's 404. The caller is an admin who
-  has signed in, so their own row exists and the 404 means the user id is unknown.
+- A 404 from `GET /admin/users/{userId}` is shown as the app's 404: the user id is unknown.
 - Dates are UTC from the backend and are formatted as `AccountController.formatDate` does.
 - Status: `ACTIVE` shows as "Active". Any other value is shown in sentence case.
 - Release order: backend first. If the web goes out first, its pages say the users could not

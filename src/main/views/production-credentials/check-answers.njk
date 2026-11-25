@@ -32,6 +32,7 @@
     {{ govukSummaryList({ rows: summaryRows }) }}
 
     <form method="post" action="/account/production-credentials/check-answers" novalidate>
+      {{ csrfField() }}
       {{ govukButton({ text: "Accept and submit", attributes: { id: "production-submit" } }) }}
     </form>
   </div>

@@ -23,6 +23,7 @@
     <p class="govuk-body">An API you remove loses its subscription key straight away. An API you add gets a new one.</p>
 
     <form method="post" action="/account/applications/{{ application.id }}/apis" novalidate>
+      {{ csrfField() }}
       {% include "applications/api-checkboxes.njk" %}
       {{ govukButton({ text: "Save changes", attributes: { id: "save-apis" } }) }}
       <p class="govuk-body"><a class="govuk-link" href="/account/applications/{{ application.id }}">Cancel</a></p>

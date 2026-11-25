@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { AddressInfo } from 'node:net';
 
-import { JWTPayload, SignJWT, exportJWK, generateKeyPair } from 'jose';
+import { JWTPayload, SignJWT, exportJWK, generateKeyPair, jwtVerify } from 'jose';
+
+import { AMP_ADMIN } from '../../main/services/AdminRole';
 
 import { StubMarketplace, stubMarketplace } from './marketplace';
 
@@ -57,12 +59,18 @@ export interface StubEntra {
   failTokenRequests(status: number): void;
   /** Every user saved through the backend's POST /session, by oid. */
   savedUsers: Map<string, { id: number; email: string; name: string }>;
-  /** The oids POST /session answers as ADMIN, until `reset()`. */
+  /** The oids whose ID token carries the admin app role, until `reset()`. */
   admins: Set<string>;
   /** Makes the backend refuse to save users, as an unreachable or unhappy one would. */
   failUserSaves(status: number): void;
   /** The backend's /applications and /apim/subscription-keys. */
   marketplace: StubMarketplace;
+  /** The Authorization header the last backend call arrived with, so a test can see it was sent. */
+  lastBackendAuthorization?: string;
+  /** The refresh token the next token response hands out, so a test can predict the rotation. */
+  nextRefreshToken: string;
+  /** How long the ID tokens this tenant issues are good for; shorten it to force a refresh. */
+  tokenLifetime: string;
   reset(): void;
   close(): Promise<void>;
 }
@@ -83,6 +91,8 @@ export async function startStubEntra(): Promise<StubEntra> {
   let failSavesWith: number | undefined;
   const savedUsers: StubEntra['savedUsers'] = new Map();
   const admins = new Set<string>();
+  /** Refresh tokens this tenant has handed out, and the sign in each belongs to. */
+  const refreshable = new Map<string, StubClaims>();
   const marketplace = stubMarketplace(() => new Map([...savedUsers].map(([oid, user]) => [oid, user.id])));
 
   const server = http.createServer((req, res) => {
@@ -103,8 +113,10 @@ export async function startStubEntra(): Promise<StubEntra> {
         .setIssuer(overrides.iss ?? issuer)
         .setAudience(overrides.aud ?? CLIENT_ID)
         .setIssuedAt()
-        .setExpirationTime(overrides.exp ?? '1h')
+        .setExpirationTime(overrides.exp ?? stub.tokenLifetime)
         .sign(overrides.key ?? keyPair.privateKey),
+    nextRefreshToken: 'refresh-1',
+    tokenLifetime: '1h',
     answerTokenRequestsWith: answer => (issue = answer),
     failTokenRequests: status => (failWith = status),
     savedUsers,
@@ -114,6 +126,9 @@ export async function startStubEntra(): Promise<StubEntra> {
     reset: () => {
       marketplace.state.reset();
       admins.clear();
+      refreshable.clear();
+      stub.nextRefreshToken = 'refresh-1';
+      stub.tokenLifetime = '1h';
       issue = undefined;
       failWith = undefined;
       failSavesWith = undefined;
@@ -127,10 +142,40 @@ export async function startStubEntra(): Promise<StubEntra> {
       }),
   };
 
+  async function verifiedRoles(authorization?: string): Promise<string[] | undefined> {
+    const token = authorization?.match(/^Bearer (.+)$/)?.[1];
+    if (!token) {
+      return undefined;
+    }
+    try {
+      const { payload } = await jwtVerify(token, keyPair.publicKey, { issuer, audience: CLIENT_ID });
+      return Array.isArray(payload.roles) ? (payload.roles as string[]) : [];
+    } catch {
+      return undefined;
+    }
+  }
+
   async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const json = (status: number, body: unknown) => {
       res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(body));
+    };
+
+    /** Spends a refresh token once, as Entra does, and hands back the next one. */
+    const refreshed = async (spent: string) => {
+      const claims = refreshable.get(spent);
+      if (!claims) {
+        return json(400, { error: 'invalid_grant', error_description: 'Unknown refresh token' });
+      }
+      refreshable.delete(spent);
+      const withRoles = admins.has(claims.oid) ? { ...claims, roles: [AMP_ADMIN] } : claims;
+      const rotated = `${spent}-next`;
+      refreshable.set(rotated, claims);
+      return json(200, {
+        id_token: await stub.idToken(withRoles, undefined as unknown as string),
+        expires_in: 3600,
+        refresh_token: rotated,
+      });
     };
 
     if (req.url === '/tenant/v2.0/.well-known/openid-configuration') {
@@ -149,6 +194,9 @@ export async function startStubEntra(): Promise<StubEntra> {
         return json(failWith, { error: 'temporarily_unavailable', error_description: 'Stub told to fail' });
       }
       const form = new URLSearchParams(await bodyOf(req));
+      if (form.get('grant_type') === 'refresh_token') {
+        return refreshed(form.get('refresh_token') ?? '');
+      }
       const { claims, nonce, codeChallenge } = JSON.parse(
         Buffer.from(form.get('code') ?? '', 'base64url').toString() || '{}'
       );
@@ -159,8 +207,10 @@ export async function startStubEntra(): Promise<StubEntra> {
       if (codeChallenge && createHash('sha256').update(verifier).digest('base64url') !== codeChallenge) {
         return json(400, { error: 'invalid_grant', error_description: 'The code_verifier does not match' });
       }
-      const idToken = issue ? await issue(claims, nonce) : await stub.idToken(claims, nonce);
-      return json(200, { id_token: idToken, expires_in: 3600 });
+      const withRoles = admins.has(claims.oid) ? { ...claims, roles: [AMP_ADMIN] } : claims;
+      const idToken = issue ? await issue(withRoles, nonce) : await stub.idToken(withRoles, nonce);
+      refreshable.set(stub.nextRefreshToken, claims);
+      return json(200, { id_token: idToken, expires_in: 3600, refresh_token: stub.nextRefreshToken });
     }
     if (req.url === '/backend/session' && req.method === 'POST') {
       if (failSavesWith) {
@@ -176,14 +226,17 @@ export async function startStubEntra(): Promise<StubEntra> {
         userReference,
         entraObjectId: objectId,
         status: 'ACTIVE',
-        role: admins.has(objectId) ? 'ADMIN' : 'USER',
         createdAt: now,
         lastLoginAt: now,
       });
     }
     if (req.url?.startsWith('/backend/admin/users') && req.method === 'GET') {
-      const caller = String(req.headers.requestinguserid ?? '');
-      if (!admins.has(caller)) {
+      stub.lastBackendAuthorization = req.headers.authorization;
+      const roles = await verifiedRoles(req.headers.authorization);
+      if (!roles) {
+        return json(401, { error: 'A verified token is required.' });
+      }
+      if (!roles.includes(AMP_ADMIN)) {
         return json(403, { error: 'Admins only.' });
       }
       const now = new Date().toISOString();
@@ -202,6 +255,7 @@ export async function startStubEntra(): Promise<StubEntra> {
     if (req.url?.startsWith('/backend/')) {
       const path = req.url.slice('/backend'.length);
       const userId = req.headers.requestingUserId ?? req.headers.requestinguserid;
+      stub.lastBackendAuthorization = req.headers.authorization;
       const body = req.method === 'GET' || req.method === 'DELETE' ? '' : await bodyOf(req);
       const reply = (status: number, payload?: unknown) =>
         payload === undefined ? res.writeHead(status).end() : json(status, payload);

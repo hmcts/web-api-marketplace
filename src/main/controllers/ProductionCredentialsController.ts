@@ -80,13 +80,14 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
+    const token = req.session.idToken;
     const preselected = typeof req.query.application === 'string' ? req.query.application : undefined;
     const answers: Answers = {
       ...req.session.productionDraft,
       ...(preselected ? { application: preselected } : {}),
     };
 
-    res.render('production-credentials/form', await this.formData(user, answers, []));
+    res.render('production-credentials/form', await this.formData(user, answers, [], undefined, undefined, token));
   }
 
   @POST()
@@ -96,15 +97,19 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await this.applications(user);
-    const requested = await this.alreadyRequested(user);
+    const token = req.session.idToken;
+    const applications = await this.applications(user, token);
+    const requested = await this.alreadyRequested(user, token);
     const answers = this.toAnswers(req.body as Record<string, unknown>);
     const errors = this.validate(answers, applications, requested);
 
     if (errors.length) {
       res
         .status(400)
-        .render('production-credentials/form', await this.formData(user, answers, errors, applications, requested));
+        .render(
+          'production-credentials/form',
+          await this.formData(user, answers, errors, applications, requested, token)
+        );
       return;
     }
 
@@ -126,8 +131,9 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
+    const token = req.session.idToken;
     res.render('production-credentials/check-answers', {
-      rows: this.summaryRows(draft, await this.applications(user)),
+      rows: this.summaryRows(draft, await this.applications(user, token)),
     });
   }
 
@@ -139,8 +145,9 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const applications = await this.applications(user);
-    const requested = await this.alreadyRequested(user);
+    const token = req.session.idToken;
+    const applications = await this.applications(user, token);
+    const requested = await this.alreadyRequested(user, token);
     const draft = req.session.productionDraft;
 
     if (!draft || this.validate(draft, applications, requested).length) {
@@ -151,7 +158,7 @@ export default class ProductionCredentialsController {
     const rows = this.summaryRows(draft, applications);
 
     try {
-      const request = await submitProductionRequest(ownerOf(user), this.toSubmission(draft));
+      const request = await submitProductionRequest(ownerOf(user, token), this.toSubmission(draft));
 
       sendEmail({
         template: 'production-request-received',
@@ -188,7 +195,8 @@ export default class ProductionCredentialsController {
     }
 
     const user = req.session.user as SignedInUser;
-    const request = await getProductionRequest(ownerOf(user), String(req.params.reference));
+    const token = req.session.idToken;
+    const request = await getProductionRequest(ownerOf(user, token), String(req.params.reference));
 
     if (!request) {
       next();
@@ -326,9 +334,9 @@ export default class ProductionCredentialsController {
     return date.getUTCDate() === day && date.getUTCMonth() === month - 1 ? date : undefined;
   }
 
-  private async applications(user: SignedInUser): Promise<Application[]> {
+  private async applications(user: SignedInUser, token?: string): Promise<Application[]> {
     try {
-      return await listApplications(ownerOf(user));
+      return await listApplications(ownerOf(user, token));
     } catch (error) {
       logger.error(`Could not list the applications for the form: ${(error as Error).message}`);
       return [];
@@ -336,9 +344,9 @@ export default class ProductionCredentialsController {
   }
 
   /** The applications that already have a request, by client id. */
-  private async alreadyRequested(user: SignedInUser): Promise<Set<string>> {
+  private async alreadyRequested(user: SignedInUser, token?: string): Promise<Set<string>> {
     try {
-      const requests = await listProductionRequests(ownerOf(user));
+      const requests = await listProductionRequests(ownerOf(user, token));
       return new Set(requests.map(request => request.clientId).filter((id): id is string => !!id));
     } catch (error) {
       logger.error(`Could not list the production requests for the form: ${(error as Error).message}`);
@@ -484,10 +492,11 @@ export default class ProductionCredentialsController {
     answers: Answers,
     errors: FieldError[],
     applications?: Application[],
-    requested?: Set<string>
+    requested?: Set<string>,
+    token?: string
   ): Promise<Record<string, unknown>> {
-    const owned = applications ?? (await this.applications(user));
-    const alreadyRequested = requested ?? (await this.alreadyRequested(user));
+    const owned = applications ?? (await this.applications(user, token));
+    const alreadyRequested = requested ?? (await this.alreadyRequested(user, token));
     const withoutARequest = owned.filter(application => !alreadyRequested.has(application.clientId));
 
     return {

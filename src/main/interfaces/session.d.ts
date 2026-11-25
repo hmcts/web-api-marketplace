@@ -17,11 +17,16 @@ declare module 'express-session' {
     /** The last email "sent", for the page that follows to preview — see services/Notify. */
     outbox?: Email;
     /**
-     * The ID token this sign in returned, kept only for someone holding the admin role and
-     * only on the server: the admin API verifies it itself rather than trusting a header.
-     * Nobody else's session has a use for one, so nobody else's holds one.
+     * The ID token this sign in returned, forwarded to the API so it can verify the caller
+     * itself rather than trusting a header. Server side only, and good for about an hour.
      */
-    adminToken?: string;
+    idToken?: string;
+    /** Spent for a fresh ID token as the old one runs out. Entra rotates it on every use. */
+    refreshToken?: string;
+    /** When the ID token above expires, in epoch seconds. */
+    idTokenExpiresAt?: number;
+    /** Sent back with every form and script request that changes something; see modules/csrf. */
+    csrfToken?: string;
     /** A one-off banner for the next page rendered, then cleared. */
     notice?: { success: boolean; title: string; text: string };
     /** Answers collected so far by the multi-page journeys, until they are submitted. */

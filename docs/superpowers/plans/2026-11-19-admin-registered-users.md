@@ -4,7 +4,7 @@
 
 **Goal:** Admins can go from the Admin tab to a list of active registered users, and from there to one user's details, applications and production credentials requests.
 
-**Architecture:** The backend (hmcts/service-api-marketplace) gets two admin-only endpoints, `GET /admin/users` and `GET /admin/users/{userId}`. They're spec first, implement the generated `AdminApi`, and answer 403 to anyone who isn't an admin. The web app (hmcts/web-api-marketplace) calls them through `callBackend` and renders `/admin/users` and `/admin/users/:id` with GOV.UK components. Both pages use the same guard as `/admin`. The backend PR ships first.
+**Architecture:** The backend (hmcts/service-api-marketplace) gets two admin-only endpoints, `GET /admin/users` and `GET /admin/users/{userId}`. They're spec first and implement the generated `AdminApi`. The backend verifies the caller's ID token and answers 401 without one and 403 without the `amp_admin` app role. The web app (hmcts/web-api-marketplace) calls them through `callBackend` with the session's ID token as `Authorization: Bearer`, and renders `/admin/users` and `/admin/users/:id` with GOV.UK components. Both pages are guarded by `requireMarketplaceAdmin`, as `/admin` is. The backend PR ships first.
 
 **Tech Stack:**
 
@@ -17,8 +17,9 @@
 
 - **Read-only.** No endpoint or page changes data.
 - **Who can see it:**
-  - Backend: a caller who isn't `ADMIN` gets **403**. A missing caller gets 400 and an unknown one gets 404, as `UserService.requireSignedIn` already does.
-  - Web: signed out → `/sign-in`. Signed in but not an admin → `next()`, which shows the app's 404.
+  - Admin means holding the `amp_admin` app role in the verified ID token, assigned in Entra.
+  - Backend: no valid token gets **401**, a token without `amp_admin` gets **403**.
+  - Web: signed out → `/sign-in`. Signed in without the role → the app's 404 page, from `requireMarketplaceAdmin`. A backend 401 clears the session and sends the person to sign in; a backend 403 shows the 404 page.
 - **Never in a response:** client ids, object ids, secrets or hints, subscription names, Entra object ids.
 - **The list:** only `status = ACTIVE`, newest `createdAt` first. The details page shows a user of any status.
 - **Organisation:** the `organisation` from the user's most recent production request (by `submittedAt`), or null.
@@ -40,7 +41,7 @@
 
 ## Review Focus
 
-1. **Calling the backend directly as a non-admin:** a `USER` who calls `/admin/users` or `/admin/users/{id}` with their own `requestingUserId` gets 403 and no data. Tested in Tasks 1 and 2.
+1. **Calling the backend directly as a non-admin:** someone whose token has no `amp_admin` role gets 403 and no data from `/admin/users` or `/admin/users/{id}`, and a call with no token gets 401. Tested in Tasks 1 and 2.
 2. **Search input:**
    - A search with spaces round it, or in a different case (`"  ADA "`), still matches "Ada Lovelace".
    - A search that matches nobody shows "0 users." and no table, rather than an empty table.
@@ -57,7 +58,7 @@ Work in a new worktree on a new branch from `origin/master`, for example
 `git worktree add ../service-api-marketplace-admin -b AMP-admin-registered-users origin/master`.
 Run tests with `./gradlew test integration`. If there's no `NOTIFY_API_KEY`, exclude `NotifyFunctionalTest` locally.
 
-### Task 1: Spec, admin guard and `GET /admin/users`
+### Task 1: Spec and `GET /admin/users`
 
 **Files:**
 
@@ -79,26 +80,24 @@ Run tests with `./gradlew test integration`. If there's no `NOTIFY_API_KEY`, exc
 - Produces:
   - **Spec schema `AdminUser`:** `id` (int64), `name`, `email`, `createdAt` (local-date-time), `lastLoginAt` (local-date-time, nullable), `applicationCount` (int64).
   - **Domain record:** `record AdminUserSummary(Long id, String name, String email, LocalDateTime createdAt, LocalDateTime lastLoginAt, long applicationCount)`.
-  - **`AdminService`:**
-    - `UserEntity requireAdmin(String requestingUserId)` calls `UserService.requireSignedIn`, then throws `ResponseStatusException(FORBIDDEN, "Admins only.")` unless the role is `UserRole.ADMIN`.
-    - `List<AdminUserSummary> listUsers(String requestingUserId)`.
+  - **`AdminService`:** `List<AdminUserSummary> listUsers()`. The token check in front of `/admin/**` has already decided the caller is an admin.
   - **`ResponseMapper`:** `List<AdminUser> toAdminUsers(List<AdminUserSummary>)`.
   - **`UserRepository`:** `List<UserEntity> findByStatusOrderByCreatedAtDesc(String status)`.
   - **`ApplicationRepository`:** application counts per user in one query. For example, `@Query("select a.user.id as userId, count(a) as total from ApplicationEntity a group by a.user.id") List<Object[]> countByUser()`, or a projection.
   - The name is built as `UserResponse.from` does: `(firstName + " " + lastName).trim()`.
 
-- [ ] **Step 1: Write the failing integration tests** in `AdminEndpointIntegrationTest`. Set it up like `UserEndpointIntegrationTest`: a clean database, then sign in Ada and Grace through `POST /session`. Make Ada an admin by saving her `UserEntity` with `setRole(UserRole.ADMIN)`.
-  - `an_admin_should_see_every_active_user_newest_first`: as Ada, `GET /admin/users` returns 200 and `$.length()` is 2. `$[0].email` is Grace's, because she signed in second.
+- [ ] **Step 1: Write the failing integration tests** in `AdminEndpointIntegrationTest`. Set it up like `UserEndpointIntegrationTest`: a clean database, then sign in Ada and Grace through `POST /session`. Call as an admin with a token carrying `amp_admin` (Spring Security's `jwt()` request post-processor).
+  - `an_admin_should_see_every_active_user_newest_first`: with an admin token, `GET /admin/users` returns 200 and `$.length()` is 2. `$[0].email` is Grace's, because she signed in second.
   - `a_suspended_user_should_be_left_out_of_the_list`: set Grace's status to `"SUSPENDED"`. Then `$.length()` is 1.
   - `the_list_should_count_each_users_applications`: save two `ApplicationEntity` rows for Grace. Then Grace's `applicationCount` is 2 and Ada's is 0.
-  - `the_list_should_not_expose_identifiers_or_secrets`: `$[0].entraObjectId`, `$[0].userReference` and `$[0].role` don't exist.
-  - `a_user_who_is_not_an_admin_should_be_refused` (Review Focus 1): as Grace, the response is 403.
-  - `a_missing_or_unknown_caller_should_be_refused_as_elsewhere`: no header gives 400, and an unknown oid gives 404.
+  - `the_list_should_not_expose_identifiers_or_secrets`: `$[0].entraObjectId` and `$[0].userReference` don't exist.
+  - `a_user_who_is_not_an_admin_should_be_refused` (Review Focus 1): a token without `amp_admin` gives 403.
+  - `a_caller_with_no_token_should_be_refused`: no token gives 401.
 - [ ] **Step 2: Run** `./gradlew integration --tests '*AdminEndpointIntegrationTest'`. Expected: the build fails because `AdminApi` doesn't exist (no spec path yet).
-- [ ] **Step 3: Add the spec path, schema and 403 response, then implement** the repository methods, `AdminUserSummary`, `AdminService.requireAdmin` and `listUsers`, the mapper method, and `AdminController implements AdminApi`.
+- [ ] **Step 3: Add the spec path, schema and 403 response, then implement** the repository methods, `AdminUserSummary`, `AdminService.listUsers`, the mapper method, and `AdminController implements AdminApi`.
   - `AdminController` uses `@Slf4j`, logging "List users for an admin". Follow the pattern in `UserController`.
   - The spec description for `/admin/users` says it lists active users only, newest first, and is for admins only.
-- [ ] **Step 4: Write `AdminServiceTest` with Mockito**, covering `requireAdmin` (USER → 403 `FORBIDDEN`, ADMIN → returns the entity) and the newest-first order passing through from the repository.
+- [ ] **Step 4: Write `AdminServiceTest` with Mockito**, covering the newest-first order passing through from the repository and the application counts.
 - [ ] **Step 5: Run** `./gradlew test integration --tests '*Admin*'`. Expected: PASS.
 - [ ] **Step 6: Run** `./gradlew check`. Expected: PASS (checkstyle, PMD and the rest of the tests).
 - [ ] **Step 7: Commit** with the message "Add GET /admin/users for admins: active users with their application counts".
@@ -116,12 +115,12 @@ Run tests with `./gradlew test integration`. If there's no `NOTIFY_API_KEY`, exc
 
 **Interfaces:**
 
-- Consumes: `AdminService.requireAdmin` (Task 1). Also the existing `ApplicationRepository.findByUserIdOrderByCreatedAtAsc` and `ProductionRequestRepository.findByUserIdOrderBySubmittedAtDesc`.
+- Consumes: `AdminService` (Task 1). Also the existing `ApplicationRepository.findByUserIdOrderByCreatedAtAsc` and `ProductionRequestRepository.findByUserIdOrderBySubmittedAtDesc`.
 - Produces:
   - **`AdminUserDetail`:** `id`, `name`, `email`, `status`, `createdAt`, `lastLoginAt` (nullable), `organisation` (nullable), `applications: AdminApplication[]`, `productionRequests: AdminProductionRequest[]`.
   - **`AdminApplication`:** `name`, `apiCount` (int64), `createdAt`.
   - **`AdminProductionRequest`:** `reference`, `applicationName`, `status`, `submittedAt`.
-  - **Service:** `AdminUserDetail getUser(String requestingUserId, long userId)`. An unknown id throws `ResponseStatusException(NOT_FOUND, "No user " + userId + ".")`.
+  - **Service:** `AdminUserDetail getUser(long userId)`. An unknown id throws `ResponseStatusException(NOT_FOUND, "No user " + userId + ".")`.
   - **Mapper:** `uk.gov.hmcts.amp.openapi.model.AdminUserDetail toAdminUserDetail(AdminUserDetail)`. Fully qualify the clashing name, as the mapper does for `CatalogueDetail`.
 
 - [ ] **Step 1: Write the failing integration tests:**
@@ -133,7 +132,7 @@ Run tests with `./gradlew test integration`. If there's no `NOTIFY_API_KEY`, exc
   - `a_user_with_no_production_requests_should_have_no_organisation`: `$.organisation` doesn't exist or is null, and `$.productionRequests.length()` is 0.
   - `a_suspended_user_should_still_be_shown_by_id`: the response is 200 and `$.status` is "SUSPENDED".
   - `an_unknown_user_should_be_not_found`: `GET /admin/users/999999` returns 404.
-  - `a_user_who_is_not_an_admin_should_be_refused_one_user` (Review Focus 1): as Grace, asking for Ada returns 403.
+  - `a_user_who_is_not_an_admin_should_be_refused_one_user` (Review Focus 1): a token without `amp_admin` asking for Ada returns 403.
   - `one_user_should_not_expose_identifiers_or_secrets`: `$.applications[0].clientId` and `$.entraObjectId` don't exist.
 - [ ] **Step 2: Run** `./gradlew integration --tests '*AdminEndpointIntegrationTest'`. Expected: the new tests fail with 404 (no route).
 - [ ] **Step 3: Add the spec and implement `getUser`.** The organisation is `productionRequests.isEmpty() ? null : productionRequests.get(0).getOrganisation()`, using the newest-first list. Add a service unit test for the organisation choice to `AdminServiceTest`.
@@ -157,7 +156,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
 
 - Create: `src/main/services/AdminUsers.ts`
 - Modify: `src/main/views/admin.njk`, adding a "Registered users" link to `/admin/users`.
-- Modify: `src/test/stubs/entra.ts`. The stub backend answers `GET /backend/admin/users` and `/backend/admin/users/:id` from `savedUsers`, answering 403 unless the requesting oid is in `admins`. Detail data can be set per test with `stub.adminUserDetails.set(id, detail)`.
+- Modify: `src/test/stubs/entra.ts`. The stub backend answers `GET /backend/admin/users` and `/backend/admin/users/:id` from `savedUsers`. Like the real backend, it verifies the Bearer token: 401 without a valid one, 403 when its `roles` lack `amp_admin`.
 - Test: `src/test/unit/services/AdminUsers.test.ts`, and an updated `src/test/unit/controllers/AdminController.test.ts`.
 
 **Interfaces:**
@@ -202,7 +201,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
   ```
 
 - [ ] **Step 1: Write the failing unit tests** in `AdminUsers.test.ts`, mocking axios as `ProductionRequests.test.ts` does:
-  - `listing_should_get_admin_users_as_the_caller`: the request is `GET /admin/users` with header `requestingUserId` set to the owner's oid.
+  - `listing_should_get_admin_users_as_the_caller`: the request is `GET /admin/users` with the owner's token as `Authorization: Bearer`.
   - `one_user_should_be_undefined_when_the_backend_does_not_know_them`: a 404 gives `undefined`.
   - `any_other_failure_should_be_thrown`: a 500 rejects with a `BackendError`.
 - [ ] **Step 2: Run** `npx jest src/test/unit/services/AdminUsers.test.ts`. Expected: FAIL (module not found).
@@ -216,15 +215,13 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
 **Files:**
 
 - Modify: `src/main/controllers/AdminController.ts`, adding `@route('/users') @GET() users(req, res, next)`.
-- Create: `src/main/services/AdminGuard.ts`, holding the shared guard taken out of `AdminController.get`.
 - Create: `src/main/views/admin/users.njk`
 - Test: `src/test/unit/controllers/AdminController.test.ts`, and `src/test/routes/admin.ts`
 
 **Interfaces:**
 
-- Consumes: `listAdminUsers` and `AdminUser` (Task 3), `requireSignIn` and `isAdmin`.
+- Consumes: `listAdminUsers` and `AdminUser` (Task 3), `requireMarketplaceAdmin` from `src/main/services/AdminRole.ts`, and `ownerOf(user, req.session.idToken)`.
 - Produces:
-  - `export function requireAdmin(req: AppRequest, res: Response, next: NextFunction): boolean` in `AdminGuard.ts`. It returns false after redirecting to sign-in, or after calling `next()`.
   - `export function formatDate(iso?: string | null): string | undefined`, moved from `AccountController`'s private method to a shared `src/main/services/Dates.ts`. `AccountController` then uses it too.
 - **View model** for `admin/users.njk`: `{ q: string, count: number, users: { id, name, email, joined, lastSignedIn, applications }[], couldNotLoad: boolean }`.
   - `name` falls back to `email` when blank.
@@ -241,9 +238,9 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
   - `a_search_matching_nobody_should_count_zero` (Review Focus 2): `count` is 0 and `users` is empty.
   - `a_user_with_no_name_should_be_listed_by_email` (Review Focus 4): with `name: ''`, `users[0].name` is the email address.
   - `an_unreachable_backend_should_say_the_users_could_not_be_loaded` (Review Focus 5): when `listAdminUsers` rejects, `couldNotLoad` is true, `res.view` is `'admin/users'`, and nothing is thrown.
-  - `a_non_admin_should_be_handed_on_to_not_found` and `a_signed_out_visitor_should_be_sent_to_sign_in`, for `users()`.
+  - `a_non_admin_should_be_told_the_users_page_is_not_found` (404 page), `a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in` and `a_signed_out_visitor_should_be_sent_to_sign_in`, for `users()`.
 - [ ] **Step 2: Run** `npx jest src/test/unit/controllers/AdminController.test.ts`. Expected: FAIL (`users` is not a function).
-- [ ] **Step 3: Implement** `requireAdmin`, the shared `formatDate`, `users()` and `admin/users.njk`.
+- [ ] **Step 3: Implement** the shared `formatDate`, `users()` and `admin/users.njk`.
   - The view uses `govukBreadcrumbs` (Home `/`, Admin `/admin`), heading "Users", the intro line, and a GET form with `govukInput` (name `q`, label "Search by name or email", value `q`) and `govukButton` ("Search", secondary).
   - Then "{{ count }} user{% if count != 1 %}s{% endif %}.", followed by a `govukTable` only when `count > 0`.
   - When `couldNotLoad` is true, show a sentence saying the users could not be loaded, worded like the account page's `couldNotLoad` text.
@@ -252,7 +249,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
   - `an_admin_should_see_the_registered_users` returns 200 and contains `href="/admin/users/1"`.
   - `a_user_should_be_told_the_users_page_is_not_found` returns 404.
   - `a_signed_out_visitor_should_be_sent_to_sign_in_from_the_users_page` returns 302 to `/sign-in`.
-- [ ] **Step 5: Run the unit and route tests, lint and Prettier.** Expected: PASS. Check `npx jest --coverage --coverageReporters=text` shows `AdminController.ts`, `AdminGuard.ts` and `Dates.ts` at 80% or above.
+- [ ] **Step 5: Run the unit and route tests, lint and Prettier.** Expected: PASS. Check `npx jest --coverage --coverageReporters=text` shows `AdminController.ts` and `Dates.ts` at 80% or above.
 - [ ] **Step 6: Commit** with the message "Add the registered users list for admins".
 
 ### Task 5: `/admin/users/:id` details page
@@ -265,7 +262,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
 
 **Interfaces:**
 
-- Consumes: `getAdminUser` and `AdminUserDetail` (Task 3), `requireAdmin` and `formatDate` (Task 4), and `statusText` from `src/main/services/LocalRequests.ts`.
+- Consumes: `getAdminUser` and `AdminUserDetail` (Task 3), `requireMarketplaceAdmin` and `formatDate` (Task 4), and `statusText` from `src/main/services/LocalRequests.ts`.
 - **View model** for `admin/user.njk`: `{ user: { name, email, organisation, status, joined, lastSignedIn }, applications: { name, apis, created }[], productionRequests: { reference, applicationName, status, submitted }[], couldNotLoad: boolean }`.
   - `organisation`, `joined` and `lastSignedIn` default to "Not known".
   - `status`: `ACTIVE` becomes "Active", and any other value becomes sentence case.
@@ -282,7 +279,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
   - `an_unknown_user_should_be_handed_on_to_not_found`: when `getAdminUser` resolves `undefined`, `next` is called.
   - `an_id_that_is_not_a_number_should_be_not_found_without_asking_the_backend` (Review Focus 3): with `params.id` of `'abc'` and of `'1abc'`, `next` is called and `getAdminUser` is never called.
   - `an_unreachable_backend_should_say_the_user_could_not_be_loaded` (Review Focus 5): `couldNotLoad` is true and `res.view` is `'admin/user'`.
-  - The guard cases for a non-admin and for someone signed out.
+  - The guard cases for a non-admin (404 page) and for someone signed out, and a backend 401 sending the admin to sign in.
 - [ ] **Step 2: Run** `npx jest src/test/unit/controllers/AdminController.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement** `user()`, accepting only `/^[0-9]{1,18}$/` as an id, and write `admin/user.njk`.
   - The view has `govukBreadcrumbs` (Home, Admin, Users `/admin/users`), `<span class="govuk-caption-l">User</span>` above `<h1 class="govuk-heading-xl">{{ user.name }}</h1>`, and a `govukSummaryList` with the six rows.
@@ -300,8 +297,7 @@ Use branch `AMP-admin-registered-users`, which already holds the spec and this p
 ### Task 6: Check it end to end locally
 
 - [ ] **Step 1:** Build the backend branch image, or run the backend from the worktree. Point the web Docker stack at it (`docker compose` in the web repo uses `hmctsprod.azurecr.io/amp/marketplace:latest`, which has no `/admin` endpoints until the backend PR merges).
-- [ ] **Step 2:** Sign in as `local@amp.com` and `test@amp.com`. Promote `local@amp.com` with
-      `docker compose exec db psql -U postgres -d marketplace -c "update marketplace_user set role = 'ADMIN' where email = 'local@amp.com';"`, then sign in again.
+- [ ] **Step 2:** Sign in as an admin, an account holding the `amp_admin` app role (with the Entra bypass, set `BYPASS_ENTRA_ADMIN=true`), and as `test@amp.com`. The backend needs an Entra tenant and audience configured to verify the admin's token.
 - [ ] **Step 3:** Check, as an admin:
   - Admin → Registered users lists 2 users.
   - The search "TEST" finds Test User.

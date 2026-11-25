@@ -3,9 +3,9 @@ import { NextFunction, Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
-import { requireAdmin } from '../services/AdminGuard';
+import { requireMarketplaceAdmin } from '../services/AdminRole';
 import { AdminUser, AdminUserDetail, getAdminUser, listAdminUsers } from '../services/AdminUsers';
-import { ownerOf } from '../services/Applications';
+import { BackendError, Owner, ownerOf } from '../services/Applications';
 import { formatDate } from '../services/Dates';
 import { statusText } from '../services/LocalRequests';
 import { SignedInUser } from '../services/SignIn';
@@ -18,8 +18,8 @@ const ROW_ID = /^[0-9]{1,18}$/;
 @route('/admin')
 export default class AdminController {
   @GET()
-  public get(req: AppRequest, res: Response, next: NextFunction): void {
-    if (!requireAdmin(req, res, next)) {
+  public get(req: AppRequest, res: Response): void {
+    if (!requireMarketplaceAdmin(req, res)) {
       return;
     }
 
@@ -29,7 +29,7 @@ export default class AdminController {
   @route('/users')
   @GET()
   public async users(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    if (!requireAdmin(req, res, next)) {
+    if (!requireMarketplaceAdmin(req, res)) {
       return;
     }
 
@@ -37,8 +37,12 @@ export default class AdminController {
     let users: AdminUser[] | undefined = [];
     let couldNotLoad = false;
     try {
-      users = await listAdminUsers(ownerOf(req.session.user as SignedInUser));
+      users = await listAdminUsers(owner(req));
     } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
       logger.error(`Could not list users for an admin: ${(error as Error).message}`);
       couldNotLoad = true;
     }
@@ -65,7 +69,7 @@ export default class AdminController {
   @route('/users/:id')
   @GET()
   public async user(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
-    if (!requireAdmin(req, res, next)) {
+    if (!requireMarketplaceAdmin(req, res)) {
       return;
     }
 
@@ -77,8 +81,12 @@ export default class AdminController {
 
     let found: AdminUserDetail | undefined;
     try {
-      found = await getAdminUser(ownerOf(req.session.user as SignedInUser), Number(id));
+      found = await getAdminUser(owner(req), Number(id));
     } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
       logger.error(`Could not read user ${id} for an admin: ${(error as Error).message}`);
       res.render('admin/user', { couldNotLoad: true, applications: [], productionRequests: [] });
       return;
@@ -112,6 +120,18 @@ export default class AdminController {
       couldNotLoad: false,
     });
   }
+}
+
+function owner(req: AppRequest): Owner {
+  return ownerOf(req.session.user as SignedInUser, req.session.idToken);
+}
+
+function tokenRefused(error: unknown): boolean {
+  return error instanceof BackendError && error.status === 401;
+}
+
+function signInAgain(req: AppRequest, res: Response): void {
+  req.session.destroy(() => res.redirect('/sign-in'));
 }
 
 function sentenceCase(value?: string): string {

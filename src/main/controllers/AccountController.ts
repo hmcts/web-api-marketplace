@@ -25,8 +25,8 @@ export default class AccountController {
 
     const user = req.session.user as SignedInUser;
     // An account registered here is unknown to the backend, which would refuse its id.
-    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id);
-    const production = await this.productionRequests(user);
+    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id, req.session.idToken);
+    const production = await this.productionRequests(user, req.session.idToken);
     const local = (await listLocalRequests(user.email)).filter(request => request.type !== 'PRODUCTION');
     const requests: Row[] = [
       ...result.requests,
@@ -54,10 +54,11 @@ export default class AccountController {
   }
 
   private async productionRequests(
-    user: SignedInUser
+    user: SignedInUser,
+    token?: string
   ): Promise<{ ok: boolean; requests: { reference: string; status: string; submittedAt: string }[] }> {
     try {
-      return { ok: true, requests: await listProductionRequests(ownerOf(user)) };
+      return { ok: true, requests: await listProductionRequests(ownerOf(user, token)) };
     } catch (error) {
       logger.error(`Could not list production requests: ${(error as Error).message}`);
       return { ok: false, requests: [] };

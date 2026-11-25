@@ -82,6 +82,13 @@ describe('The registered users page', () => {
     });
   });
 
+  test('admin_calls_should_carry_the_signed_in_admins_token', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin/users').expect(res => expect(res.status).to.equal(200));
+    expect(stubEntra().lastBackendAuthorization).to.match(/^Bearer [\w-]+\.[\w-]+\.[\w-]+$/);
+  });
+
   test('a_user_should_be_told_the_users_page_is_not_found', async () => {
     const agent = await signedInAs(USER);
 
@@ -113,7 +120,8 @@ describe('The registered users page', () => {
     await agent.get('/admin/users/999').expect(res => expect(res.status).to.equal(404));
   });
 
-  test('an_admin_whose_role_was_removed_after_sign_in_should_be_told_both_pages_are_not_found', async () => {
+  test('an_admin_whose_role_was_removed_in_entra_should_be_told_both_pages_are_not_found_after_a_refresh', async () => {
+    stubEntra().tokenLifetime = '60s';
     const agent = await signedInAs(ADMIN);
     const adminId = stubEntra().savedUsers.get(ADMIN.oid)?.id;
     stubEntra().admins.delete(ADMIN.oid);
