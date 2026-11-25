@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { AppRequest } from '../interfaces/AppRequest';
 import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
+import { AMP_ADMIN } from '../services/AdminRole';
 import { EntraClaims, ExchangedTokens, exchangeCodeForTokens, expiryOf, verifiedClaims } from '../services/Entra';
 import { EntraUser, saveEntraUser } from '../services/EntraUsers';
 import { toSignedInUser } from '../services/Profiles';
@@ -87,7 +88,7 @@ export default class AuthCallbackController {
       return;
     }
 
-    logger.info(`Signed in  oid=${claims.oid}  userId=${user.id}`);
+    logger.info(`Signed in  oid=${claims.oid}  userId=${user.id}  admin=${claims.roles?.includes(AMP_ADMIN) === true}`);
     startSession(req, res, claims, user, tokens);
   }
 
