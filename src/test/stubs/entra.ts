@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { AddressInfo } from 'node:net';
 
-import { JWTPayload, SignJWT, exportJWK, generateKeyPair } from 'jose';
+import { JWTPayload, SignJWT, exportJWK, generateKeyPair, jwtVerify } from 'jose';
 
 import { AMP_ADMIN } from '../../main/services/AdminRole';
 
@@ -142,6 +142,19 @@ export async function startStubEntra(): Promise<StubEntra> {
       }),
   };
 
+  async function verifiedRoles(authorization?: string): Promise<string[] | undefined> {
+    const token = authorization?.match(/^Bearer (.+)$/)?.[1];
+    if (!token) {
+      return undefined;
+    }
+    try {
+      const { payload } = await jwtVerify(token, keyPair.publicKey, { issuer, audience: CLIENT_ID });
+      return Array.isArray(payload.roles) ? (payload.roles as string[]) : [];
+    } catch {
+      return undefined;
+    }
+  }
+
   async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const json = (status: number, body: unknown) => {
       res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -216,6 +229,28 @@ export async function startStubEntra(): Promise<StubEntra> {
         createdAt: now,
         lastLoginAt: now,
       });
+    }
+    if (req.url?.startsWith('/backend/admin/users') && req.method === 'GET') {
+      stub.lastBackendAuthorization = req.headers.authorization;
+      const roles = await verifiedRoles(req.headers.authorization);
+      if (!roles) {
+        return json(401, { error: 'A verified token is required.' });
+      }
+      if (!roles.includes(AMP_ADMIN)) {
+        return json(403, { error: 'Admins only.' });
+      }
+      const now = new Date().toISOString();
+      const listed = [...savedUsers.values()]
+        .reverse()
+        .map(user => ({ ...user, createdAt: now, lastLoginAt: now, applicationCount: 0 }));
+      const id = req.url.slice('/backend/admin/users/'.length);
+      if (!id) {
+        return json(200, listed);
+      }
+      const found = listed.find(user => String(user.id) === id);
+      return found
+        ? json(200, { ...found, status: 'ACTIVE', organisation: null, applications: [], productionRequests: [] })
+        : json(404, { error: `No user ${id}.` });
     }
     if (req.url?.startsWith('/backend/')) {
       const path = req.url.slice('/backend'.length);

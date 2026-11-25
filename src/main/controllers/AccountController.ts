@@ -5,6 +5,7 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
 import { requireSignIn } from '../modules/session';
 import { ownerOf } from '../services/Applications';
+import { formatDate } from '../services/Dates';
 import { listLocalRequests, statusText } from '../services/LocalRequests';
 import { listProductionRequests } from '../services/ProductionRequests';
 import { RequestSummary, getRequestsFor } from '../services/Requests';
@@ -65,20 +66,6 @@ export default class AccountController {
   }
 
   private forDisplay(request: Row) {
-    return { ...request, submittedOn: this.formatDate(request.submittedAt) };
-  }
-
-  private formatDate(submittedAt: string): string {
-    const date = new Date(submittedAt);
-
-    if (Number.isNaN(date.getTime())) {
-      return submittedAt;
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(date);
+    return { ...request, submittedOn: formatDate(request.submittedAt) ?? request.submittedAt };
   }
 }
