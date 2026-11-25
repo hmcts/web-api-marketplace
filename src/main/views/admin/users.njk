@@ -41,7 +41,7 @@
           {% set rows = [] %}
           {% for user in users %}
             {% set rows = (rows.push([
-              { html: '<a class="govuk-link" href="/admin/users/' + user.id + '">' + (user.name | escape) + '</a>' },
+              { html: '<a class="govuk-link" href="/admin/users/' + (user.id | escape) + '">' + (user.name | escape) + '</a>' },
               { text: user.email },
               { text: user.joined },
               { text: user.lastSignedIn },
