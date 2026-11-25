@@ -40,6 +40,18 @@
         },
         {
           "requestParam": "subject",
+          "match": "functional-admin@amp.com",
+          "claims": {
+            "ver": "2.0",
+            "tid": "00000000-0000-4000-8000-00000000c1a0",
+            "oid": "44444444-4444-4444-8444-444444444444",
+            "email": "functional-admin@amp.com",
+            "name": "Functional Admin",
+            "roles": ["amp_admin"]
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": ".*",
           "claims": {
             "ver": "2.0",
