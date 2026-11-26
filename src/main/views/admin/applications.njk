@@ -1,0 +1,53 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = "Applications - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "admin" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }, { text: "Admin", href: "/admin" }] %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">Applications</h1>
+
+      <p class="govuk-body">Every application, newest first.</p>
+
+      {% if couldNotLoad %}
+        {{ govukWarningText({
+          text: "The applications could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "applications-unavailable" }
+        }) }}
+      {% elif count == 0 %}
+        <p class="govuk-body" id="applications-none">No applications have been created yet.</p>
+      {% else %}
+        {% set rows = [] %}
+        {% for application in applications %}
+          {% set href = '/admin/applications/' + (application.id | escape) %}
+          {% set rows = (rows.push([
+            { html: '<a class="govuk-link" href="' + href + '">' + (application.name | escape) + '</a>' },
+            { html: '<a class="govuk-link" href="/admin/users/' + (application.owner.id | escape) + '">' + (application.owner.name | escape) + '</a>' } if application.owner else { text: "Not known" },
+            { text: application.apis },
+            { text: application.created },
+            { html: '<a class="govuk-link" href="' + href + '#production-credentials-request">Requested<span class="govuk-visually-hidden"> for ' + (application.name | escape) + '</span></a>' } if application.productionRequested else { text: "Not requested" }
+          ]), rows) %}
+        {% endfor %}
+        {{ govukTable({
+          caption: "Applications",
+          captionClasses: "govuk-visually-hidden",
+          head: [
+            { text: "Application" },
+            { text: "Owner" },
+            { text: "APIs" },
+            { text: "Created" },
+            { text: "Production credentials" }
+          ],
+          rows: rows,
+          attributes: { id: "applications-table" }
+        }) }}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

@@ -6,10 +6,10 @@
 {% set section = "admin" %}
 {% set hideBackLink = true %}
 
-{% macro stat(count, label, id) %}
+{% macro stat(count, label, id, href) %}
   <div class="govuk-grid-column-one-third">
     <p class="govuk-body">
-      <a class="govuk-link govuk-link--no-visited-state" href="/admin/users" id="{{ id }}">
+      <a class="govuk-link govuk-link--no-visited-state" href="{{ href }}" id="{{ id }}">
         <span class="govuk-!-font-size-48 govuk-!-font-weight-bold govuk-!-display-block">{{ count }}</span>
         {{ label }}
       </a>
@@ -37,9 +37,9 @@
     </div>
   {% else %}
     <div class="govuk-grid-row">
-      {{ stat(counts.users, "registered users", "count-users") }}
-      {{ stat(counts.applications, "applications", "count-applications") }}
-      {{ stat(counts.productionRequests, "production requests", "count-production-requests") }}
+      {{ stat(counts.users, "registered users", "count-users", "/admin/users") }}
+      {{ stat(counts.applications, "applications", "count-applications", "/admin/applications") }}
+      {{ stat(counts.productionRequests, "production requests", "count-production-requests", "/admin/users") }}
     </div>
   {% endif %}
 {% endblock %}

@@ -1,0 +1,74 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = (application.name if application else "Application") + " - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "admin" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Admin", href: "/admin" },
+  { text: "Applications", href: "/admin/applications" }
+] %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if couldNotLoad %}
+        <h1 class="govuk-heading-xl">Application</h1>
+        {{ govukWarningText({
+          text: "This application could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "application-unavailable" }
+        }) }}
+      {% else %}
+        <span class="govuk-caption-l">Application</span>
+        <h1 class="govuk-heading-xl">{{ application.name }}</h1>
+
+        {% if application.owner %}
+          {% set ownerHtml = '<a class="govuk-link" href="/admin/users/' + (application.owner.id | escape) + '">' + (application.owner.name | escape) + '</a><br>' + (application.owner.email | escape) %}
+        {% else %}
+          {% set ownerHtml = "Not known" %}
+        {% endif %}
+        {{ govukSummaryList({
+          rows: [
+            { key: { text: "Application name" }, value: { text: application.name } },
+            { key: { text: "Owner" }, value: { html: ownerHtml } },
+            { key: { text: "Created" }, value: { text: application.created } },
+            { key: { text: "Client ID" }, value: { html: '<span class="apim-credential" id="client-id">' + (application.clientId | escape) + '</span>' } }
+          ]
+        }) }}
+
+        {{ govukInsetText({
+          text: "Admins cannot see an application's client secret or subscription keys. Only the application's owner can."
+        }) }}
+
+        <h2 class="govuk-heading-l">APIs</h2>
+        {% if application.apis.length %}
+          <ul class="govuk-list govuk-list--bullet" id="application-apis">
+            {% for api in application.apis %}
+              <li>{{ api }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="govuk-body">This application does not use any APIs yet.</p>
+        {% endif %}
+
+        <h2 class="govuk-heading-l" id="production-credentials-request">Production credentials request</h2>
+        {% if productionRequest %}
+          {{ govukSummaryList({
+            rows: [
+              { key: { text: "Reference" }, value: { text: productionRequest.reference } },
+              { key: { text: "Status" }, value: { text: productionRequest.status } },
+              { key: { text: "Submitted" }, value: { text: productionRequest.submitted } }
+            ],
+            attributes: { id: "application-production-request" }
+          }) }}
+        {% else %}
+          <p class="govuk-body">Production credentials have not been requested for this application.</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
