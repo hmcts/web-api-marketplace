@@ -1,5 +1,5 @@
 import { expect, test } from '../../fixtures';
-import { ADMIN_USERNAME, signIn } from '../../utils/sign-in';
+import { signIn } from '../../utils/sign-in';
 
 test.describe('Admin, signed out', () => {
   test('the_admin_page_should_send_a_signed_out_user_to_sign_in', async ({ request }) => {
@@ -18,7 +18,7 @@ test.describe('Admin, signed out', () => {
 
 test.describe('Admin, signed in', () => {
   test('an_admin_should_be_offered_the_admin_tab_and_open_the_admin_page', async ({ page, axeUtils }) => {
-    await signIn(page, ADMIN_USERNAME);
+    await signIn(page, 'admin');
 
     await page.getByRole('link', { name: 'Admin', exact: true }).click();
 
