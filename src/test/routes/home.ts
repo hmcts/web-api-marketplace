@@ -7,7 +7,7 @@ import { app } from '../../main/app';
 
 describe('Home page', () => {
   describe('on GET', () => {
-    test('should return sample home page', async () => {
+    test('the_home_page_should_answer_200', async () => {
       await request(app)
         .get('/')
         .expect(res => expect(res.status).to.equal(200));

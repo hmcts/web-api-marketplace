@@ -26,7 +26,7 @@ describe('Logger', () => {
     jest.clearAllMocks();
   });
 
-  test('writes errors to the console logger and Application Insights', () => {
+  test('an_error_should_reach_the_console_and_application_insights_with_its_details_flattened', () => {
     const logger = Logger.getLogger('app');
     const details = {
       name: 'ZodError',
@@ -58,7 +58,7 @@ describe('Logger', () => {
     );
   });
 
-  test('does not interrupt console logging if telemetry throws', () => {
+  test('a_telemetry_failure_should_not_stop_the_console_log', () => {
     trackTrace.mockImplementationOnce(() => {
       throw new Error('telemetry unavailable');
     });
@@ -83,7 +83,7 @@ describe('Logger', () => {
   });
 
   describe('during a request', () => {
-    test('adds the correlation ID as metadata and to Application Insights', () => {
+    test('a_log_during_a_request_should_carry_the_correlation_id_to_the_console_and_application_insights', () => {
       runWithCorrelationId('abc-123', () => Logger.getLogger('app').info('Application created'));
 
       expect(delegateLogger.info).toHaveBeenCalledWith('Application created', { correlationId: 'abc-123' });
@@ -94,7 +94,7 @@ describe('Logger', () => {
       });
     });
 
-    test('merges into existing metadata rather than adding a second object', () => {
+    test('existing_metadata_should_gain_the_correlation_id_without_being_changed_in_place', () => {
       const details = { status: 409 };
 
       runWithCorrelationId('abc-123', () => Logger.getLogger('app').warn('APIM rejected the key', details));
@@ -106,7 +106,7 @@ describe('Logger', () => {
       expect(details).toEqual({ status: 409 });
     });
 
-    test('appends after an error rather than merging into it', () => {
+    test('an_error_argument_should_be_followed_by_the_correlation_id_not_merged_with_it', () => {
       const error = new Error('boom');
 
       runWithCorrelationId('abc-123', () => Logger.getLogger('app').error('Failed', error));
@@ -115,7 +115,7 @@ describe('Logger', () => {
     });
   });
 
-  test('leaves the arguments untouched outside a request', () => {
+  test('a_log_outside_a_request_should_carry_no_correlation_id', () => {
     Logger.getLogger('app').info('Startup complete');
 
     expect(delegateLogger.info).toHaveBeenCalledWith('Startup complete');

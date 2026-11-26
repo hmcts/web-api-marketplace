@@ -28,7 +28,7 @@ describe('The admin tab', () => {
     await agent.get('/').expect(res => expect(res.text).to.contain('href="/admin"'));
   });
 
-  test('a_user_should_not_see_the_admin_tab', async () => {
+  test('a_non_admin_should_not_see_the_admin_tab', async () => {
     const agent = await signedInAs(USER);
 
     await agent.get('/').expect(res => expect(res.text).to.not.contain('href="/admin"'));
@@ -49,7 +49,7 @@ describe('The admin tab', () => {
     });
   });
 
-  test('a_user_should_be_told_the_admin_page_is_not_found', async () => {
+  test('a_non_admin_should_be_told_the_admin_page_is_not_found', async () => {
     const agent = await signedInAs(USER);
 
     await agent.get('/admin').expect(res => expect(res.status).to.equal(404));
@@ -82,14 +82,14 @@ describe('The registered users page', () => {
     });
   });
 
-  test('admin_calls_should_carry_the_signed_in_admins_token', async () => {
+  test('admin_backend_calls_should_carry_a_bearer_id_token', async () => {
     const agent = await signedInAs(ADMIN);
 
     await agent.get('/admin/users').expect(res => expect(res.status).to.equal(200));
     expect(stubEntra().lastBackendAuthorization).to.match(/^Bearer [\w-]+\.[\w-]+\.[\w-]+$/);
   });
 
-  test('a_user_should_be_told_the_users_page_is_not_found', async () => {
+  test('a_non_admin_should_be_told_the_users_page_is_not_found', async () => {
     const agent = await signedInAs(USER);
 
     await agent.get('/admin/users').expect(res => expect(res.status).to.equal(404));
@@ -107,14 +107,14 @@ describe('The registered users page', () => {
     });
   });
 
-  test('a_user_should_be_told_a_user_page_is_not_found', async () => {
+  test('a_non_admin_should_be_told_a_user_page_is_not_found', async () => {
     const agent = await signedInAs(USER);
     const joeId = stubEntra().savedUsers.get(USER.oid)?.id;
 
     await agent.get(`/admin/users/${joeId}`).expect(res => expect(res.status).to.equal(404));
   });
 
-  test('an_unknown_user_should_be_not_found', async () => {
+  test('an_unknown_user_id_should_be_not_found', async () => {
     const agent = await signedInAs(ADMIN);
 
     await agent.get('/admin/users/999').expect(res => expect(res.status).to.equal(404));

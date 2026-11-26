@@ -10,7 +10,7 @@ describe('LocalRequests', () => {
     expect((await addLocalRequest('a@example.com', 'PRODUCTION', [])).reference).toMatch(/^PCR-/);
   });
 
-  test('requests_should_belong_to_their_owner', async () => {
+  test('a_request_should_be_found_for_its_owner_in_any_letter_case_and_not_for_anyone_else', async () => {
     const request = await addLocalRequest('A@example.com', 'PRODUCTION', [{ key: 'k', value: 'v' }]);
 
     expect(await getLocalRequest('a@example.com', request.reference)).toMatchObject({ status: 'SUBMITTED' });

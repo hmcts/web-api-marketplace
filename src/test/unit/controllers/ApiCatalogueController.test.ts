@@ -54,7 +54,7 @@ describe('ApiCatalogueController', () => {
     expect(letters.filter(item => item.present).map(item => item.letter)).toEqual(['C', 'D']);
   });
 
-  test('a_search_should_list_matches_without_letters', async () => {
+  test('a_search_should_show_no_letter_groups_or_letter_links', async () => {
     const res = mockResponse();
 
     await new ApiCatalogueController().list(anonymous({ query: { q: 'api' } }), res);
@@ -128,7 +128,7 @@ describe('ApiCatalogueController', () => {
     expect(res.data?.descriptionParagraphs).toEqual([]);
   });
 
-  test('a_short_code_the_catalogue_does_not_list_should_be_handed_on', async () => {
+  test('a_short_code_the_catalogue_does_not_list_should_be_handed_on_to_not_found', async () => {
     (getCatalogueApi as jest.Mock).mockResolvedValue(undefined);
     const res = mockResponse();
     const next = jest.fn();

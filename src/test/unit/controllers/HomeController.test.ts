@@ -6,7 +6,7 @@ import HomeController from '../../../main/controllers/HomeController';
 import { mockRequest } from '../mocks/mockRequest';
 
 describe('HomeController', () => {
-  test('renders the home view', () => {
+  test('the_home_page_should_render_the_home_view_with_its_content', () => {
     const controller = new HomeController();
     const response = {
       render: () => '',

@@ -13,7 +13,7 @@ describe('Notify', () => {
     expect(sendEmail(email)).toBe(email);
   });
 
-  test('an_address_without_a_domain_should_still_be_handled', () => {
+  test('an_address_without_a_domain_should_be_handed_back_unchanged', () => {
     expect(
       sendEmail({ template: 'production-request-received', to: 'nonsense', subject: 's', paragraphs: [] }).to
     ).toBe('nonsense');

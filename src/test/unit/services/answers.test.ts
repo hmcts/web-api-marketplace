@@ -50,7 +50,7 @@ describe('answers', () => {
     }
   );
 
-  test('a_reference_should_be_unguessable_hex_rather_than_a_predictable_sequence', () => {
+  test('a_reference_should_be_amp_followed_by_eight_hex_characters', () => {
     expect(newReference()).toMatch(/^AMP-[0-9A-F]{8}$/);
   });
 

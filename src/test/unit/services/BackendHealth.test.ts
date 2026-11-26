@@ -77,7 +77,7 @@ describe('BackendHealth', () => {
     expect(result.detail).toBe('Unknown error');
   });
 
-  test('the_request_should_use_a_timeout_and_accept_any_status', async () => {
+  test('the_request_should_time_out_after_five_seconds_accept_any_status_and_keep_the_body_raw', async () => {
     mockedGet.mockResolvedValue({ status: 200, data: 'ok' });
 
     await checkBackendHealth();

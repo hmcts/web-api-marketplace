@@ -13,7 +13,7 @@ describe('Home page', () => {
     expect(html).toContain(i18n.lede);
   });
 
-  test('rendering_the_home_page_should_link_every_migrated_section', () => {
+  test('rendering_the_home_page_should_show_and_link_every_card', () => {
     const html = env.render('home.njk', i18n);
 
     for (const card of i18n.cardRows.flat()) {

@@ -130,7 +130,7 @@ describe('ApplicationsController', () => {
       expect(res.data?.atLimit).toBeUndefined();
     });
 
-    test('a_backend_that_cannot_be_reached_should_say_so', async () => {
+    test('a_backend_that_cannot_be_reached_should_show_the_unavailable_page_with_503', async () => {
       Applications.listApplications.mockRejectedValue(new BackendError('down'));
       const res = mockResponse();
 
@@ -340,7 +340,7 @@ describe('ApplicationsController', () => {
     test.each([
       [409, 'Taken', 'You already have an application called Case Viewer'],
       [400, 'Use letters, digits and spaces only.', 'Use letters, digits and spaces only.'],
-    ])('a_%i_from_the_backend_should_go_back_to_the_name', async (status, message, shown) => {
+    ])('a_%i_from_the_backend_should_show_the_name_again_with_the_error', async (status, message, shown) => {
       Applications.createApplication.mockRejectedValue(new BackendError(message, status));
       const res = mockResponse();
       const req = asUser({ session: { applicationDraft: DRAFT } });
@@ -353,7 +353,7 @@ describe('ApplicationsController', () => {
       expect(req.session.applicationDraft).toEqual(DRAFT);
     });
 
-    test('an_outage_while_creating_should_say_so_and_keep_the_answers', async () => {
+    test('an_outage_while_creating_should_answer_503_and_keep_the_answers', async () => {
       Applications.createApplication.mockRejectedValue(new BackendError('Entra unreachable', 502));
       const res = mockResponse();
       const req = asUser({ session: { applicationDraft: DRAFT } });
@@ -401,7 +401,7 @@ describe('ApplicationsController', () => {
       expect(res.data?.productionRequest).toMatchObject({ reference: 'PCR-ABCD2345' });
     });
 
-    test('a_request_for_another_application_should_leave_this_one_asking', async () => {
+    test('a_production_request_for_another_application_should_not_be_shown_on_this_one', async () => {
       (listProductionRequests as jest.Mock).mockResolvedValueOnce([
         { reference: 'PCR-OTHER123', status: 'SUBMITTED', submittedAt: '', clientId: 'someone-elses' },
       ]);
@@ -460,7 +460,7 @@ describe('ApplicationsController', () => {
       [{ state: 'granted' }, true, 'Case Viewer can now call the APIs it is subscribed to.'],
       [{ state: 'pending' }, false, 'Access is still being set up. Try again in a minute.'],
       [{ state: 'failed', message: 'Graph refused.' }, false, 'Access could not be set up: Graph refused.'],
-    ])('an_access_check_without_javascript_should_come_back_with_%j', async (result, success, text) => {
+    ])('a_no_javascript_access_check_answering_%j_should_return_with_a_notice', async (result, success, text) => {
       Applications.grantAccess.mockResolvedValue(result);
       const res = mockResponse();
       const req = withAccept(forId(), 'html');
@@ -526,7 +526,7 @@ describe('ApplicationsController', () => {
       [{ added: ['two'], removed: ['one'], failed: [] }, true, 'APIs updated: 1 added, 1 removed.'],
       [{ added: [], removed: [], failed: [] }, true, 'No changes were made to the APIs.'],
       [{ added: [], removed: [], failed: ['API two'] }, false, 'Some APIs could not be changed: API two.'],
-    ])('saving_apis_should_say_what_happened_%#', async (changes, success, text) => {
+    ])('saving_apis_with_changes_%j_should_report_them_in_the_notice', async (changes, success, text) => {
       Applications.setApis.mockResolvedValue(changes);
       const res = mockResponse();
       const req = forId({ body: { apis: ['two'] } });
@@ -567,7 +567,7 @@ describe('ApplicationsController', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test('deleting_should_need_the_confirmation', async () => {
+    test('deleting_without_confirming_should_go_back_to_the_application_and_delete_nothing', async () => {
       const res = mockResponse();
 
       await controller().remove(forId(), res, jest.fn());
@@ -587,7 +587,7 @@ describe('ApplicationsController', () => {
       expect(res.redirected).toBe('/account/applications');
     });
 
-    test('a_delete_the_backend_cannot_complete_should_say_so', async () => {
+    test('a_delete_the_backend_cannot_complete_should_answer_503', async () => {
       Applications.deleteApplication.mockRejectedValue(new BackendError('down', 502));
       const res = mockResponse();
 

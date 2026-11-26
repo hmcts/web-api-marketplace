@@ -6,7 +6,7 @@ import AccessibilityStatementController from '../../../main/controllers/Accessib
 import { mockRequest } from '../mocks/mockRequest';
 
 describe('AccessibilityStatementController', () => {
-  test('renders the accessibility-statement view', () => {
+  test('the_accessibility_statement_should_render_its_view_with_its_content', () => {
     const controller = new AccessibilityStatementController();
     const response = {
       render: () => '',

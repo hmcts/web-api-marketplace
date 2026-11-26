@@ -76,7 +76,7 @@ describe('Applications', () => {
       expect(validateName(name)).toEqual([{ name: 'name', text }]);
     });
 
-    test('at_least_one_api_from_the_catalogue_should_be_chosen', () => {
+    test('no_api_or_one_the_catalogue_does_not_list_should_be_refused', () => {
       expect(validateApis([], CATALOGUE)).toHaveLength(1);
       expect(validateApis(['unknown'], CATALOGUE)).toHaveLength(1);
       expect(validateApis(['one'], CATALOGUE)).toEqual([]);
@@ -127,7 +127,7 @@ describe('Applications', () => {
   });
 
   describe('creating', () => {
-    test('should_register_with_the_name_then_subscribe_each_api_and_return_the_secret_once', async () => {
+    test('creating_should_register_the_trimmed_name_then_subscribe_each_api_and_return_the_secret', async () => {
       answer({
         'POST /applications': () => ok({ ...BACKEND_APP, clientSecret: 'Uc6Q~secret' }),
         'POST /apim/subscription-keys': () =>
@@ -276,7 +276,7 @@ describe('Applications', () => {
       expect(call(0).url).toBe('/applications/..%2Fusers');
     });
 
-    test('a_subscription_key_should_be_read_from_apim_on_demand', async () => {
+    test('a_subscription_key_should_be_read_from_apim_by_its_subscription_name', async () => {
       answer({ 'GET /apim/subscription-keys/amp-temp-1/values': () => ok({ primaryKey: 'abc' }) });
 
       await expect(

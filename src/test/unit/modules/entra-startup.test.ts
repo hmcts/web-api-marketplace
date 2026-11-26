@@ -27,13 +27,13 @@ describe('entraConfig.enabled', () => {
     expect(entraConfig.enabled).toBe(true);
   });
 
-  test('ENTRA_ENABLED_false_should_switch_it_off', () => {
+  test('ENTRA_ENABLED_false_should_switch_sign_in_off', () => {
     process.env.ENTRA_ENABLED = 'false';
 
     expect(entraConfig.enabled).toBe(false);
   });
 
-  test.each(['true', 'no', '0', 'FALSE', ''])('ENTRA_ENABLED_%p_should_leave_it_on', value => {
+  test.each(['true', 'no', '0', 'FALSE', ''])('ENTRA_ENABLED_%p_should_leave_sign_in_on', value => {
     process.env.ENTRA_ENABLED = value;
 
     expect(entraConfig.enabled).toBe(true);
@@ -69,7 +69,7 @@ describe('prepareEntra', () => {
 describe('prepareEntra and BYPASS_ENTRA', () => {
   withCleanEnv([...SETTINGS, 'BYPASS_ENTRA', 'NODE_ENV']);
 
-  test('with_it_on_entra_should_not_be_prepared_at_all', async () => {
+  test('the_bypass_in_development_should_skip_entra_and_name_the_bypass_user', async () => {
     process.env.BYPASS_ENTRA = 'true';
     process.env.NODE_ENV = 'development';
 
@@ -79,7 +79,7 @@ describe('prepareEntra and BYPASS_ENTRA', () => {
     expect(line).toContain('john.doe@example.com');
   });
 
-  test('set_but_ignored_should_still_check_everything_entra_needs', async () => {
+  test('a_bypass_ignored_in_production_should_still_refuse_to_start_without_entra_settings', async () => {
     // An environment that does not get the bypass signs people in through Entra, so a
     // missing setting has to stop the server here rather than failing a sign in later.
     process.env.BYPASS_ENTRA = 'true';
@@ -88,7 +88,7 @@ describe('prepareEntra and BYPASS_ENTRA', () => {
     await expect(prepareEntra(untouchableVault)).rejects.toThrow();
   });
 
-  test('set_but_ignored_should_say_so_once_entra_is_configured', async () => {
+  test('a_bypass_ignored_in_production_should_be_reported_as_ignored_when_sign_in_is_switched_off', async () => {
     process.env.BYPASS_ENTRA = 'true';
     process.env.NODE_ENV = 'production';
     process.env.ENTRA_ENABLED = 'false';

@@ -242,7 +242,7 @@ describe('ProductionCredentialsController', () => {
       expect(res.data?.error).toBe('Tracker already has a production access request.');
     });
 
-    test('a_backend_that_is_down_should_still_invite_a_retry', async () => {
+    test('a_backend_that_is_down_should_answer_502_and_invite_a_retry', async () => {
       (submitProductionRequest as jest.Mock).mockRejectedValue(new BackendError('Could not reach the backend'));
       const res = mockResponse();
 
@@ -253,7 +253,7 @@ describe('ProductionCredentialsController', () => {
     });
   });
 
-  test('the_long_answer_should_take_two_thousand_characters', async () => {
+  test('a_data_request_of_2000_characters_should_be_accepted', async () => {
     const res = mockResponse();
     const full = { 'data-request': 'x'.repeat(2000) };
 
@@ -356,7 +356,7 @@ describe('ProductionCredentialsController', () => {
     expect(JSON.stringify(checked.data?.rows)).not.toContain('Left over text.');
   });
 
-  test('a_single_recipient_option_posted_as_text_should_still_count', async () => {
+  test('a_single_recipient_option_posted_as_text_should_be_accepted', async () => {
     const res = mockResponse();
 
     await controller().save(asUser({ body: answers(applicationId, { 'data-recipients': 'own-team' }) }), res);
@@ -372,7 +372,7 @@ describe('ProductionCredentialsController', () => {
     }
   });
 
-  test('submitting_should_store_the_request_email_the_user_and_quote_a_reference', async () => {
+  test('submitting_should_confirm_with_the_backends_reference_and_clear_the_draft', async () => {
     (submitProductionRequest as jest.Mock).mockResolvedValue(STORED);
     const req = asUser({ session: { productionDraft: answers(applicationId) } });
     const res = mockResponse();
@@ -436,7 +436,7 @@ describe('ProductionCredentialsController', () => {
     expect(submission).not.toHaveProperty('dataCombinedDescription');
   });
 
-  test('a_failure_to_store_should_keep_the_answers_and_say_so', async () => {
+  test('a_failure_to_store_should_answer_502_on_check_answers_and_keep_the_answers', async () => {
     (submitProductionRequest as jest.Mock).mockRejectedValueOnce(new BackendError('Backend down'));
     const req = asUser({ session: { productionDraft: answers(applicationId) } });
     const res = mockResponse();

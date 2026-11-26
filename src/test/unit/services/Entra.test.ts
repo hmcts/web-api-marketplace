@@ -49,7 +49,7 @@ describe('Entra', () => {
       expect(new URL(authorizeUrl('s', 'n', 'c', 'create')).searchParams.get('prompt')).toBe('create');
     });
 
-    test('only_the_prompts_we_use_should_be_passed_on', () => {
+    test('only_create_and_login_should_count_as_entra_prompts', () => {
       expect(isEntraPrompt('create')).toBe(true);
       expect(isEntraPrompt('login')).toBe(true);
       expect(isEntraPrompt('none')).toBe(false);
@@ -122,53 +122,53 @@ describe('Entra', () => {
 
     const tokenWith = (overrides: TokenOverrides) => entra.idToken(ADA, 'n1', overrides);
 
-    test('signed_by_some_other_key', async () => {
+    test('a_token_signed_by_some_other_key_should_be_rejected', async () => {
       const forger = await generateKeyPair('RS256');
       await expect(verifying(tokenWith({ key: forger.privateKey }))).rejects.toThrow();
     });
 
-    test('unsigned', async () => {
+    test('an_unsigned_token_should_be_rejected', async () => {
       const segment = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
       await expect(
         verifying(`${segment({ alg: 'none' })}.${segment({ ...ADA, iss: entra.issuer, aud: CLIENT_ID, nonce: 'n1' })}.`)
       ).rejects.toThrow();
     });
 
-    test('signed_with_a_shared_secret_instead_of_the_tenant_key', async () => {
+    test('a_token_signed_with_a_shared_secret_instead_of_the_tenant_key_should_be_rejected', async () => {
       // The HS256 key-confusion attack: sign with a secret and hope it is treated as a key.
       await expect(
         verifying(tokenWith({ alg: 'HS256', key: new TextEncoder().encode('x'.repeat(32)) }))
       ).rejects.toThrow();
     });
 
-    test('issued_for_another_app', async () => {
+    test('a_token_issued_for_another_app_should_be_rejected', async () => {
       await expect(verifying(tokenWith({ aud: 'some-other-client' }))).rejects.toThrow();
     });
 
-    test('issued_by_another_tenant', async () => {
+    test('a_token_issued_by_another_tenant_should_be_rejected', async () => {
       await expect(verifying(tokenWith({ iss: 'https://login.example/other-tenant/v2.0' }))).rejects.toThrow();
     });
 
-    test('expired', async () => {
+    test('an_expired_token_should_be_rejected', async () => {
       await expect(verifying(tokenWith({ exp: Math.floor(Date.now() / 1000) - 3600 }))).rejects.toThrow();
     });
 
-    test('from_a_different_sign_in', async () => {
+    test('a_token_from_a_different_sign_in_should_be_rejected', async () => {
       // A genuine token, but its nonce belongs to some other round trip: a replay.
       await expect(verifying(entra.idToken(ADA, 'from-an-earlier-sign-in'))).rejects.toThrow();
     });
 
-    test('with_no_nonce_expected_at_all', async () => {
+    test('a_token_checked_with_no_expected_nonce_should_be_rejected', async () => {
       await expect(verifiedClaims(await entra.idToken(ADA, 'n1'), undefined)).rejects.toThrow(/nonce/);
     });
 
-    test('with_no_oid', async () => {
+    test('a_token_with_no_oid_should_be_rejected', async () => {
       await expect(verifiedClaims(await entra.idToken({ name: 'No One' } as never, 'n1'), 'n1')).rejects.toThrow(/oid/);
     });
   });
 
   describe('signing out', () => {
-    test('should_go_to_the_tenants_sign_out_page_and_come_back_here', async () => {
+    test('signing_out_should_go_to_the_tenants_sign_out_page_and_come_back_here', async () => {
       const sentTo = new URL(await logoutUrl());
 
       expect(sentTo.origin + sentTo.pathname).toBe(entra.endSessionEndpoint);

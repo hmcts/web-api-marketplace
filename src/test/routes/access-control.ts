@@ -72,14 +72,14 @@ describe('Access control on the form journeys', () => {
     }
   );
 
-  test('the_producer_onboarding_page_should_be_reachable', async () => {
+  test('the_producer_onboarding_page_should_answer_200', async () => {
     await request(app)
       .get('/documentation/producer-onboarding')
       .expect(res => expect(res.status).to.equal(200));
   });
 
   test.each(['/documentation/producer-guidance', '/documentation/producer-standards'])(
-    'the_old_producer_address_%s_should_be_gone',
+    'the_old_producer_address_%s_should_answer_404',
     async path => {
       await request(app)
         .get(path)
@@ -125,7 +125,7 @@ describe('Access control on the form journeys', () => {
       .expect(res => expect(res.status).to.equal(404));
   });
 
-  test('sign_in_itself_should_stay_reachable_when_signed_out', async () => {
+  test('sign_in_should_answer_a_signed_out_visitor_with_a_redirect', async () => {
     await request(app)
       .get('/sign-in')
       .expect(res => expect(res.status).to.equal(302));

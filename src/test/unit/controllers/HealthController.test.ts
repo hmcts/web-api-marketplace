@@ -60,7 +60,7 @@ describe('HealthController', () => {
     downMock.resetHistory();
   });
 
-  test('delegates /health to healthcheck routes', () => {
+  test('health_should_hand_the_request_to_the_healthcheck_routes', () => {
     const controller = new HealthController();
     const request = {} as never;
     const response = {} as never;
@@ -74,7 +74,7 @@ describe('HealthController', () => {
     assert.calledWith(configureHandler, request, response);
   });
 
-  test('returns liveness status', () => {
+  test('liveness_should_respond_with_status_up', () => {
     const controller = new HealthController();
     const response = {
       json: () => '',
@@ -88,7 +88,7 @@ describe('HealthController', () => {
     responseMock.verify();
   });
 
-  test('delegates /health/readiness to readiness checks', () => {
+  test('readiness_should_hand_the_request_to_the_readiness_checks', () => {
     const controller = new HealthController();
     const request = {} as never;
     const response = {} as never;

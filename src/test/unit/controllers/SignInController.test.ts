@@ -86,7 +86,7 @@ describe('SignInController', () => {
       process.env = { ...environment };
     });
 
-    test('it_should_start_a_session_without_going_to_entra', async () => {
+    test('the_bypass_should_sign_john_doe_in_without_going_to_entra', async () => {
       process.env.BYPASS_ENTRA = 'true';
       process.env.NODE_ENV = 'development';
       const req = anonymous();
@@ -100,7 +100,7 @@ describe('SignInController', () => {
       expect(req.session.entraSignIn).toBeUndefined();
     });
 
-    test('the_user_should_be_saved_in_the_backend_as_a_real_sign_in_saves_it', async () => {
+    test('the_bypass_user_should_be_saved_in_the_backend_like_a_real_sign_in', async () => {
       process.env.BYPASS_ENTRA = 'true';
       process.env.NODE_ENV = 'development';
 

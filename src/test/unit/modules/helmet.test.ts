@@ -22,11 +22,11 @@ async function formAction(): Promise<string | undefined> {
 describe('Helmet', () => {
   withCleanEnv(ENTRA_SETTINGS);
 
-  test('without_sign_in_forms_should_post_only_to_this_service', async () => {
+  test('without_an_entra_endpoint_forms_should_post_only_to_this_service', async () => {
     expect(await formAction()).toBe("form-action 'self'");
   });
 
-  test('with_sign_in_forms_should_also_post_to_entra', async () => {
+  test('with_an_entra_endpoint_forms_should_also_post_to_entra', async () => {
     process.env.ENTRA_AUTHORIZE_ENDPOINT = 'https://login.example/tenant/oauth2/v2.0/authorize';
 
     expect(await formAction()).toBe("form-action 'self' https://login.example");

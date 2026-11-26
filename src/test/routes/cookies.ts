@@ -5,7 +5,7 @@ import { app } from '../../main/app';
 
 describe('Cookies page', () => {
   describe('on GET', () => {
-    test('should return cookies page', async () => {
+    test('the_cookies_page_should_answer_200_and_mention_cookies', async () => {
       await request(app)
         .get('/cookies')
         .expect(res => {

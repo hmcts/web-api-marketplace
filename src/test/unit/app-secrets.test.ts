@@ -33,7 +33,7 @@ describe('Secrets mounted from Key Vault', () => {
     }
   });
 
-  test('should_reach_the_config_when_the_app_is_built', () => {
+  test('mounted_secrets_should_reach_the_config_and_the_entra_settings_when_the_app_is_built', () => {
     let config: { get<T>(name: string): T } | undefined;
     let clientId: string | undefined;
 

@@ -47,7 +47,7 @@ describe('The link back to the marketplace site', () => {
     expect(configured).to.equal('/');
   });
 
-  test('every_page_should_carry_the_link_not_just_the_home_page', async () => {
+  test('other_pages_should_carry_the_same_link_as_the_home_page', async () => {
     const paths = ['/help', '/cookies', '/accessibility-statement'];
     const pages = await Promise.all(paths.map(path => request(app).get(path)));
 

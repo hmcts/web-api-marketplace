@@ -6,7 +6,7 @@ import CookiesController from '../../../main/controllers/CookiesController';
 import { mockRequest } from '../mocks/mockRequest';
 
 describe('CookiesController', () => {
-  test('renders the cookie policy view', () => {
+  test('the_cookie_policy_should_render_the_cookies_view_with_its_content', () => {
     const controller = new CookiesController();
     const response = {
       render: () => '',

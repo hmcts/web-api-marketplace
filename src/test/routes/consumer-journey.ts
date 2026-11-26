@@ -26,7 +26,7 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('creating an account', () => {
-    test('create_a_developer_account_should_open_entra_on_its_create_account_form', async () => {
+    test('register_should_open_entra_on_its_create_account_form', async () => {
       const agent = newAgent();
 
       await agent.get('/register').expect(res => expect(res.headers.location).to.equal('/sign-in?prompt=create'));
@@ -239,7 +239,7 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('access_that_graph_refuses_should_say_why_and_stop', async () => {
+    test('access_that_graph_refuses_should_fail_naming_the_missing_permission', async () => {
       const agent = await signedInConsumer('ada@example.com');
       const id = await createdApplication(agent);
       stubEntra().marketplace.refuseRoles(500);
@@ -507,7 +507,7 @@ describe('Consumer onboarding journey', () => {
       });
     });
 
-    test('a_go_live_date_in_the_past_should_be_refused', async () => {
+    test('an_impossible_or_past_go_live_date_should_be_refused', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
       await agent
@@ -524,7 +524,7 @@ describe('Consumer onboarding journey', () => {
   });
 
   describe('what a backend call carries', () => {
-    test('a_signed_in_consumer_should_send_the_id_token_as_well_as_the_user_id', async () => {
+    test('a_signed_in_consumers_backend_call_should_carry_a_bearer_id_token', async () => {
       const agent = await signedInConsumer('ada@example.com');
 
       await createdApplication(agent, 'Token carrier');

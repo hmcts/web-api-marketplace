@@ -118,7 +118,7 @@ describe('refreshExpiringToken', () => {
     expect(req.session.user?.roles).toEqual([AMP_ADMIN]);
   });
 
-  test('a_signed_out_visitor_should_not_be_refreshed', async () => {
+  test('a_signed_out_visitor_should_be_passed_over_without_error', async () => {
     const req = { session: {} } as unknown as AppRequest;
 
     await expect(refreshExpiringToken(req)).resolves.toBeUndefined();

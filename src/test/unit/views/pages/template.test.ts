@@ -5,7 +5,7 @@ import { env } from '../helpers/nunjucksEnv';
 const i18n = require('../../../../main/locales/en/template.json');
 
 describe('Base template', () => {
-  test('renders header/footer content', () => {
+  test('the_page_should_show_the_service_name_and_no_language_toggle', () => {
     const html = env.render('template.njk', {
       ...i18n,
       serviceName: i18n.serviceName,
@@ -53,7 +53,7 @@ describe('Base template', () => {
     expect(serviceNameHref(html)).toBe('https://hmcts.github.io/hmcts-api-marketplace/');
   });
 
-  test('a_moved_site_should_only_need_the_configured_address_to_change', () => {
+  test('the_service_name_should_follow_whatever_site_address_is_configured', () => {
     // The site already moved off /v2/ once without a template change, and the next move
     // must not need one either.
     const html = render({ marketplaceSiteUrl: 'https://example.gov.uk/somewhere-else' });

@@ -24,7 +24,7 @@ describe('saveEntraUser', () => {
     mockedPost.mockResolvedValue({ status: 200, data: saved });
   });
 
-  test('should_post_the_oid_email_and_name_to_the_session_endpoint', async () => {
+  test('the_oid_and_the_trimmed_email_and_name_should_be_posted_to_the_session_endpoint', async () => {
     await saveEntraUser({ oid: OID, email: ' Ada@Example.com ', name: ' Ada Lovelace ' });
 
     const [url, body] = mockedPost.mock.calls[0];
@@ -32,7 +32,7 @@ describe('saveEntraUser', () => {
     expect(body).toEqual({ objectId: OID, email: 'ada@example.com', name: 'Ada Lovelace' });
   });
 
-  test('should_return_the_user_the_backend_holds', async () => {
+  test('the_user_the_backend_holds_should_be_returned', async () => {
     expect(await saveEntraUser({ oid: OID, email: 'ada@example.com', name: 'Ada Lovelace' })).toEqual(saved);
   });
 
@@ -48,7 +48,7 @@ describe('saveEntraUser', () => {
     expect((mockedPost.mock.calls[0][1] as { name: string }).name).toHaveLength(200);
   });
 
-  test('API_URL_should_be_read_on_each_call', async () => {
+  test('a_changed_api_url_should_be_used_on_the_next_call', async () => {
     const apiUrl = process.env.API_URL;
     process.env.API_URL = 'http://backend.example';
     try {
@@ -70,7 +70,7 @@ describe('saveEntraUser', () => {
     await expect(saveEntraUser({ oid: OID, email: 'ada@example.com' })).rejects.toThrow(/409/);
   });
 
-  test('an_unreachable_backend_should_reject', async () => {
+  test('an_unreachable_backend_should_reject_with_the_connection_error', async () => {
     mockedPost.mockRejectedValue(new Error('connect ECONNREFUSED'));
 
     await expect(saveEntraUser({ oid: OID, email: 'ada@example.com' })).rejects.toThrow(/ECONNREFUSED/);

@@ -54,7 +54,7 @@ describe('AppInsights', () => {
     restoreEnvironmentVariable('OTEL_SERVICE_NAME', originalServiceName);
   });
 
-  test('starts Application Insights with the environment connection string and service name', () => {
+  test('the_environment_connection_string_should_start_application_insights_and_ignore_health_probes', () => {
     process.env.APP_INSIGHTS_CONNECTION_STRING = 'InstrumentationKey=test';
     sdk.start.mockImplementationOnce(() => {
       expect(defaultClient.config.azureMonitorOpenTelemetryOptions).toBeDefined();
@@ -90,7 +90,7 @@ describe('AppInsights', () => {
     expect(ignoreIncomingRequestHook({ url: '/courts' })).toBe(false);
   });
 
-  test('uses the configured Key Vault connection string as a fallback', () => {
+  test('the_key_vault_connection_string_should_be_used_when_the_environment_has_none', () => {
     getConfig.mockReturnValue('InstrumentationKey=key-vault');
 
     new AppInsights().enable();
@@ -99,7 +99,7 @@ describe('AppInsights', () => {
     expect(sdk.start).toHaveBeenCalled();
   });
 
-  test('does not start Application Insights without a connection string', () => {
+  test('application_insights_should_not_start_without_a_connection_string', () => {
     new AppInsights().enable();
 
     expect(setup).not.toHaveBeenCalled();

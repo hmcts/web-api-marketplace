@@ -20,11 +20,11 @@ const response = () => {
 };
 
 describe('isMarketplaceAdmin', () => {
-  it('is true only for someone holding the role', () => {
+  it('someone_holding_the_admin_role_should_be_an_admin', () => {
     expect(isMarketplaceAdmin(user([AMP_ADMIN]))).toBe(true);
   });
 
-  it('is false without the claim, with other roles, and with no user at all', () => {
+  it('no_roles_claim_another_role_or_no_user_should_not_be_an_admin', () => {
     expect(isMarketplaceAdmin(user())).toBe(false);
     expect(isMarketplaceAdmin(user(['something_else']))).toBe(false);
     expect(isMarketplaceAdmin(undefined)).toBe(false);
@@ -32,20 +32,20 @@ describe('isMarketplaceAdmin', () => {
 });
 
 describe('requireMarketplaceAdmin', () => {
-  it('lets an admin through', () => {
+  it('an_admin_should_be_let_through_without_a_page_being_rendered', () => {
     const res = response();
     expect(requireMarketplaceAdmin(request(user([AMP_ADMIN])), res)).toBe(true);
     expect(res.render).not.toHaveBeenCalled();
   });
 
-  it('answers a signed-in non-admin with not found, not a refusal', () => {
+  it('a_signed_in_non_admin_should_get_the_not_found_page', () => {
     const res = response();
     expect(requireMarketplaceAdmin(request(user()), res)).toBe(false);
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.render).toHaveBeenCalledWith('not-found', {});
   });
 
-  it('sends someone who is not signed in to sign in', () => {
+  it('a_signed_out_visitor_should_be_sent_to_sign_in', () => {
     const res = response();
     expect(requireMarketplaceAdmin(request(), res)).toBe(false);
     expect(res.redirect).toHaveBeenCalledWith('/sign-in');
@@ -53,12 +53,12 @@ describe('requireMarketplaceAdmin', () => {
 });
 
 describe('adminRequestHeaders', () => {
-  it('forwards the session token as a bearer token, and nothing else', () => {
+  it('the_headers_should_carry_only_the_session_id_token_as_a_bearer_token', () => {
     const req = { session: { idToken: 'the-id-token' } } as AppRequest;
     expect(adminRequestHeaders(req)).toEqual({ Authorization: 'Bearer the-id-token' });
   });
 
-  it('refuses to build headers for a session with no token', () => {
+  it('a_session_without_an_id_token_should_fail_to_build_headers', () => {
     expect(() => adminRequestHeaders(request(user([AMP_ADMIN])))).toThrow(/no ID token/);
   });
 });

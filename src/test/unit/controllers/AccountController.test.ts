@@ -107,7 +107,7 @@ describe('AccountController', () => {
 
     beforeEach(() => useDataStore(new MemoryStore()));
 
-    test('they_should_be_listed_with_the_backends_newest_first_and_production_ones_linked', async () => {
+    test('production_requests_should_be_listed_with_the_others_newest_first_and_linked_to_their_page', async () => {
       (getRequestsFor as jest.Mock).mockResolvedValue({ ok: true, requests: [request] });
       (listProductionRequests as jest.Mock).mockResolvedValue([
         { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '2026-09-04T09:00:00' },
@@ -124,7 +124,7 @@ describe('AccountController', () => {
       });
     });
 
-    test('a_production_request_left_in_the_data_store_should_not_be_listed_twice', async () => {
+    test('a_production_request_left_in_the_data_store_should_give_way_to_the_backends_list', async () => {
       const stale = await addLocalRequest(user.email, 'PRODUCTION', []);
       (listProductionRequests as jest.Mock).mockResolvedValue([
         { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '2026-09-04T09:00:00' },

@@ -32,7 +32,7 @@ describe('cookie-preferences bundle', () => {
     delete (global as { window?: unknown }).window;
   });
 
-  test('initializes the cookie manager with preferences and manifest', () => {
+  test('the_cookie_manager_should_start_with_the_amp_cookie_and_the_essential_analytics_and_apm_categories', () => {
     const manager = setupModule();
 
     expect(manager.init).toHaveBeenCalledWith(
@@ -57,7 +57,7 @@ describe('cookie-preferences bundle', () => {
     );
   });
 
-  test('registers handlers for cookie manager events', () => {
+  test('the_bundle_should_listen_for_form_submitted_preferences_loaded_and_preferences_saved', () => {
     const manager = setupModule();
 
     const events = manager.on.mock.calls.map(([event]) => event);
@@ -66,7 +66,7 @@ describe('cookie-preferences bundle', () => {
     );
   });
 
-  test('PreferenceFormSubmitted shows the confirmation and scrolls to top', () => {
+  test('submitting_the_form_should_show_and_focus_the_confirmation_and_scroll_to_the_top', () => {
     const manager = setupModule();
     const handler = getHandler(manager, 'PreferenceFormSubmitted');
     const message = { style: { display: 'none' }, focus: jest.fn() };
@@ -87,7 +87,7 @@ describe('cookie-preferences bundle', () => {
     ).toBe(0);
   });
 
-  test('UserPreferencesLoaded pushes preferences into the data layer', () => {
+  test('loaded_preferences_should_be_pushed_to_the_data_layer', () => {
     const manager = setupModule();
     const handler = getHandler(manager, 'UserPreferencesLoaded');
     const dataLayer: { event: string; cookiePreferences: Record<string, string> }[] = [];
@@ -104,7 +104,7 @@ describe('cookie-preferences bundle', () => {
     ]);
   });
 
-  test('UserPreferencesSaved enables Dynatrace when apm is on', () => {
+  test('saving_apm_on_should_record_the_choice_and_enable_dynatrace_and_session_replay', () => {
     const manager = setupModule();
     const handler = getHandler(manager, 'UserPreferencesSaved');
     const dataLayer: { event: string; cookiePreferences: Record<string, string> }[] = [];
@@ -131,7 +131,7 @@ describe('cookie-preferences bundle', () => {
     expect(dtrum.disableSessionReplay).not.toHaveBeenCalled();
   });
 
-  test('UserPreferencesSaved disables Dynatrace when apm is off', () => {
+  test('saving_apm_off_should_record_the_choice_and_disable_dynatrace_and_session_replay', () => {
     const manager = setupModule();
     const handler = getHandler(manager, 'UserPreferencesSaved');
     const dataLayer: { event: string; cookiePreferences: Record<string, string> }[] = [];

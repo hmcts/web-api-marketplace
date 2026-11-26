@@ -21,14 +21,14 @@ describe('EntraBypass', () => {
     }
   };
 
-  test('an_environment_that_asks_for_it_in_development_should_have_it', () => {
+  test('the_bypass_should_be_on_when_asked_for_in_development', () => {
     env({ BYPASS_ENTRA: 'true', NODE_ENV: 'development' });
 
     expect(entraBypass.enabled).toBe(true);
     expect(entraBypass.refused).toBe(false);
   });
 
-  test('an_unset_node_env_should_leave_it_off', () => {
+  test('an_unset_node_env_should_refuse_the_bypass', () => {
     // Nothing deployed sets NODE_ENV, so the bypass must not treat absence as development.
     env({ BYPASS_ENTRA: 'true', NODE_ENV: undefined });
 
@@ -36,14 +36,14 @@ describe('EntraBypass', () => {
     expect(entraBypass.refused).toBe(true);
   });
 
-  test('nothing_set_should_leave_it_off', () => {
+  test('the_bypass_should_be_off_but_not_refused_when_nobody_asks_for_it', () => {
     env({ BYPASS_ENTRA: undefined, NODE_ENV: 'development' });
 
     expect(entraBypass.enabled).toBe(false);
     expect(entraBypass.refused).toBe(false);
   });
 
-  test('production_should_refuse_it_however_the_variable_is_set', () => {
+  test('production_should_refuse_the_bypass_even_when_asked_for', () => {
     // The guard that matters: every deployed environment runs as production, so setting
     // the variable there cannot switch the bypass on.
     env({ BYPASS_ENTRA: 'true', NODE_ENV: 'production' });
@@ -52,7 +52,7 @@ describe('EntraBypass', () => {
     expect(entraBypass.refused).toBe(true);
   });
 
-  test('anything_other_than_the_exact_word_true_should_leave_it_off', () => {
+  test('anything_other_than_the_exact_word_true_should_leave_the_bypass_off', () => {
     for (const value of ['TRUE', 'yes', '1', 'on', ' true', 'false', '']) {
       env({ BYPASS_ENTRA: value, NODE_ENV: 'development' });
 
@@ -60,7 +60,7 @@ describe('EntraBypass', () => {
     }
   });
 
-  test('the_user_should_be_john_doe', () => {
+  test('the_bypass_user_should_be_john_doe', () => {
     expect(entraBypass.claims).toEqual({
       oid: '00000000-0000-4000-8000-00000000d0e0',
       email: 'john.doe@example.com',

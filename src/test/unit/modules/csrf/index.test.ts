@@ -21,7 +21,7 @@ function call(method: string, session: Session, sent: { body?: string; header?: 
 const signedIn = (): Session => ({ user: { id: 1 } });
 
 describe('csrfProtection', () => {
-  test('a_signed_in_page_should_get_one_token_for_the_session', () => {
+  test('a_signed_in_page_should_get_a_token_that_is_kept_in_the_session', () => {
     const session = signedIn();
     const { res } = call('GET', session);
 
@@ -75,11 +75,11 @@ describe('csrfProtection', () => {
 });
 
 describe('csrfFieldHtml', () => {
-  test('should_render_a_hidden_field_with_the_token', () => {
+  test('the_field_should_be_a_hidden_input_holding_the_token', () => {
     expect(csrfFieldHtml('abc_-123')).toBe('<input type="hidden" name="_csrf" value="abc_-123">');
   });
 
-  test('should_escape_anything_that_could_break_out_of_the_attribute', () => {
+  test('the_field_should_escape_anything_that_could_break_out_of_the_attribute', () => {
     expect(csrfFieldHtml('"><script>&')).toBe(
       '<input type="hidden" name="_csrf" value="&quot;&gt;&lt;script&gt;&amp;">'
     );

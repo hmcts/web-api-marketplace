@@ -58,5 +58,6 @@ test.describe('Admin, signed in', () => {
     const response = await page.goto('/admin');
 
     expect(response?.status()).toBe(404);
+    await expect(page.locator('h1')).toHaveText('Page not found');
   });
 });

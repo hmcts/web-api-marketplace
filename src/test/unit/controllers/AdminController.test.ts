@@ -70,13 +70,13 @@ describe('AdminController user page', () => {
     expect(data.couldNotLoad).toBe(false);
   });
 
-  test('one_api_should_read_singular', async () => {
+  test('an_application_with_one_api_should_read_1_api', async () => {
     const { data } = await userPage('2');
 
     expect((data.applications as { apis: string }[])[1].apis).toBe('1 API');
   });
 
-  test('missing_values_should_show_not_known', async () => {
+  test('a_missing_organisation_or_last_sign_in_should_show_not_known', async () => {
     (getAdminUser as jest.Mock).mockResolvedValue({ ...GRACE_DETAIL, organisation: null, lastLoginAt: null });
 
     const { data } = await userPage('2');
@@ -354,7 +354,7 @@ describe('AdminController', () => {
     expect(res.view).toBeUndefined();
   });
 
-  test('a_user_should_be_told_the_page_is_not_found', async () => {
+  test('a_non_admin_should_be_told_the_admin_page_is_not_found', async () => {
     const { res } = await dashboard({ user });
 
     expect(res.statusCode).toBe(404);
