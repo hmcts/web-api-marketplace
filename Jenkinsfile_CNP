@@ -8,33 +8,6 @@ def component = "marketplace-web"
 
 def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
 
-static Map<String, Object> secret(String secretName, String envVariable) {
-  [
-    $class     : 'AzureKeyVaultSecret',
-    secretType : 'Secret',
-    name       : secretName,
-    envVariable: envVariable
-  ]
-}
-
-// The AAT functional tests sign in as real Entra test accounts. They and their passwords are
-// managed by hmcts/external-entra-id (tenants/stg/config/users.yaml); jenkins-aat-mi may read
-// these two secrets and nothing else in the vault.
-def loadAatTestAccounts() {
-  env.AMP_TEST_USER_EMAIL = 'amp-functional-user@hmctsextstg.onmicrosoft.com'
-  env.AMP_TEST_ADMIN_EMAIL = 'amp-functional-admin@hmctsextstg.onmicrosoft.com'
-  azureKeyVault(
-    keyVaultURL: 'https://kvspsextidaat.vault.azure.net/',
-    secrets: [
-      secret('entra-amp-user-amp-functional-user-at-hmctsextstg-onmicrosoft-com', 'AMP_TEST_USER_PASSWORD'),
-      secret('entra-amp-user-amp-functional-admin-at-hmctsextstg-onmicrosoft-com', 'AMP_TEST_ADMIN_PASSWORD'),
-    ]
-  ) {
-    env.AMP_TEST_USER_PASSWORD = "${AMP_TEST_USER_PASSWORD}"
-    env.AMP_TEST_ADMIN_PASSWORD = "${AMP_TEST_ADMIN_PASSWORD}"
-  }
-}
-
 withPipeline(type, product, component) {
   env.PLAYWRIGHT_WORKERS = 4
   env.PLAYWRIGHT_REPORTERS = 'list,odhin'
@@ -62,7 +35,6 @@ withPipeline(type, product, component) {
 
   before('functionalTest:aat') {
     yarnBuilder.yarn('playwright install')
-    loadAatTestAccounts()
   }
 
   afterAlways('functionalTest:preview') {
