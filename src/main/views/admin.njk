@@ -1,14 +1,45 @@
 {% extends "template.njk" %}
 
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
 {% set pageTitle = "Admin - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "admin" %}
 {% set hideBackLink = true %}
 
+{% macro stat(count, label, id) %}
+  <div class="govuk-grid-column-one-third">
+    <p class="govuk-body">
+      <a class="govuk-link govuk-link--no-visited-state" href="/admin/users" id="{{ id }}">
+        <span class="govuk-!-font-size-48 govuk-!-font-weight-bold govuk-!-display-block">{{ count }}</span>
+        {{ label }}
+      </a>
+    </p>
+  </div>
+{% endmacro %}
+
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-l">Marketplace Team</span>
       <h1 class="govuk-heading-xl">Admin</h1>
-      <p class="govuk-body"><a class="govuk-link" href="/admin/users">Registered users</a></p>
     </div>
   </div>
+
+  {% if couldNotLoad %}
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-two-thirds">
+        {{ govukWarningText({
+          text: "The figures could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "counts-unavailable" }
+        }) }}
+      </div>
+    </div>
+  {% else %}
+    <div class="govuk-grid-row">
+      {{ stat(counts.users, "registered users", "count-users") }}
+      {{ stat(counts.applications, "applications", "count-applications") }}
+      {{ stat(counts.productionRequests, "production requests", "count-production-requests") }}
+    </div>
+  {% endif %}
 {% endblock %}
