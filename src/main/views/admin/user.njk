@@ -4,7 +4,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
-{% set pageTitle = (user.name if user else "User") + " - HMCTS API Marketplace - GOV.UK" %}
+{% set pageTitle = (person.name if person else "User") + " - HMCTS API Marketplace - GOV.UK" %}
 {% set section = "admin" %}
 {% set breadcrumbs = [
   { text: "Home", href: "/" },
@@ -24,16 +24,16 @@
         }) }}
       {% else %}
         <span class="govuk-caption-l">User</span>
-        <h1 class="govuk-heading-xl">{{ user.name }}</h1>
+        <h1 class="govuk-heading-xl">{{ person.name }}</h1>
 
         {{ govukSummaryList({
           rows: [
-            { key: { text: "Name" }, value: { text: user.name } },
-            { key: { text: "Email" }, value: { text: user.email } },
-            { key: { text: "Organisation" }, value: { text: user.organisation } },
-            { key: { text: "Status" }, value: { text: user.status } },
-            { key: { text: "Joined" }, value: { text: user.joined } },
-            { key: { text: "Last signed in" }, value: { text: user.lastSignedIn } }
+            { key: { text: "Name" }, value: { text: person.name } },
+            { key: { text: "Email" }, value: { text: person.email } },
+            { key: { text: "Organisation" }, value: { text: person.organisation } },
+            { key: { text: "Status" }, value: { text: person.status } },
+            { key: { text: "Joined" }, value: { text: person.joined } },
+            { key: { text: "Last signed in" }, value: { text: person.lastSignedIn } }
           ]
         }) }}
 

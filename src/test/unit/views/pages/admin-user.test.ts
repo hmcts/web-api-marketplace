@@ -2,7 +2,7 @@ import { describe, expect, test } from '@jest/globals';
 
 import { env } from '../helpers/nunjucksEnv';
 
-const user = {
+const person = {
   name: 'Grace Hopper',
   email: 'grace.hopper@hmcts.net',
   organisation: 'Not known',
@@ -12,7 +12,7 @@ const user = {
 };
 
 const render = (extra: Record<string, unknown> = {}) =>
-  env.render('admin/user.njk', { user, applications: [], productionRequests: [], couldNotLoad: false, ...extra });
+  env.render('admin/user.njk', { person, applications: [], productionRequests: [], couldNotLoad: false, ...extra });
 
 describe('Admin user page', () => {
   test('the_user_should_be_headed_by_name_under_a_user_caption', () => {
@@ -65,12 +65,26 @@ describe('Admin user page', () => {
     );
   });
 
+  test('the_signed_in_admin_should_keep_the_admin_tab', () => {
+    const html = env.render('admin/user.njk', {
+      user: { name: 'Ada Admin', roles: ['amp_admin'] },
+      nav: { admin: 'Admin', account: 'Your account', applications: 'Applications' },
+      person,
+      applications: [],
+      productionRequests: [],
+      couldNotLoad: false,
+    });
+
+    expect(html).toMatch(/<a class="govuk-service-navigation__link" href="\/admin"/);
+    expect(html).toContain('<h1 class="govuk-heading-xl">Grace Hopper</h1>');
+  });
+
   test('the_breadcrumbs_should_lead_back_to_the_users', () => {
     expect(render()).toContain('href="/admin/users"');
   });
 
   test('an_unreachable_backend_should_say_the_user_could_not_be_loaded', () => {
-    const html = render({ user: undefined, couldNotLoad: true });
+    const html = render({ person: undefined, couldNotLoad: true });
 
     expect(html).toContain('This user could not be loaded just now.');
     expect(html).not.toContain('govuk-summary-list');

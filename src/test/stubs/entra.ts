@@ -230,7 +230,7 @@ export async function startStubEntra(): Promise<StubEntra> {
         lastLoginAt: now,
       });
     }
-    if (req.url?.startsWith('/backend/admin/users') && req.method === 'GET') {
+    if (req.url?.startsWith('/backend/admin/') && req.method === 'GET') {
       stub.lastBackendAuthorization = req.headers.authorization;
       const roles = await verifiedRoles(req.headers.authorization);
       if (!roles) {
@@ -238,6 +238,12 @@ export async function startStubEntra(): Promise<StubEntra> {
       }
       if (!roles.includes(AMP_ADMIN)) {
         return json(403, { error: 'Admins only.' });
+      }
+      if (req.url === '/backend/admin/applications') {
+        return json(200, []);
+      }
+      if (req.url.startsWith('/backend/admin/applications/')) {
+        return json(404, { error: 'No such application.' });
       }
       const now = new Date().toISOString();
       const listed = [...savedUsers.values()]
