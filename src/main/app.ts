@@ -96,6 +96,17 @@ app.use((req, res, next) => {
 
 new Correlation().enableFor(app);
 
+// After the correlation id so a page and the API calls it makes read as one request. The path
+// is logged without its query, which on the admin search would otherwise write the name or
+// email somebody typed into the logs.
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    logger.info(`${req.method} ${req.path} ${res.statusCode} in ${Date.now() - startedAt}ms`);
+  });
+  next();
+});
+
 app.use(scopePerRequest(app.locals.container));
 app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
 
