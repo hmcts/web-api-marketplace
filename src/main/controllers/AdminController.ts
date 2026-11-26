@@ -3,6 +3,13 @@ import { NextFunction, Response } from 'express';
 
 import { AppRequest } from '../interfaces/AppRequest';
 import { Logger } from '../modules/logging';
+import {
+  AdminApplicationDetail,
+  AdminApplicationOwner,
+  AdminApplicationSummary,
+  getAdminApplication,
+  listAdminApplications,
+} from '../services/AdminApplications';
 import { requireMarketplaceAdmin } from '../services/AdminRole';
 import { AdminUser, AdminUserDetail, getAdminUser, listAdminUsers } from '../services/AdminUsers';
 import { BackendError, Owner, ownerOf } from '../services/Applications';
@@ -25,9 +32,10 @@ export default class AdminController {
     }
 
     let users: AdminUser[] | undefined = [];
+    let applications: AdminApplicationSummary[] | undefined;
     let couldNotLoad = false;
     try {
-      users = await listAdminUsers(owner(req));
+      [users, applications] = await Promise.all([listAdminUsers(owner(req)), countableApplications(req)]);
     } catch (error) {
       if (tokenRefused(error)) {
         signInAgain(req, res);
@@ -43,11 +51,10 @@ export default class AdminController {
     }
 
     res.render('admin', {
-      // Only the users are counted from the user list. A dash says a figure is not known yet
-      // rather than claiming none exist, until each has an endpoint of its own to count.
+      // A dash says a figure is not known yet rather than claiming none exist.
       counts: {
         users: users.length,
-        applications: UNKNOWN_COUNT,
+        applications: applications?.length ?? UNKNOWN_COUNT,
         productionRequests: UNKNOWN_COUNT,
       },
       couldNotLoad,
@@ -136,7 +143,7 @@ export default class AdminController {
       },
       applications: found.applications.map(application => ({
         name: application.name,
-        apis: `${application.apiCount} ${application.apiCount === 1 ? 'API' : 'APIs'}`,
+        apis: apiCount(application.apiCount),
         created: formatDate(application.createdAt) ?? NOT_KNOWN,
       })),
       productionRequests: found.productionRequests.map(request => ({
@@ -148,6 +155,115 @@ export default class AdminController {
       couldNotLoad: false,
     });
   }
+
+  @route('/applications')
+  @GET()
+  public async applications(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    if (!requireMarketplaceAdmin(req, res)) {
+      return;
+    }
+
+    let applications: AdminApplicationSummary[] | undefined = [];
+    let couldNotLoad = false;
+    try {
+      applications = await listAdminApplications(owner(req));
+    } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
+      logger.error(`Could not list applications for an admin: ${(error as Error).message}`);
+      couldNotLoad = true;
+    }
+
+    if (!applications) {
+      next();
+      return;
+    }
+
+    const rows = applications.map(application => ({
+      id: application.id,
+      name: application.name,
+      owner: ownerView(application.owner),
+      apis: apiCount(application.apiCount),
+      created: formatDate(application.createdAt) ?? NOT_KNOWN,
+      productionRequested: application.productionRequested,
+    }));
+
+    res.render('admin/applications', { count: rows.length, applications: rows, couldNotLoad });
+  }
+
+  @route('/applications/:id')
+  @GET()
+  public async application(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    if (!requireMarketplaceAdmin(req, res)) {
+      return;
+    }
+
+    const id = String(req.params.id);
+    if (!ROW_ID.test(id)) {
+      next();
+      return;
+    }
+
+    let found: AdminApplicationDetail | undefined;
+    try {
+      found = await getAdminApplication(owner(req), Number(id));
+    } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
+      logger.error(`Could not read application ${id} for an admin: ${(error as Error).message}`);
+      res.render('admin/application', { couldNotLoad: true });
+      return;
+    }
+
+    if (!found) {
+      next();
+      return;
+    }
+
+    const request = found.productionRequest;
+    res.render('admin/application', {
+      application: {
+        name: found.name,
+        owner: ownerView(found.owner),
+        created: formatDate(found.createdAt) ?? NOT_KNOWN,
+        clientId: found.clientId,
+        apis: found.apis,
+      },
+      productionRequest: request
+        ? {
+            reference: request.reference,
+            status: statusText(request.status),
+            submitted: formatDate(request.submittedAt) ?? NOT_KNOWN,
+          }
+        : undefined,
+      couldNotLoad: false,
+    });
+  }
+}
+
+/** The dashboard counts applications when it can; a failure there leaves a dash, not a broken page. */
+async function countableApplications(req: AppRequest): Promise<AdminApplicationSummary[] | undefined> {
+  try {
+    return await listAdminApplications(owner(req));
+  } catch (error) {
+    if (tokenRefused(error)) {
+      throw error;
+    }
+    logger.error(`Could not count applications for an admin: ${(error as Error).message}`);
+    return undefined;
+  }
+}
+
+function ownerView(found?: AdminApplicationOwner | null): { id: number; name: string; email: string } | undefined {
+  return found ? { id: found.id, name: found.name?.trim() || found.email, email: found.email } : undefined;
+}
+
+function apiCount(count: number): string {
+  return `${count} ${count === 1 ? 'API' : 'APIs'}`;
 }
 
 function owner(req: AppRequest): Owner {
