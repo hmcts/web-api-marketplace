@@ -1,4 +1,5 @@
 import { expect, test } from '../../fixtures';
+import { config } from '../../utils/config.utils';
 
 test.describe('API catalogue', () => {
   // The catalogue is served by the marketplace backend, which preview does not deploy — the web
@@ -72,6 +73,12 @@ test.describe('API catalogue', () => {
     await expect(apiCataloguePage.referenceLink).toHaveAttribute('href', /^https:\/\/.+\/api-details#api=/);
     await expect(apiCataloguePage.referenceLink).toHaveAttribute('target', '_blank');
     await expect(apiCataloguePage.referenceLink).toHaveAttribute('rel', /noopener/);
+
+    const portalHost = config.developerPortalHost;
+    if (portalHost) {
+      const href = await apiCataloguePage.referenceLink.getAttribute('href');
+      expect(new URL(href!).hostname).toBe(portalHost);
+    }
   });
 
   test('an_api_page_should_explain_how_browsing_differs_from_try_it_now', async ({ apiCataloguePage }) => {
