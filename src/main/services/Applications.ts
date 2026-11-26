@@ -225,11 +225,7 @@ export async function grantAccess(owner: Owner, application: Application): Promi
   }
   try {
     for (const { shortCode } of application.apis) {
-      await callBackend(owner, {
-        method: 'POST',
-        url: `/applications/${encodeURIComponent(application.clientId)}/roles`,
-        data: { shortCode },
-      });
+      await grantRole(owner, application.clientId, shortCode);
     }
   } catch (error) {
     if (error instanceof BackendError && RETRYABLE.includes(error.status as number) && !error.signInAgain) {
@@ -273,9 +269,13 @@ export async function setApis(
   for (const shortCode of selected.filter(code => !current.includes(code))) {
     try {
       apis.push((await subscribe(owner, application.clientId, shortCode, catalogue)).subscription);
+      // An application still waiting on Set up gets every role at once when it is pressed.
+      if (application.accessGranted) {
+        await grantRole(owner, application.clientId, shortCode);
+      }
       changes.added.push(shortCode);
     } catch (error) {
-      logger.error(`Could not subscribe ${application.clientId} to ${shortCode}: ${(error as Error).message}`);
+      logger.error(`Could not add ${shortCode} to ${application.clientId}: ${(error as Error).message}`);
       changes.failed.push(titleOf(shortCode, catalogue));
     }
   }
@@ -322,6 +322,14 @@ async function subscribe(
     },
     key: created.subscriptionKey ?? '',
   };
+}
+
+async function grantRole(owner: Owner, clientId: string, shortCode: string): Promise<void> {
+  await callBackend(owner, {
+    method: 'POST',
+    url: `/applications/${encodeURIComponent(clientId)}/roles`,
+    data: { shortCode },
+  });
 }
 
 async function revoke(owner: Owner, subscriptionName: string): Promise<void> {
