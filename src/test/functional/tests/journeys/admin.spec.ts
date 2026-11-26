@@ -17,16 +17,20 @@ test.describe('Admin, signed out', () => {
 });
 
 test.describe('Admin, signed in', () => {
-  test('an_admin_should_be_offered_the_admin_tab_and_open_the_admin_page', async ({ page, axeUtils }) => {
-    await signIn(page, 'admin');
+  test(
+    'an_admin_should_be_offered_the_admin_tab_and_open_the_admin_page',
+    { tag: '@a11y' },
+    async ({ page, axeUtils }) => {
+      await signIn(page, 'admin');
 
-    await page.getByRole('link', { name: 'Admin', exact: true }).click();
+      await page.getByRole('link', { name: 'Admin', exact: true }).click();
 
-    await expect(page.locator('h1')).toHaveText('Admin');
-    await axeUtils.audit();
-  });
+      await expect(page.locator('h1')).toHaveText('Admin');
+      await axeUtils.audit();
+    }
+  );
 
-  test('an_admin_should_find_a_user_and_open_their_details', async ({ page, axeUtils }) => {
+  test('an_admin_should_find_a_user_and_open_their_details', { tag: '@a11y' }, async ({ page, axeUtils }) => {
     await signIn(page, 'admin');
     const email = accountEmail('admin');
 

@@ -13,13 +13,17 @@ const pages = [
 
 test.describe('Content pages', () => {
   for (const { path, heading } of pages) {
-    test(`${path}_should_show_its_heading_with_no_accessibility_violations`, async ({ page, axeUtils }) => {
-      const response = await page.goto(path);
+    test(
+      `${path}_should_show_its_heading_with_no_accessibility_violations`,
+      { tag: '@a11y' },
+      async ({ page, axeUtils }) => {
+        const response = await page.goto(path);
 
-      expect(response?.status()).toBe(200);
-      await expect(page.locator('h1')).toContainText(heading);
-      await axeUtils.audit();
-    });
+        expect(response?.status()).toBe(200);
+        await expect(page.locator('h1')).toContainText(heading);
+        await axeUtils.audit();
+      }
+    );
   }
 
   test('an_unknown_page_should_answer_404_with_the_not_found_page', async ({ page }) => {

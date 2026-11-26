@@ -3,21 +3,25 @@ import { expect, test } from '../../fixtures';
 const retiredPages = ['/documentation/producer-guidance', '/documentation/producer-standards'];
 
 test.describe('Documentation', () => {
-  test('the_documentation_page_should_split_the_guides_for_consumers_and_producers', async ({ page, axeUtils }) => {
-    await page.goto('/documentation');
+  test(
+    'the_documentation_page_should_split_the_guides_for_consumers_and_producers',
+    { tag: '@a11y' },
+    async ({ page, axeUtils }) => {
+      await page.goto('/documentation');
 
-    await expect(page.locator('h2#consumers')).toHaveText('For API consumers');
-    await expect(page.locator('h2#producers')).toHaveText('For API producers');
-    await expect(page.getByRole('link', { name: 'Consumer guidance' })).toHaveAttribute(
-      'href',
-      '/documentation/consumer-guidance'
-    );
-    await expect(page.getByRole('link', { name: 'Producer Onboarding' })).toHaveAttribute(
-      'href',
-      '/documentation/producer-onboarding'
-    );
-    await axeUtils.audit();
-  });
+      await expect(page.locator('h2#consumers')).toHaveText('For API consumers');
+      await expect(page.locator('h2#producers')).toHaveText('For API producers');
+      await expect(page.getByRole('link', { name: 'Consumer guidance' })).toHaveAttribute(
+        'href',
+        '/documentation/consumer-guidance'
+      );
+      await expect(page.getByRole('link', { name: 'Producer Onboarding' })).toHaveAttribute(
+        'href',
+        '/documentation/producer-onboarding'
+      );
+      await axeUtils.audit();
+    }
+  );
 
   for (const path of retiredPages) {
     test(`${path}_should_answer_404_now_the_page_is_retired`, async ({ page }) => {

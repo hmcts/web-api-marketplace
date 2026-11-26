@@ -56,7 +56,7 @@ test.describe('Signed in', () => {
     await deleteTestApplication(page);
   });
 
-  test('an_application_should_be_created_listed_and_deleted', async ({ page, axeUtils }) => {
+  test('an_application_should_be_created_listed_and_deleted', { tag: '@a11y' }, async ({ page, axeUtils }) => {
     await page.goto('/account/applications/new');
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.locator('h1')).toHaveText('Application details');
@@ -83,30 +83,34 @@ test.describe('Signed in', () => {
     await expect(page.getByRole('link', { name: appName })).toHaveCount(0);
   });
 
-  test('an_application_should_show_its_details_and_a_subscription_key_for_each_api', async ({ page, axeUtils }) => {
-    await createTestApplication(page);
-    await page.goto('/account/applications');
-    await page.getByRole('link', { name: appName }).click();
+  test(
+    'an_application_should_show_its_details_and_a_subscription_key_for_each_api',
+    { tag: '@a11y' },
+    async ({ page, axeUtils }) => {
+      await createTestApplication(page);
+      await page.goto('/account/applications');
+      await page.getByRole('link', { name: appName }).click();
 
-    await expect(page.locator('h1')).toHaveText(appName);
-    await expect(page.locator('#client-id')).not.toBeEmpty();
-    await expect(page.locator('#masked-secret')).not.toBeEmpty();
-    await expect(page.locator('#application-apis')).toBeVisible();
-    await axeUtils.audit();
+      await expect(page.locator('h1')).toHaveText(appName);
+      await expect(page.locator('#client-id')).not.toBeEmpty();
+      await expect(page.locator('#masked-secret')).not.toBeEmpty();
+      await expect(page.locator('#application-apis')).toBeVisible();
+      await axeUtils.audit();
 
-    await page
-      .locator('#application-apis')
-      .getByRole('link', { name: /View subscription key/ })
-      .first()
-      .click();
+      await page
+        .locator('#application-apis')
+        .getByRole('link', { name: /View subscription key/ })
+        .first()
+        .click();
 
-    await expect(page.locator('#subscription-key-unavailable')).toHaveCount(0);
-    await page.locator('#show-subscription-key summary').click();
-    await expect(page.locator('#subscription-key')).not.toBeEmpty();
-    await axeUtils.audit();
-  });
+      await expect(page.locator('#subscription-key-unavailable')).toHaveCount(0);
+      await page.locator('#show-subscription-key summary').click();
+      await expect(page.locator('#subscription-key')).not.toBeEmpty();
+      await axeUtils.audit();
+    }
+  );
 
-  test('a_name_that_is_too_short_should_show_an_error', async ({ page, axeUtils }) => {
+  test('a_name_that_is_too_short_should_show_an_error', { tag: '@a11y' }, async ({ page, axeUtils }) => {
     await page.goto('/account/applications/new/details');
     await page.getByLabel('What is your application name?').fill('Short');
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -124,32 +128,36 @@ test.describe('Signed in', () => {
     await expect(page.locator('.govuk-error-summary')).toContainText('There is a problem');
   });
 
-  test('production_credentials_should_be_requested_for_an_application', async ({ page, axeUtils }) => {
-    await createTestApplication(page);
+  test(
+    'production_credentials_should_be_requested_for_an_application',
+    { tag: '@a11y' },
+    async ({ page, axeUtils }) => {
+      await createTestApplication(page);
 
-    await page.goto('/account/production-credentials');
-    await expect(page.locator('h1')).toHaveText('Request production credentials');
-    await axeUtils.audit();
-    await page.getByRole('radio', { name: appName }).check();
-    await page.getByRole('radio', { name: 'Other external organisation' }).check();
-    await page.getByLabel('Team name (and organisation if external to HMCTS?)').fill('Web Functional Test Ltd');
-    const goLive = new Date();
-    goLive.setFullYear(goLive.getFullYear() + 1);
-    await page.getByLabel('Day').fill(String(goLive.getDate()));
-    await page.getByLabel('Month').fill(String(goLive.getMonth() + 1));
-    await page.getByLabel('Year').fill(String(goLive.getFullYear()));
-    await page.locator('input[name="call-volume"]').first().check();
-    await page.locator('textarea').nth(0).fill('Court schedules for an automated functional test.');
-    await page.getByLabel('Me/my immediate team only').check();
-    await page.getByRole('radio', { name: 'No', exact: true }).check();
-    await page.getByRole('button', { name: 'Continue' }).click();
+      await page.goto('/account/production-credentials');
+      await expect(page.locator('h1')).toHaveText('Request production credentials');
+      await axeUtils.audit();
+      await page.getByRole('radio', { name: appName }).check();
+      await page.getByRole('radio', { name: 'Other external organisation' }).check();
+      await page.getByLabel('Team name (and organisation if external to HMCTS?)').fill('Web Functional Test Ltd');
+      const goLive = new Date();
+      goLive.setFullYear(goLive.getFullYear() + 1);
+      await page.getByLabel('Day').fill(String(goLive.getDate()));
+      await page.getByLabel('Month').fill(String(goLive.getMonth() + 1));
+      await page.getByLabel('Year').fill(String(goLive.getFullYear()));
+      await page.locator('input[name="call-volume"]').first().check();
+      await page.locator('textarea').nth(0).fill('Court schedules for an automated functional test.');
+      await page.getByLabel('Me/my immediate team only').check();
+      await page.getByRole('radio', { name: 'No', exact: true }).check();
+      await page.getByRole('button', { name: 'Continue' }).click();
 
-    await expect(page.locator('h1')).toHaveText('Check your answers before submitting');
-    await axeUtils.audit();
-    await page.getByRole('button', { name: 'Accept and submit' }).click();
+      await expect(page.locator('h1')).toHaveText('Check your answers before submitting');
+      await axeUtils.audit();
+      await page.getByRole('button', { name: 'Accept and submit' }).click();
 
-    await expect(page.locator('.govuk-panel__title')).toHaveText('Request submitted');
-  });
+      await expect(page.locator('.govuk-panel__title')).toHaveText('Request submitted');
+    }
+  );
 
   test('signing_out_should_end_the_session', async ({ page }) => {
     await page.goto('/account');

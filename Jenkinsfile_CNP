@@ -72,6 +72,14 @@ withPipeline(type, product, component) {
       reportFiles           : 'odhin-report/index.html,lighthouse-report-*.html',
       reportName            : 'Functional Test Report',
     ]
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results/accessibility-report',
+      reportFiles           : 'index.html',
+      reportName            : 'Accessibility Test Report',
+    ]
   }
 
   afterAlways('functionalTest:aat') {
@@ -82,6 +90,14 @@ withPipeline(type, product, component) {
       reportDir             : 'test-results',
       reportFiles           : 'odhin-report/index.html,lighthouse-report-*.html',
       reportName            : 'Functional Test Report',
+    ]
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results/accessibility-report',
+      reportFiles           : 'index.html',
+      reportName            : 'Accessibility Test Report',
     ]
   }
 
