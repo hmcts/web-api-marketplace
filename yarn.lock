@@ -6694,12 +6694,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"awilix-express@npm:11.0.1":
-  version: 11.0.1
-  resolution: "awilix-express@npm:11.0.1"
+"awilix-express@npm:11.0.2":
+  version: 11.0.2
+  resolution: "awilix-express@npm:11.0.2"
   dependencies:
     awilix-router-core: "npm:^4.0.0"
-  checksum: 10/b9695b87430cbc94f6639b7209d0e22fcd14d0b1113a7b3938ecefc09b18fe24ea6f9ca55e65c565f64dbc642a3725fd8673dee59570b055a35207e560ba92d6
+  checksum: 10/8a9ab482fc2f5898966339af96d5e92b225dd9fcac0c599d2f5bf23ccf269a41c00a88a3b66b3431ec11798cb36e679c890d2dcc7106c2f84358d21448ebfa45
   languageName: node
   linkType: hard
 
@@ -15938,7 +15938,7 @@ __metadata:
     applicationinsights: "npm:3.17.1"
     async-mutex: "npm:0.5.0"
     awilix: "npm:13.0.7"
-    awilix-express: "npm:11.0.1"
+    awilix-express: "npm:11.0.2"
     axios: "npm:1.21.1"
     babel-jest: "npm:30.4.1"
     babel-loader: "npm:10.1.1"
