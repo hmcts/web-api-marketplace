@@ -14,6 +14,8 @@ export interface Config {
   urls: {
     homePageUrl: string;
   };
+  /** The environment's own developer portal host, where the web app runs in a known environment. */
+  developerPortalHost?: string;
   /**
    * Real Entra accounts, for environments that sign in through Entra rather than the mock (AAT).
    * Absent where their variables are not set; the signed-in journeys then skip there.
@@ -24,10 +26,28 @@ export interface Config {
   };
 }
 
+// Most specific first: prod's web host is the bare platform.hmcts.net one
+const DEVELOPER_PORTAL_HOSTS: [string, string][] = [
+  ['.sandbox.platform.hmcts.net', 'amp-portal.sandbox.api.hmcts.net'],
+  ['.aat.platform.hmcts.net', 'amp-portal.aat.api.hmcts.net'],
+  ['.demo.platform.hmcts.net', 'amp-portal.demo.api.hmcts.net'],
+];
+const PROD_WEB_HOST = 'amp-marketplace-web.platform.hmcts.net';
+
+function developerPortalHostFor(webHost: string): string | undefined {
+  if (webHost === PROD_WEB_HOST) {
+    return 'amp-portal.api.hmcts.net';
+  }
+  return DEVELOPER_PORTAL_HOSTS.find(([suffix]) => webHost.endsWith(suffix))?.[1];
+}
+
+const homePageUrl = getEnvVar('TEST_URL', 'https://localhost:3344');
+
 export const config: Config = {
   urls: {
-    homePageUrl: getEnvVar('TEST_URL', 'https://localhost:3344'),
+    homePageUrl,
   },
+  developerPortalHost: developerPortalHostFor(new URL(homePageUrl).hostname),
   accounts: {
     user: credentials('AMP_TEST_USER_EMAIL', 'AMP_TEST_USER_PASSWORD'),
     admin: credentials('AMP_TEST_ADMIN_EMAIL', 'AMP_TEST_ADMIN_PASSWORD'),

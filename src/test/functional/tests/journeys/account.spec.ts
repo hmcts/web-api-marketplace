@@ -83,6 +83,29 @@ test.describe('Signed in', () => {
     await expect(page.getByRole('link', { name: appName })).toHaveCount(0);
   });
 
+  test('an_application_should_show_its_details_and_a_subscription_key_for_each_api', async ({ page, axeUtils }) => {
+    await createTestApplication(page);
+    await page.goto('/account/applications');
+    await page.getByRole('link', { name: appName }).click();
+
+    await expect(page.locator('h1')).toHaveText(appName);
+    await expect(page.locator('#client-id')).not.toBeEmpty();
+    await expect(page.locator('#masked-secret')).not.toBeEmpty();
+    await expect(page.locator('#application-apis')).toBeVisible();
+    await axeUtils.audit();
+
+    await page
+      .locator('#application-apis')
+      .getByRole('link', { name: /View subscription key/ })
+      .first()
+      .click();
+
+    await expect(page.locator('#subscription-key-unavailable')).toHaveCount(0);
+    await page.locator('#show-subscription-key summary').click();
+    await expect(page.locator('#subscription-key')).not.toBeEmpty();
+    await axeUtils.audit();
+  });
+
   test('a_name_that_is_too_short_should_show_an_error', async ({ page, axeUtils }) => {
     await page.goto('/account/applications/new/details');
     await page.getByLabel('What is your application name?').fill('Short');
