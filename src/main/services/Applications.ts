@@ -259,10 +259,13 @@ export async function setApis(
   for (const subscription of application.apis.filter(api => !selected.includes(api.shortCode))) {
     try {
       await revoke(owner, subscription.subscriptionName);
+      if (application.accessGranted) {
+        await revokeRole(owner, application.clientId, subscription.shortCode); // NOSONAR given the replication pains with Entra, leave this sequential
+      }
       apis = apis.filter(api => api !== subscription);
       changes.removed.push(subscription.shortCode);
     } catch (error) {
-      logger.error(`Could not revoke ${subscription.subscriptionName}: ${(error as Error).message}`);
+      logger.error(`Could not remove ${subscription.shortCode}: ${(error as Error).message}`);
       changes.failed.push(subscription.apiTitle);
     }
   }
@@ -271,7 +274,7 @@ export async function setApis(
       apis.push((await subscribe(owner, application.clientId, shortCode, catalogue)).subscription);
       // An application still waiting on Set up gets every role at once when it is pressed.
       if (application.accessGranted) {
-        await grantRole(owner, application.clientId, shortCode);
+        await grantRole(owner, application.clientId, shortCode); // NOSONAR given the replication pains with Entra, leave this sequential
       }
       changes.added.push(shortCode);
     } catch (error) {
@@ -329,6 +332,13 @@ async function grantRole(owner: Owner, clientId: string, shortCode: string): Pro
     method: 'POST',
     url: `/applications/${encodeURIComponent(clientId)}/roles`,
     data: { shortCode },
+  });
+}
+
+async function revokeRole(owner: Owner, clientId: string, shortCode: string): Promise<void> {
+  await callBackend(owner, {
+    method: 'DELETE',
+    url: `/applications/${encodeURIComponent(clientId)}/roles/${encodeURIComponent(shortCode)}`,
   });
 }
 

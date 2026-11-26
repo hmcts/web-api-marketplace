@@ -373,6 +373,49 @@ describe('Applications', () => {
       });
     });
 
+    test('a_removed_api_should_have_its_role_revoked_when_access_is_set_up', async () => {
+      const application = { ...(await created()), accessGranted: true };
+      request.mockReset();
+      answer({
+        'DELETE /apim/subscription-keys/*': () => ok(),
+        'POST /apim/subscription-keys': () => ok({ primaryKey: 'k2' }),
+        'DELETE /applications/*': () => ok(),
+        'POST /applications/*': () => ok(),
+      });
+
+      const changes = await setApis(OWNER, application, ['two'], CATALOGUE);
+
+      expect(changes).toEqual({ added: ['two'], removed: ['one'], failed: [] });
+      expect(call(1)).toMatchObject({
+        method: 'DELETE',
+        url: `/applications/${BACKEND_APP.clientId}/roles/one`,
+      });
+    });
+
+    test('a_removed_api_should_not_be_revoked_before_access_is_set_up', async () => {
+      const application = await created();
+      request.mockReset();
+      answer({ 'DELETE /apim/subscription-keys/*': () => ok() });
+
+      const changes = await setApis(OWNER, application, [], CATALOGUE);
+
+      expect(changes).toEqual({ added: [], removed: ['one'], failed: [] });
+      expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    test('a_role_that_cannot_be_revoked_should_keep_the_api_and_report_it', async () => {
+      const application = { ...(await created()), accessGranted: true };
+      request.mockReset();
+      answer({
+        'DELETE /apim/subscription-keys/*': () => ok(),
+        'DELETE /applications/*': () => refused(502),
+      });
+
+      const changes = await setApis(OWNER, application, [], CATALOGUE);
+
+      expect(changes).toEqual({ added: [], removed: [], failed: ['API one'] });
+    });
+
     test('an_added_api_should_be_granted_its_role_when_access_is_already_set_up', async () => {
       const application = { ...(await created()), accessGranted: true };
       request.mockReset();
