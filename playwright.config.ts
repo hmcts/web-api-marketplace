@@ -197,7 +197,8 @@ const config = defineConfig({
     baseURL: functionalConfig.urls.homePageUrl,
     ignoreHTTPSErrors: true,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    // A trace records every value typed, so none is kept where tests sign in with a real password.
+    trace: process.env.AMP_TEST_USER_PASSWORD || process.env.AMP_TEST_ADMIN_PASSWORD ? 'off' : 'retain-on-failure',
     video: resolveVideoMode(),
   },
   projects: resolveProjects(),
