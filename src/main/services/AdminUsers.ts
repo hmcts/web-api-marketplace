@@ -45,8 +45,6 @@ export async function listAdminUsers(owner: Owner): Promise<AdminUser[] | undefi
     return await callBackend<AdminUser[]>(owner, { method: 'GET', url: PATH });
   } catch (error) {
     if (hasStatus(error, 403)) {
-      // The page answers "not found" either way, so without this the whole refusal is silent:
-      // the web believed the caller was an admin and the service did not.
       logger.warn(`The service refused ${owner.oid} the user list: the token holds no admin role`);
       return undefined;
     }
@@ -59,8 +57,6 @@ export async function getAdminUser(owner: Owner, id: number): Promise<AdminUserD
     return await callBackend<AdminUserDetail>(owner, { method: 'GET', url: `${PATH}/${id}` });
   } catch (error) {
     if (hasStatus(error, 403, 404)) {
-      // The page answers "not found" either way, so without this the whole refusal is silent:
-      // a missing user and a refused caller leave the same trace otherwise.
       logger.warn(`The service answered ${(error as BackendError).status} for user ${id}`);
       return undefined;
     }
