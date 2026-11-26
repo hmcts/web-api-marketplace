@@ -271,7 +271,7 @@ export async function setApis(
       apis.push((await subscribe(owner, application.clientId, shortCode, catalogue)).subscription);
       // An application still waiting on Set up gets every role at once when it is pressed.
       if (application.accessGranted) {
-        await grantRole(owner, application.clientId, shortCode);
+        await grantRole(owner, application.clientId, shortCode); // NOSONAR given the replication pains with Entra, leave this sequential
       }
       changes.added.push(shortCode);
     } catch (error) {
