@@ -68,10 +68,20 @@ describe('AuthCallbackController', () => {
     expect(req.session.idToken).toBeDefined();
   });
 
-  test('a_later_sign_in_should_go_to_the_account', async () => {
-    const { res } = await callback();
+  test('a_returning_user_should_keep_their_account_and_take_entras_latest_name', async () => {
+    const first = await callback();
+    const renamed = codeFor({ ...ADA, name: 'Ada King' }, STARTED.nonce, PKCE.challenge);
+
+    const { req, res } = await callback(backFromEntra({ code: renamed, state: STARTED.state }));
 
     expect(res.redirected).toBe('/account');
+    expect(req.session.user).toMatchObject({
+      id: first.req.session.user?.id,
+      userReference: first.req.session.user?.userReference,
+      oid: ADA.oid,
+      name: 'Ada King',
+    });
+    expect(entra.savedUsers.get(ADA.oid)).toMatchObject({ id: first.req.session.user?.id, name: 'Ada King' });
   });
 
   test('a_sign_in_asked_for_by_another_page_should_still_go_to_the_account', async () => {
