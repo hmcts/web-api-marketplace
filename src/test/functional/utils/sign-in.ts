@@ -38,6 +38,11 @@ export async function signIn(page: Page, account: TestAccount = 'user'): Promise
   await expect(page.locator('h1')).toContainText('Your account');
 }
 
+/** The email the given test account signs in with, whichever sign-in the environment uses. */
+export function accountEmail(account: TestAccount): string {
+  return config.accounts[account]?.email ?? MOCK_USERNAMES[account];
+}
+
 function isEntraExternalId(location: string | undefined): boolean {
   if (!location) {
     return false;
