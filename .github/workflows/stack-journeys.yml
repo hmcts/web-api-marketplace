@@ -83,6 +83,12 @@ jobs:
         working-directory: service
         env:
           ENTRA_BYPASS: 'true'
+          # Admin sign-in against the Entra mock, so the admin pages are tested end to end: the
+          # service verifies the token the web sends, which the mock issued for the web's client.
+          ENTRA_TENANT_ID: ${{ env.ENTRA_TENANT }}
+          ADMIN_AUTH_AUDIENCE: local-web-api-marketplace
+          ADMIN_AUTH_ISSUER: http://localhost:4600/${{ env.ENTRA_TENANT }}
+          ADMIN_AUTH_JWK_SET_URI: http://localhost:4600/${{ env.ENTRA_TENANT }}/jwks
         run: |
           ./gradlew --no-daemon bootJar
           nohup java -jar build/libs/amp-marketplace.jar > ../service.log 2>&1 &
