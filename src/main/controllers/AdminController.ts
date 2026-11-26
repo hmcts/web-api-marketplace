@@ -133,7 +133,8 @@ export default class AdminController {
     }
 
     res.render('admin/user', {
-      user: {
+      // Not `user`: the layout reads that as the signed-in admin, to decide on the Admin tab.
+      person: {
         name: found.name?.trim() || found.email,
         email: found.email,
         organisation: found.organisation || NOT_KNOWN,

@@ -56,7 +56,7 @@ describe('AdminController user page', () => {
     expect(res.view).toBe('admin/user');
     expect((getAdminUser as jest.Mock).mock.calls[0][0].token).toBe(ID_TOKEN);
     expect((getAdminUser as jest.Mock).mock.calls[0][1]).toBe(2);
-    expect(data.user).toEqual({
+    expect(data.person).toEqual({
       name: 'Grace Hopper',
       email: 'grace.hopper@hmcts.net',
       organisation: 'Example Legal Ltd',
@@ -86,8 +86,8 @@ describe('AdminController user page', () => {
 
     const { data } = await userPage('2');
 
-    expect((data.user as { organisation: string }).organisation).toBe('Not known');
-    expect((data.user as { lastSignedIn: string }).lastSignedIn).toBe('Not known');
+    expect((data.person as { organisation: string }).organisation).toBe('Not known');
+    expect((data.person as { lastSignedIn: string }).lastSignedIn).toBe('Not known');
   });
 
   test('a_status_other_than_active_should_read_in_sentence_case', async () => {
@@ -95,7 +95,7 @@ describe('AdminController user page', () => {
 
     const { data } = await userPage('2');
 
-    expect((data.user as { status: string }).status).toBe('Suspended');
+    expect((data.person as { status: string }).status).toBe('Suspended');
   });
 
   test('a_user_with_no_name_should_be_headed_by_email', async () => {
@@ -103,7 +103,7 @@ describe('AdminController user page', () => {
 
     const { data } = await userPage('2');
 
-    expect((data.user as { name: string }).name).toBe('grace.hopper@hmcts.net');
+    expect((data.person as { name: string }).name).toBe('grace.hopper@hmcts.net');
   });
 
   test('an_unknown_user_should_be_handed_on_to_not_found', async () => {
