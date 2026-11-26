@@ -13,17 +13,45 @@ import { SignedInUser } from '../services/SignIn';
 const logger = Logger.getLogger('admin');
 
 const NOT_KNOWN = 'Not known';
+const UNKNOWN_COUNT = '—';
 const ROW_ID = /^[0-9]{1,18}$/;
 
 @route('/admin')
 export default class AdminController {
   @GET()
-  public get(req: AppRequest, res: Response): void {
+  public async get(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
     if (!requireMarketplaceAdmin(req, res)) {
       return;
     }
 
-    res.render('admin');
+    let users: AdminUser[] | undefined = [];
+    let couldNotLoad = false;
+    try {
+      users = await listAdminUsers(owner(req));
+    } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
+      logger.error(`Could not count the marketplace for an admin: ${(error as Error).message}`);
+      couldNotLoad = true;
+    }
+
+    if (!users) {
+      next();
+      return;
+    }
+
+    res.render('admin', {
+      // Only the users are counted from the user list. A dash says a figure is not known yet
+      // rather than claiming none exist, until each has an endpoint of its own to count.
+      counts: {
+        users: users.length,
+        applications: UNKNOWN_COUNT,
+        productionRequests: UNKNOWN_COUNT,
+      },
+      couldNotLoad,
+    });
   }
 
   @route('/users')

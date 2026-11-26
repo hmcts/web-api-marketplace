@@ -296,28 +296,73 @@ describe('AdminController users page', () => {
   });
 });
 
-describe('AdminController', () => {
-  test('an_admin_should_see_the_admin_page', () => {
-    const res = mockResponse();
+const dashboard = async (session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }) => {
+  const res = mockResponse();
+  const next = jest.fn();
+  await new AdminController().get(mockRequest({}, session), res, next);
+  return { res, next, counts: (res.data as Record<string, unknown>)?.counts as Record<string, unknown> };
+};
 
-    new AdminController().get(mockRequest({}, { user: admin }), res);
+describe('AdminController', () => {
+  beforeEach(() => {
+    (listAdminUsers as jest.Mock).mockReset();
+    (listAdminUsers as jest.Mock).mockResolvedValue([ADA, GRACE]);
+  });
+
+  test('an_admin_should_see_the_admin_page', async () => {
+    const { res } = await dashboard();
 
     expect(res.view).toBe('admin');
   });
 
-  test('a_user_should_be_told_the_page_is_not_found', () => {
-    const res = mockResponse();
+  test('the_users_should_be_counted_from_the_user_list', async () => {
+    const { counts } = await dashboard();
 
-    new AdminController().get(mockRequest({}, { user }), res);
+    expect(counts.users).toBe(2);
+  });
+
+  test('the_other_figures_should_read_as_unknown_until_each_has_an_endpoint', async () => {
+    const { counts } = await dashboard();
+
+    expect(counts.applications).toBe('—');
+    expect(counts.productionRequests).toBe('—');
+  });
+
+  test('an_unreachable_backend_should_say_the_figures_could_not_be_loaded', async () => {
+    (listAdminUsers as jest.Mock).mockRejectedValue(new BackendError('Backend down'));
+
+    const { res } = await dashboard();
+
+    expect(res.view).toBe('admin');
+    expect((res.data as Record<string, unknown>).couldNotLoad).toBe(true);
+  });
+
+  test('a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in', async () => {
+    (listAdminUsers as jest.Mock).mockRejectedValue(new BackendError('Unauthorised', 401));
+
+    const { res } = await dashboard();
+
+    expect(res.redirected).toBe('/sign-in');
+  });
+
+  test('an_admin_the_backend_refuses_should_be_told_the_page_is_not_found', async () => {
+    (listAdminUsers as jest.Mock).mockResolvedValue(undefined);
+
+    const { next, res } = await dashboard();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+  });
+
+  test('a_user_should_be_told_the_page_is_not_found', async () => {
+    const { res } = await dashboard({ user });
 
     expect(res.statusCode).toBe(404);
     expect(res.view).toBe('not-found');
   });
 
-  test('a_signed_out_visitor_should_be_redirected_to_sign_in', () => {
-    const res = mockResponse();
-
-    new AdminController().get(mockRequest({}), res);
+  test('a_signed_out_visitor_should_be_redirected_to_sign_in', async () => {
+    const { res } = await dashboard({});
 
     expect(res.redirected).toBe('/sign-in');
     expect(res.view).toBeUndefined();
