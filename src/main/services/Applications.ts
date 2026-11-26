@@ -263,10 +263,8 @@ export async function setApis(
   for (const subscription of application.apis.filter(api => !selected.includes(api.shortCode))) {
     try {
       await revoke(owner, subscription.subscriptionName);
-      // The key alone is not the whole subscription: the registration goes on holding the role,
-      // and a token minted for it still claims an API this application no longer has.
       if (application.accessGranted) {
-        await revokeRole(owner, application.clientId, subscription.shortCode);
+        await revokeRole(owner, application.clientId, subscription.shortCode); // NOSONAR given the replication pains with Entra, leave this sequential
       }
       apis = apis.filter(api => api !== subscription);
       changes.removed.push(subscription.shortCode);
