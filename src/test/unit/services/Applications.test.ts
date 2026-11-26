@@ -373,6 +373,48 @@ describe('Applications', () => {
       });
     });
 
+    test('an_added_api_should_be_granted_its_role_when_access_is_already_set_up', async () => {
+      const application = { ...(await created()), accessGranted: true };
+      request.mockReset();
+      answer({
+        'POST /apim/subscription-keys': () => ok({ primaryKey: 'k2' }),
+        'POST /applications/*': () => ok(),
+      });
+
+      const changes = await setApis(OWNER, application, ['one', 'two'], CATALOGUE);
+
+      expect(changes).toEqual({ added: ['two'], removed: [], failed: [] });
+      expect(call(1)).toMatchObject({
+        method: 'POST',
+        url: `/applications/${BACKEND_APP.clientId}/roles`,
+        data: { shortCode: 'two' },
+      });
+    });
+
+    test('an_added_api_should_not_be_granted_before_access_is_set_up', async () => {
+      const application = await created();
+      request.mockReset();
+      answer({ 'POST /apim/subscription-keys': () => ok({ primaryKey: 'k2' }) });
+
+      const changes = await setApis(OWNER, application, ['one', 'two'], CATALOGUE);
+
+      expect(changes).toEqual({ added: ['two'], removed: [], failed: [] });
+      expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    test('an_added_api_whose_role_is_refused_should_be_reported_as_failed', async () => {
+      const application = { ...(await created()), accessGranted: true };
+      request.mockReset();
+      answer({
+        'POST /apim/subscription-keys': () => ok({ primaryKey: 'k2' }),
+        'POST /applications/*': () => refused(502),
+      });
+
+      const changes = await setApis(OWNER, application, ['one', 'two'], CATALOGUE);
+
+      expect(changes).toEqual({ added: [], removed: [], failed: ['API two'] });
+    });
+
     test('a_change_that_fails_should_be_reported_and_the_rest_kept', async () => {
       const application = await created();
       request.mockReset();

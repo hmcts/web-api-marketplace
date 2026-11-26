@@ -96,6 +96,14 @@ app.use((req, res, next) => {
 
 new Correlation().enableFor(app);
 
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    logger.info(`${req.method} ${req.path} ${res.statusCode} in ${Date.now() - startedAt}ms`);
+  });
+  next();
+});
+
 app.use(scopePerRequest(app.locals.container));
 app.use(loadControllers('controllers/**/*.+(ts|js)', { cwd: __dirname }));
 
