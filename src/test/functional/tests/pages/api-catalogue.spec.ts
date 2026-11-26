@@ -19,19 +19,20 @@ test.describe('API catalogue', () => {
     await apiCataloguePage.expectAtLeastOneApi();
   });
 
-  test('an_api_should_open_its_detail_page_with_no_accessibility_violations', async ({
-    apiCataloguePage,
-    axeUtils,
-  }) => {
-    await apiCataloguePage.goto();
-    await axeUtils.audit();
+  test(
+    'an_api_should_open_its_detail_page_with_no_accessibility_violations',
+    { tag: '@a11y' },
+    async ({ apiCataloguePage, axeUtils }) => {
+      await apiCataloguePage.goto();
+      await axeUtils.audit();
 
-    const title = await apiCataloguePage.openFirstApi();
+      const title = await apiCataloguePage.openFirstApi();
 
-    await expect(apiCataloguePage.page).toHaveURL(/\/api-catalogue\/.+/);
-    await apiCataloguePage.expectHeadingToContainText(title);
-    await axeUtils.audit();
-  });
+      await expect(apiCataloguePage.page).toHaveURL(/\/api-catalogue\/.+/);
+      await apiCataloguePage.expectHeadingToContainText(title);
+      await axeUtils.audit();
+    }
+  );
 
   test('browsing_the_catalogue_should_group_apis_under_letters', async ({ apiCataloguePage }) => {
     await apiCataloguePage.goto();
@@ -52,16 +53,20 @@ test.describe('API catalogue', () => {
   });
 
   for (const shortCode of ['pcd', 'dl']) {
-    test(`the_${shortCode}_api_should_be_listed_with_its_own_page`, async ({ apiCataloguePage, axeUtils }) => {
-      await apiCataloguePage.goto();
-      await expect(apiCataloguePage.apiLink(shortCode)).toBeVisible();
+    test(
+      `the_${shortCode}_api_should_be_listed_with_its_own_page`,
+      { tag: '@a11y' },
+      async ({ apiCataloguePage, axeUtils }) => {
+        await apiCataloguePage.goto();
+        await expect(apiCataloguePage.apiLink(shortCode)).toBeVisible();
 
-      const response = await apiCataloguePage.page.goto(`/api-catalogue/${shortCode}`);
+        const response = await apiCataloguePage.page.goto(`/api-catalogue/${shortCode}`);
 
-      expect(response?.status()).toBe(200);
-      await expect(apiCataloguePage.aboutThisApi).toContainText(shortCode);
-      await axeUtils.audit();
-    });
+        expect(response?.status()).toBe(200);
+        await expect(apiCataloguePage.aboutThisApi).toContainText(shortCode);
+        await axeUtils.audit();
+      }
+    );
   }
 
   test('an_api_page_should_link_to_the_developer_portal_rather_than_github_pages', async ({ apiCataloguePage }) => {

@@ -7,7 +7,7 @@ test.describe('Home page', () => {
     await homePage.expectHeadingToContainText('HMCTS API Marketplace');
   });
 
-  test('the_home_page_should_have_no_accessibility_violations', async ({ axeUtils, homePage }) => {
+  test('the_home_page_should_have_no_accessibility_violations', { tag: '@a11y' }, async ({ axeUtils, homePage }) => {
     await homePage.goto();
     await axeUtils.audit();
   });

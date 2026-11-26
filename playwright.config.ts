@@ -147,6 +147,11 @@ function resolveReporters(): ReporterDescription[] {
     ]);
   }
 
+  reporters.push([
+    './scripts/accessibility-report-reporter.mjs',
+    { outputFolder: process.env.PW_A11Y_OUTPUT ?? './test-results/accessibility-report' },
+  ]);
+
   return reporters;
 }
 

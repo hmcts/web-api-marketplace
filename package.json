@@ -28,6 +28,7 @@
     "test:functional:webkit": "yarn playwright test --project=webkit",
     "test:performance": "yarn playwright test --grep='@performance'",
     "test:a11y": "echo 'a11y tests run as part of test:functional' && exit 0",
+    "test:functional:a11y": "yarn playwright test --grep @a11y",
     "test:functional:headed": "playwright test --headed",
     "test:functional:ui": "playwright test --ui",
     "test:functional:debug": "playwright test --debug"

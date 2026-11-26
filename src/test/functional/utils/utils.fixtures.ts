@@ -34,7 +34,7 @@ export const utilsFixtures = {
   axeUtils: async ({ page }, use, testInfo): Promise<void> => {
     const axeUtils = new AxeUtils(page);
     await use(axeUtils);
-    await axeUtils.generateReport(testInfo);
+    await axeUtils.generateReport(testInfo, 'Accessibility Test Report');
   },
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   lighthouseUtils: async ({ lighthousePage, lighthousePort }, use): Promise<void> => {
