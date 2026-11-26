@@ -263,10 +263,15 @@ export async function setApis(
   for (const subscription of application.apis.filter(api => !selected.includes(api.shortCode))) {
     try {
       await revoke(owner, subscription.subscriptionName);
+      // The key alone is not the whole subscription: the registration goes on holding the role,
+      // and a token minted for it still claims an API this application no longer has.
+      if (application.accessGranted) {
+        await revokeRole(owner, application.clientId, subscription.shortCode);
+      }
       apis = apis.filter(api => api !== subscription);
       changes.removed.push(subscription.shortCode);
     } catch (error) {
-      logger.error(`Could not revoke ${subscription.subscriptionName}: ${(error as Error).message}`);
+      logger.error(`Could not remove ${subscription.shortCode}: ${(error as Error).message}`);
       changes.failed.push(subscription.apiTitle);
     }
   }
@@ -322,6 +327,13 @@ async function subscribe(
     },
     key: created.subscriptionKey ?? '',
   };
+}
+
+async function revokeRole(owner: Owner, clientId: string, shortCode: string): Promise<void> {
+  await callBackend(owner, {
+    method: 'DELETE',
+    url: `/applications/${encodeURIComponent(clientId)}/roles/${encodeURIComponent(shortCode)}`,
+  });
 }
 
 async function revoke(owner: Owner, subscriptionName: string): Promise<void> {
