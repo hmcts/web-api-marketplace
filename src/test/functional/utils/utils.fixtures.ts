@@ -16,6 +16,22 @@ export interface UtilsFixtures {
   logger: LoggerInstance;
 }
 
+/** Audits only in the browser the accessibility checks run in for this run; see config.accessibilityProject. */
+class BrowserAxeUtils extends AxeUtils {
+  constructor(
+    page: Page,
+    private readonly enabled: boolean
+  ) {
+    super(page);
+  }
+
+  public override async audit(options?: Parameters<AxeUtils['audit']>[0]): Promise<void> {
+    if (this.enabled) {
+      await super.audit(options);
+    }
+  }
+}
+
 export const utilsFixtures = {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, no-empty-pattern
   config: async ({}, use): Promise<void> => {
@@ -32,7 +48,8 @@ export const utilsFixtures = {
   },
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   axeUtils: async ({ page }, use, testInfo): Promise<void> => {
-    const axeUtils = new AxeUtils(page);
+    const browser = config.accessibilityProject;
+    const axeUtils = new BrowserAxeUtils(page, !browser || testInfo.project.name === browser);
     await use(axeUtils);
     await axeUtils.generateReport(testInfo, 'Accessibility Test Report');
   },
