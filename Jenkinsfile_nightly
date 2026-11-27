@@ -6,6 +6,9 @@ pipelineTriggers([cron('H 07 * * 1-5')]),
 parameters([
   // The long-lived AAT release. The staging release only exists while a master build deploys
   string(name: 'URL_TO_TEST', defaultValue: 'https://amp-marketplace-web.aat.platform.hmcts.net', description: 'The URL you want to run these tests against'),
+  // Set by service-api-marketplace's master build once its new image is in AAT: runs the journeys
+  // the web's own master build runs, against the new service, and nothing else
+  booleanParam(name: 'AFTER_SERVICE_DEPLOY', defaultValue: false, description: 'Run only the Edge and Chrome journeys, after a service deploy'),
 ])
 ])
 
@@ -34,27 +37,33 @@ static LinkedHashMap<String, Object> secret(String secretName, String envVar) {
   ]
 }
 
+def afterServiceDeploy = params.AFTER_SERVICE_DEPLOY == true
+
 withNightlyPipeline(type, product, component) {
   env.TEST_URL = params.URL_TO_TEST
 
-  // AAT runs the newest promoted image of both web and service, so the smoke set run here catches
-  // a change to either breaking the other, without the service knowing anything about web
-  enableE2eTest()
-  before('E2eTest') {
-    yarnBuilder.yarn('playwright install chrome')
+  if (!afterServiceDeploy) {
+    // AAT runs the newest promoted image of both web and service, so the smoke set run here catches
+    // a change to either breaking the other, without the service knowing anything about web
+    enableE2eTest()
+    before('E2eTest') {
+      yarnBuilder.yarn('playwright install chrome')
+    }
   }
 
-  // Every functional test and accessibility audit in all six browsers. Master builds run Edge and
-  // Chrome only, with the accessibility audits in Chrome
+  // Every functional test and accessibility audit: in all six browsers at night, and in Edge and
+  // Chrome (as a web master build runs them) after a service deploy
   env.PLAYWRIGHT_WORKERS = 4
   env.PLAYWRIGHT_REPORTERS = 'list,odhin'
   env.PLAYWRIGHT_VIDEO_MODE = 'retain-on-failure'
+  // After a service deploy: the master build's browsers, which the agents already have
+  env.PLAYWRIGHT_BROWSERS = afterServiceDeploy ? 'edge-chrome' : 'all'
   env.AMP_TEST_USER_EMAIL = 'amp-functional-user@hmctsextstg.onmicrosoft.com'
   env.AMP_TEST_ADMIN_EMAIL = 'amp-functional-admin@hmctsextstg.onmicrosoft.com'
   loadVaultSecrets(secrets)
   enableFullFunctionalTest(45)
   before('fullFunctionalTest') {
-    yarnBuilder.yarn('playwright install')
+    yarnBuilder.yarn(afterServiceDeploy ? 'playwright install ffmpeg' : 'playwright install')
   }
   afterAlways('fullFunctionalTest') {
     publishHTML target: [
@@ -75,15 +84,17 @@ withNightlyPipeline(type, product, component) {
     ]
   }
 
-  // The app's own cookies, added to the scan's ignore list. Set here because the library does not
-  // pass enableSecurityScan's cookieIgnoreList on to the scan script
-  env.CUSTOM_COOKIES = 'amp-cookie-preferences,connect.sid'
-  // ZAP skips an excluded URL only when its entry is enabled. The catalogue pages scanned are
-  // those of the APIs going to production, SLC and RCC
-  enableSecurityScan(
-    urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$' " +
-      "-config globalexcludeurl.url_list.url\\(1\\).enabled=true " +
-      "-config globalexcludeurl.url_list.url\\(2\\).regex='^https?:\\/\\/.*\\/api-catalogue\\/(?!(slc|rcc)\$).+\$' " +
-      "-config globalexcludeurl.url_list.url\\(2\\).enabled=true"
-  )
+  if (!afterServiceDeploy) {
+    // The app's own cookies, added to the scan's ignore list. Set here because the library does not
+    // pass enableSecurityScan's cookieIgnoreList on to the scan script
+    env.CUSTOM_COOKIES = 'amp-cookie-preferences,connect.sid'
+    // ZAP skips an excluded URL only when its entry is enabled. The catalogue pages scanned are
+    // those of the APIs going to production, SLC and RCC
+    enableSecurityScan(
+      urlExclusions: "-config globalexcludeurl.url_list.url\\(1\\).regex='^https?:\\/\\/.*\\/(sign-in|sign-out|auth\\/callback).*\$' " +
+        "-config globalexcludeurl.url_list.url\\(1\\).enabled=true " +
+        "-config globalexcludeurl.url_list.url\\(2\\).regex='^https?:\\/\\/.*\\/api-catalogue\\/(?!(slc|rcc)\$).+\$' " +
+        "-config globalexcludeurl.url_list.url\\(2\\).enabled=true"
+    )
+  }
 }

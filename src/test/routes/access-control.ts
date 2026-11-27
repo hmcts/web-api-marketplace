@@ -130,4 +130,22 @@ describe('Access control on the form journeys', () => {
       .get('/sign-in')
       .expect(res => expect(res.status).to.equal(302));
   });
+
+  test.each(['/info', '/health'])('the_build_should_not_be_published_at_%s', async path => {
+    await request(app)
+      .get(path)
+      .expect(res => {
+        expect(res.status).to.equal(404);
+        expect(res.text).to.not.contain('commit');
+      });
+  });
+
+  test('the_probes_the_cluster_needs_should_stay_reachable', async () => {
+    await request(app)
+      .get('/health/liveness')
+      .expect(res => expect(res.status).to.equal(200));
+    await request(app)
+      .get('/health/readiness')
+      .expect(res => expect(res.status).to.equal(200));
+  });
 });
