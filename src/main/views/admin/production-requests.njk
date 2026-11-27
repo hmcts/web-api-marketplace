@@ -1,0 +1,69 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = "Production credentials requests - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "admin" %}
+{% set breadcrumbs = [{ text: "Home", href: "/" }, { text: "Admin", href: "/admin" }] %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">Production credentials requests</h1>
+
+      <p class="govuk-body">
+        Every production credentials request, oldest first. Review happens outside the service today, so every
+        request is still Submitted.
+      </p>
+
+      <form method="get" action="/admin/production-requests" novalidate>
+        {{ govukSelect({
+          id: "status",
+          name: "status",
+          label: { text: "Status", classes: "govuk-label--s" },
+          items: statuses
+        }) }}
+        {{ govukButton({ text: "Filter", classes: "govuk-button--secondary", attributes: { id: "requests-filter" } }) }}
+      </form>
+
+      {% if couldNotLoad %}
+        {{ govukWarningText({
+          text: "The production credentials requests could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "requests-unavailable" }
+        }) }}
+      {% else %}
+        <p class="govuk-body" id="requests-count">{{ count }} {{ "request" if count == 1 else "requests" }}.</p>
+
+        {% if count > 0 %}
+          {% set rows = [] %}
+          {% for request in requests %}
+            {% set rows = (rows.push([
+              { html: '<a class="govuk-link" href="/admin/production-requests/' + (request.reference | urlencode) + '">' + (request.reference | escape) + '</a>' },
+              { html: '<a class="govuk-link" href="/admin/applications/' + (request.applicationId | escape) + '">' + (request.applicationName | escape) + '</a>' } if request.applicationId else { text: request.applicationName },
+              { text: request.organisation },
+              { text: request.submitted },
+              { text: request.status }
+            ]), rows) %}
+          {% endfor %}
+          {{ govukTable({
+            caption: "Production credentials requests",
+            captionClasses: "govuk-visually-hidden",
+            head: [
+              { text: "Reference" },
+              { text: "Application" },
+              { text: "Organisation" },
+              { text: "Submitted" },
+              { text: "Status" }
+            ],
+            rows: rows,
+            attributes: { id: "requests-table" }
+          }) }}
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

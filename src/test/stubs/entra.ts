@@ -245,6 +245,12 @@ export async function startStubEntra(): Promise<StubEntra> {
       if (req.url.startsWith('/backend/admin/applications/')) {
         return json(404, { error: 'No such application.' });
       }
+      if (req.url === '/backend/admin/production-requests') {
+        return json(200, []);
+      }
+      if (req.url.startsWith('/backend/admin/production-requests/')) {
+        return json(404, { error: 'No such request.' });
+      }
       const now = new Date().toISOString();
       const listed = [...savedUsers.values()]
         .reverse()

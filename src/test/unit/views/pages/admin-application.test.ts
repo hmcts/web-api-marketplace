@@ -61,7 +61,7 @@ describe('Admin application page', () => {
       productionRequest: { reference: 'PCR-ABCD2345', status: 'In review', submitted: '1 November 2026' },
     });
 
-    expect(html).toContain('PCR-ABCD2345');
+    expect(html).toContain('<a class="govuk-link" href="/admin/production-requests/PCR-ABCD2345">PCR-ABCD2345</a>');
     expect(html).toContain('In review');
     expect(html).not.toContain('have not been requested');
   });

@@ -1,0 +1,67 @@
+{% extends "template.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = "Production credentials request " + (request.reference if request else "") + " - HMCTS API Marketplace - GOV.UK" %}
+{% set section = "admin" %}
+{% set breadcrumbs = [
+  { text: "Home", href: "/" },
+  { text: "Admin", href: "/admin" },
+  { text: "Production credentials requests", href: "/admin/production-requests" }
+] %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if couldNotLoad %}
+        <h1 class="govuk-heading-xl">Production credentials request</h1>
+        {{ govukWarningText({
+          text: "This production credentials request could not be loaded just now. Try again in a few minutes.",
+          iconFallbackText: "Warning",
+          attributes: { id: "request-unavailable" }
+        }) }}
+      {% else %}
+        <span class="govuk-caption-l">Production credentials request</span>
+        <h1 class="govuk-heading-xl">{{ request.reference }}</h1>
+
+        <p class="govuk-body">
+          Status: {{ govukTag({ text: request.status, classes: "govuk-tag--blue", attributes: { id: "request-status" } }) }}
+          <br>Submitted {{ request.submitted }}
+        </p>
+
+        {% if request.requester %}
+          {% set requesterHtml = '<a class="govuk-link" href="/admin/users/' + (request.requester.id | escape) + '">' + (request.requester.name | escape) + '</a><br>' + (request.requester.email | escape) %}
+        {% else %}
+          {% set requesterHtml = "Not known" %}
+        {% endif %}
+        {% if request.applicationId %}
+          {% set applicationHtml = '<a class="govuk-link" href="/admin/applications/' + (request.applicationId | escape) + '">' + (request.applicationName | escape) + '</a>' %}
+        {% else %}
+          {% set applicationHtml = request.applicationName | escape %}
+        {% endif %}
+
+        {% set whoRows = [{ key: { text: "Requested by" }, value: { html: requesterHtml } }] %}
+        {% if request.organisationType %}
+          {% set whoRows = (whoRows.push({ key: { text: "Organisation" }, value: { text: request.organisationType } }), whoRows) %}
+        {% endif %}
+        {% set whoRows = (whoRows.push(
+          { key: { text: "Organisation or team name" }, value: { text: request.organisation } },
+          { key: { text: "Application" }, value: { html: applicationHtml } },
+          { key: { text: "APIs" }, value: { text: request.apis } }
+        ), whoRows) %}
+
+        <h2 class="govuk-heading-m">Who asked</h2>
+        {{ govukSummaryList({ rows: whoRows, attributes: { id: "request-who-asked" } }) }}
+
+        {% set answerRows = [] %}
+        {% for row in answers %}
+          {% set answerRows = (answerRows.push({ key: { text: row.key }, value: { text: row.value } }), answerRows) %}
+        {% endfor %}
+        <h2 class="govuk-heading-m">Their answers</h2>
+        {{ govukSummaryList({ rows: answerRows, attributes: { id: "request-answers" } }) }}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

@@ -11,6 +11,14 @@ jest.mock('../../../main/services/AdminApplications', () => ({
 }));
 
 const { listAdminApplications, getAdminApplication } = require('../../../main/services/AdminApplications');
+jest.mock('../../../main/services/AdminProductionRequests', () => ({
+  listAdminProductionRequests: jest.fn(),
+  getAdminProductionRequest: jest.fn(),
+}));
+const {
+  listAdminProductionRequests,
+  getAdminProductionRequest,
+} = require('../../../main/services/AdminProductionRequests');
 const { listAdminUsers, getAdminUser } = require('../../../main/services/AdminUsers');
 
 const GRACE_DETAIL = {
@@ -314,6 +322,8 @@ describe('AdminController', () => {
     (listAdminUsers as jest.Mock).mockResolvedValue([ADA, GRACE]);
     (listAdminApplications as jest.Mock).mockReset();
     (listAdminApplications as jest.Mock).mockResolvedValue([CASE_VIEWER, LISTINGS, CASE_VIEWER]);
+    (listAdminProductionRequests as jest.Mock).mockReset();
+    (listAdminProductionRequests as jest.Mock).mockResolvedValue([OLDER_REQUEST, NEWER_REQUEST]);
   });
 
   test('an_admin_should_see_the_admin_page', async () => {
@@ -334,9 +344,19 @@ describe('AdminController', () => {
     expect(counts.applications).toBe(3);
   });
 
-  test('the_production_requests_should_read_as_unknown_until_they_have_an_endpoint', async () => {
+  test('the_production_requests_should_be_counted_from_the_request_list', async () => {
     const { counts } = await dashboard();
 
+    expect(counts.productionRequests).toBe(2);
+  });
+
+  test('requests_that_cannot_be_counted_should_read_as_unknown_without_losing_the_rest', async () => {
+    (listAdminProductionRequests as jest.Mock).mockRejectedValue(new BackendError('Not deployed yet', 404));
+
+    const { counts } = await dashboard();
+
+    expect(counts.users).toBe(2);
+    expect(counts.applications).toBe(3);
     expect(counts.productionRequests).toBe('—');
   });
 
@@ -609,5 +629,246 @@ describe('AdminController application page', () => {
 
     expect(res.statusCode).toBe(404);
     expect(getAdminApplication).not.toHaveBeenCalled();
+  });
+});
+
+const OLDER_REQUEST = {
+  reference: 'PCR-7K2MHQ4D',
+  applicationId: 10,
+  applicationName: 'Custody listings feed',
+  organisation: 'Northshire Police, custody team',
+  submittedAt: '2026-09-08T10:00:00',
+  status: 'SUBMITTED',
+};
+const NEWER_REQUEST = {
+  reference: 'PCR-R9TB3WXN',
+  applicationId: null,
+  applicationName: 'Pre-sentence report helper',
+  organisation: 'Example Probation Region',
+  submittedAt: '2026-09-19T10:00:00',
+  status: 'IN_REVIEW',
+};
+
+const requestsPage = async (
+  query: Record<string, string> = {},
+  session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }
+) => {
+  const req = mockRequest({}, session);
+  req.query = query;
+  const res = mockResponse();
+  const next = jest.fn();
+  await new AdminController().productionRequests(req, res, next);
+  return { res, next, data: res.data as Record<string, unknown> };
+};
+
+describe('AdminController production requests page', () => {
+  beforeEach(() => {
+    (listAdminProductionRequests as jest.Mock).mockReset();
+    (listAdminProductionRequests as jest.Mock).mockResolvedValue([OLDER_REQUEST, NEWER_REQUEST]);
+  });
+
+  test('the_requests_page_should_list_what_the_backend_returns_in_its_order', async () => {
+    const { res, data } = await requestsPage();
+
+    expect(res.view).toBe('admin/production-requests');
+    expect((listAdminProductionRequests as jest.Mock).mock.calls[0][0].token).toBe(ID_TOKEN);
+    expect(data.count).toBe(2);
+    expect(data.requests).toEqual([
+      {
+        reference: 'PCR-7K2MHQ4D',
+        applicationId: 10,
+        applicationName: 'Custody listings feed',
+        organisation: 'Northshire Police, custody team',
+        submitted: '8 September 2026',
+        status: 'Submitted',
+      },
+      expect.objectContaining({ reference: 'PCR-R9TB3WXN', applicationId: undefined, status: 'In review' }),
+    ]);
+    expect(data.couldNotLoad).toBe(false);
+  });
+
+  test('the_status_filter_should_offer_all_statuses_first_and_every_status_after', async () => {
+    const { data } = await requestsPage();
+
+    expect((data.statuses as { value: string; text: string; selected: boolean }[]).map(s => s.text)).toEqual([
+      'All statuses',
+      'Submitted',
+      'In review',
+      'More information needed',
+      'Approved',
+      'Declined',
+    ]);
+    expect((data.statuses as { selected: boolean }[])[0].selected).toBe(true);
+  });
+
+  test('a_status_should_filter_the_requests_and_be_selected', async () => {
+    const { data } = await requestsPage({ status: 'IN_REVIEW' });
+
+    expect(data.count).toBe(1);
+    expect((data.requests as { reference: string }[])[0].reference).toBe('PCR-R9TB3WXN');
+    expect(data.status).toBe('IN_REVIEW');
+    expect((data.statuses as { value: string; selected: boolean }[]).find(s => s.selected)?.value).toBe('IN_REVIEW');
+  });
+
+  test('an_unknown_status_should_be_ignored', async () => {
+    const { data } = await requestsPage({ status: '<script>' });
+
+    expect(data.count).toBe(2);
+    expect(data.status).toBe('');
+  });
+
+  test('an_unreachable_backend_should_say_the_requests_could_not_be_loaded', async () => {
+    (listAdminProductionRequests as jest.Mock).mockRejectedValue(new Error('Could not reach the backend'));
+
+    const { res, data } = await requestsPage();
+
+    expect(res.view).toBe('admin/production-requests');
+    expect(data.couldNotLoad).toBe(true);
+    expect(data.count).toBe(0);
+  });
+
+  test('a_backend_refusal_should_be_handed_on_to_not_found_from_the_requests', async () => {
+    (listAdminProductionRequests as jest.Mock).mockResolvedValue(undefined);
+
+    const { res, next } = await requestsPage();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.view).toBeUndefined();
+  });
+
+  test('a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in_from_the_requests', async () => {
+    (listAdminProductionRequests as jest.Mock).mockRejectedValue(new BackendError('The backend answered 401', 401));
+
+    const { res } = await requestsPage();
+
+    expect(res.redirected).toBe('/sign-in');
+  });
+
+  test('a_non_admin_should_be_told_the_requests_page_is_not_found', async () => {
+    const { res } = await requestsPage({}, { user });
+
+    expect(res.statusCode).toBe(404);
+    expect(listAdminProductionRequests).not.toHaveBeenCalled();
+  });
+});
+
+const REQUEST_DETAIL = {
+  reference: 'PCR-7K2MHQ4D',
+  status: 'SUBMITTED',
+  submittedAt: '2026-09-08T10:00:00',
+  requester: { id: 5, name: 'Priya Shah', email: 'priya.shah@example.com' },
+  organisation: 'Northshire Police, custody team',
+  applicationId: 10,
+  applicationName: 'Custody listings feed',
+  apis: ['Court Schedule', 'Courthouse Reference Data'],
+  goLiveDate: '2026-12-01',
+  callVolume: 'medium',
+  dataRequest: 'Daily hearing lists',
+  proposedOutputs: 'A morning production list',
+  organisationType: 'other-government',
+  dataRecipients: ['own-team', 'supplier'],
+  dataRecipientsExplanation: 'Our supplier hosts it',
+  dataCombined: 'no',
+  dataCombinedDescription: null,
+};
+
+const requestPage = async (
+  reference: string,
+  session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }
+) => {
+  const req = mockRequest({}, session);
+  req.params = { reference };
+  const res = mockResponse();
+  const next = jest.fn();
+  await new AdminController().productionRequest(req, res, next);
+  return { res, next, data: res.data as Record<string, unknown> };
+};
+
+describe('AdminController production request page', () => {
+  beforeEach(() => {
+    (getAdminProductionRequest as jest.Mock).mockReset();
+    (getAdminProductionRequest as jest.Mock).mockResolvedValue(REQUEST_DETAIL);
+  });
+
+  test('one_request_should_show_who_asked_and_their_answers', async () => {
+    const { res, data } = await requestPage('PCR-7K2MHQ4D');
+
+    expect(res.view).toBe('admin/production-request');
+    expect((getAdminProductionRequest as jest.Mock).mock.calls[0][1]).toBe('PCR-7K2MHQ4D');
+    expect(data.request).toEqual({
+      reference: 'PCR-7K2MHQ4D',
+      status: 'Submitted',
+      submitted: '8 September 2026',
+      requester: { id: 5, name: 'Priya Shah', email: 'priya.shah@example.com' },
+      organisationType: 'Other government department/public body',
+      organisation: 'Northshire Police, custody team',
+      applicationId: 10,
+      applicationName: 'Custody listings feed',
+      apis: 'Court Schedule, Courthouse Reference Data',
+    });
+    expect(data.answers).toEqual([
+      { key: 'Go-live date', value: '1 December 2026' },
+      { key: 'Expected call volume', value: 'Medium' },
+      { key: 'Data request', value: 'Daily hearing lists' },
+      {
+        key: 'Who will have access to, or receive, the data?',
+        value: 'Me/my immediate team only, Supplier/contract/delivery partner',
+      },
+      { key: 'Who will receive the data and why', value: 'Our supplier hosts it' },
+      { key: 'Will you combine or link the API data with other data?', value: 'No' },
+      { key: 'Proposed outputs', value: 'A morning production list' },
+    ]);
+  });
+
+  test('a_request_whose_application_is_gone_should_say_none_for_apis', async () => {
+    (getAdminProductionRequest as jest.Mock).mockResolvedValue({ ...REQUEST_DETAIL, applicationId: null, apis: [] });
+
+    const { data } = await requestPage('PCR-7K2MHQ4D');
+
+    expect((data.request as { applicationId: unknown }).applicationId).toBeUndefined();
+    expect((data.request as { apis: string }).apis).toBe('None');
+  });
+
+  test.each(['pcr-7k2mhq4d', 'PCR-123', 'PCR-7K2MHQ4D1', '../users', 'PCR-7K2MHQ4%'])(
+    'a_reference_that_is_not_one_%s_should_be_not_found_without_asking_the_backend',
+    async reference => {
+      const { res, next } = await requestPage(reference);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.view).toBeUndefined();
+      expect(getAdminProductionRequest).not.toHaveBeenCalled();
+    }
+  );
+
+  test('an_unknown_request_should_be_handed_on_to_not_found', async () => {
+    (getAdminProductionRequest as jest.Mock).mockResolvedValue(undefined);
+
+    const { next } = await requestPage('PCR-NOTHERE1');
+
+    expect(next).toHaveBeenCalled();
+  });
+
+  test('an_unreachable_backend_should_say_the_request_could_not_be_loaded', async () => {
+    (getAdminProductionRequest as jest.Mock).mockRejectedValue(new Error('Could not reach the backend'));
+
+    const { res, data } = await requestPage('PCR-7K2MHQ4D');
+
+    expect(res.view).toBe('admin/production-request');
+    expect(data.couldNotLoad).toBe(true);
+  });
+
+  test('a_backend_that_no_longer_accepts_the_token_should_send_the_admin_to_sign_in_from_a_request', async () => {
+    (getAdminProductionRequest as jest.Mock).mockRejectedValue(new BackendError('The backend answered 401', 401));
+
+    const { res } = await requestPage('PCR-7K2MHQ4D');
+
+    expect(res.redirected).toBe('/sign-in');
+  });
+
+  test('a_non_admin_should_be_told_a_request_page_is_not_found', async () => {
+    const { res } = await requestPage('PCR-7K2MHQ4D', { user });
+
+    expect(res.statusCode).toBe(404);
+    expect(getAdminProductionRequest).not.toHaveBeenCalled();
   });
 });

@@ -56,7 +56,7 @@ describe('Admin user page', () => {
       expect(html).toContain(`>${heading}</th>`);
     }
     expect(html).toContain('2 APIs');
-    expect(html).toContain('PCR-ABCD2345');
+    expect(html).toContain('<a class="govuk-link" href="/admin/production-requests/PCR-ABCD2345">PCR-ABCD2345</a>');
     expect(html).not.toMatch(/<a [^>]*>Case Viewer<\/a>/);
     expect(html).not.toContain('This user has not created any applications.');
     expect(html).toContain('<caption class="govuk-table__caption govuk-visually-hidden">Applications</caption>');

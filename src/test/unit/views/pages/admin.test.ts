@@ -19,10 +19,11 @@ describe('Admin dashboard', () => {
     expect(html).toMatch(/href="\/admin\/applications" id="count-applications"/);
   });
 
-  test('the_other_figures_should_link_to_the_registered_users_until_their_own_page_exists', () => {
+  test('each_figure_should_link_to_its_own_list', () => {
     const html = env.render('admin.njk', { counts });
 
-    expect(html.match(/href="\/admin\/users"/g)).toHaveLength(2);
+    expect(html).toMatch(/href="\/admin\/users" id="count-users"/);
+    expect(html).toMatch(/href="\/admin\/production-requests" id="count-production-requests"/);
   });
 
   test('the_page_should_be_captioned_for_the_marketplace_team', () => {
