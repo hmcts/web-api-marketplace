@@ -46,7 +46,7 @@ export async function postSubmission(
   label: string,
   detail: string,
   path: string,
-  requesterId: number,
+  token: string | undefined,
   body: Record<string, unknown>
 ): Promise<SubmitResult> {
   const url = submissionEndpoint(path);
@@ -57,7 +57,7 @@ export async function postSubmission(
     const response = await axios.post(url, body, {
       timeout: 10000,
       validateStatus: () => true,
-      headers: authHeaders(String(requesterId)),
+      headers: authHeaders(token),
     });
 
     if (response.status === 201) {

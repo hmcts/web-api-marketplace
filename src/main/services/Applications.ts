@@ -362,7 +362,7 @@ export async function callBackend<T = unknown>(owner: Owner, request: AxiosReque
       ...request,
       baseURL,
       timeout,
-      headers: authHeaders(owner.oid, owner.token),
+      headers: authHeaders(owner.token),
     });
     return response.data;
   } catch (error) {

@@ -54,7 +54,7 @@ describe('AccountController', () => {
 
     await new AccountController().get(mockRequest({ account: content }, { user }), res);
 
-    expect(getRequestsFor).toHaveBeenCalledWith(user.id, undefined);
+    expect(getRequestsFor).toHaveBeenCalledWith('the-id-token');
     expect(res.data?.myRequests).toEqual([]);
     expect(res.data?.couldNotLoad).toBe(false);
   });

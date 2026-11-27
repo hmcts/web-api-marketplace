@@ -25,7 +25,7 @@ export default class AccountController {
 
     const user = req.session.user as SignedInUser;
     // An account registered here is unknown to the backend, which would refuse its id.
-    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(user.id, req.session.idToken);
+    const result = user.local ? { ok: true, requests: [] } : await getRequestsFor(req.session.idToken);
     const production = await this.productionRequests(user, req.session.idToken);
     const local = (await listLocalRequests(user.email)).filter(request => request.type !== 'PRODUCTION');
     const requests: Row[] = [

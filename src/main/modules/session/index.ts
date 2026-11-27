@@ -80,8 +80,12 @@ export class Session {
 }
 
 export function requireSignIn(req: AppRequest, res: Response): boolean {
-  if (req.session?.user) {
+  if (req.session?.user && req.session.idToken) {
     return true;
+  }
+  if (req.session?.user) {
+    logger.info(`Session for ${req.session.user.oid} holds no ID token; signing in again`);
+    delete req.session.user;
   }
 
   // Only a page can be returned to. A POST's body is lost on the way through sign in, so
