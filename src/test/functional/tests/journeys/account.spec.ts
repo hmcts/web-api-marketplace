@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 
 import { expect, test } from '../../fixtures';
+import { config } from '../../utils/config.utils';
 import { signIn } from '../../utils/sign-in';
 
 // The service allows each user 5 applications, and every browser project signs in as the same
@@ -19,11 +20,12 @@ async function deleteTestApplication(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Yes, delete application' }).click();
 }
 
-async function createTestApplication(page: Page): Promise<void> {
+async function createTestApplication(page: Page, api?: string): Promise<void> {
   await page.goto('/account/applications/new/details');
   await page.getByLabel('What is your application name?').fill(appName);
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.locator('input[name="apis"]').first().check();
+  const apis = page.locator('input[name="apis"]');
+  await (api ? apis.and(page.locator(`[value="${api}"]`)) : apis.first()).check();
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Create application' }).click();
 }
@@ -84,10 +86,10 @@ test.describe('Signed in', () => {
   });
 
   test(
-    'an_application_should_show_its_details_and_a_subscription_key_for_each_api',
+    'an_application_should_show_its_details_and_its_slc_key_should_return_try_it_now_scenarios',
     { tag: '@a11y' },
     async ({ page, axeUtils }) => {
-      await createTestApplication(page);
+      await createTestApplication(page, 'slc');
       await page.goto('/account/applications');
       await page.getByRole('link', { name: appName }).click();
 
@@ -97,16 +99,29 @@ test.describe('Signed in', () => {
       await expect(page.locator('#application-apis')).toBeVisible();
       await axeUtils.audit();
 
-      await page
-        .locator('#application-apis')
-        .getByRole('link', { name: /View subscription key/ })
-        .first()
-        .click();
+      await page.locator('#application-apis a[href$="/apis/slc"]').click();
 
       await expect(page.locator('#subscription-key-unavailable')).toHaveCount(0);
       await page.locator('#show-subscription-key summary').click();
       await expect(page.locator('#subscription-key')).not.toBeEmpty();
       await axeUtils.audit();
+
+      // Where a real APIM issued the key, the consumer can call Try It Now with it straight away.
+      // The stack, preview and local runs have no gateway, and their keys are made up.
+      const gateway = config.apiGatewayHost;
+      if (gateway) {
+        const key = (await page.locator('#subscription-key').innerText()).trim();
+        const scenarios = () =>
+          page.request.get(`https://${gateway}/amp/try/slc/scenarios`, {
+            headers: { 'Ocp-Apim-Subscription-Key': key },
+          });
+
+        await expect.poll(async () => (await scenarios()).status(), { timeout: 30_000 }).toBe(200);
+        const body = await (await scenarios()).json();
+        expect(body.api).toBe('slc');
+        expect(Array.isArray(body.scenarios)).toBe(true);
+        expect(body.description).toContain('no Common Platform data is reachable');
+      }
     }
   );
 
