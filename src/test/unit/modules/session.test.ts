@@ -47,6 +47,12 @@ describe('Session', () => {
     expect(options.socket.servername).toBe('apim.redis.cache.windows.net');
   });
 
+  test('the_connection_should_be_pinged_every_five_minutes_so_azure_does_not_drop_it_when_idle', () => {
+    enable(withRedis);
+
+    expect((createClient as jest.Mock).mock.calls[0][0].pingInterval).toBe(300_000);
+  });
+
   test('tls_should_be_optional_so_a_local_redis_can_be_used', () => {
     enable({ host: '127.0.0.1', port: '6379', key: '', tls: false });
 

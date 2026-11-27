@@ -1,4 +1,10 @@
-import { MemoryStore, RedisStore } from '../../../main/modules/store';
+import { createClient } from 'redis';
+
+import { MemoryStore, RedisStore, configureDataStore } from '../../../main/modules/store';
+
+jest.mock('redis', () => ({
+  createClient: jest.fn(() => ({ on: jest.fn(), connect: jest.fn().mockResolvedValue(undefined) })),
+}));
 
 describe('MemoryStore', () => {
   test('a_document_should_come_back_as_it_was_stored', async () => {
@@ -56,5 +62,13 @@ describe('RedisStore', () => {
     const store = new RedisStore({ get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() });
 
     expect(await store.get('missing')).toBeUndefined();
+  });
+});
+
+describe('configureDataStore', () => {
+  test('the_connection_should_be_pinged_every_five_minutes_so_azure_does_not_drop_it_when_idle', () => {
+    configureDataStore({ host: 'apim.redis.cache.windows.net', port: '6380', key: 'a-key', tls: true });
+
+    expect(jest.mocked(createClient).mock.calls[0][0]).toMatchObject({ pingInterval: 300_000 });
   });
 });

@@ -7,6 +7,7 @@ import { createClient } from 'redis';
 
 import { AppRequest } from '../../interfaces/AppRequest';
 import { Logger } from '../logging';
+import { REDIS_PING_INTERVAL_MS } from '../store';
 
 const logger = Logger.getLogger('session');
 
@@ -57,6 +58,7 @@ export class Session {
       url: `${tls ? 'rediss' : 'redis'}://${host}:${port}`,
       password: key || undefined,
       socket: tls ? { tls: true, servername: host } : {},
+      pingInterval: REDIS_PING_INTERVAL_MS,
     });
 
     client.on('error', error => logger.error(`Redis connection error: ${error.message}`));
