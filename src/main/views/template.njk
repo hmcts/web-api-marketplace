@@ -9,6 +9,13 @@
 {% block pageTitle %}{{ pageTitle }}{% endblock %}
 
 {% block head %}
+  {# Only an admin is given `build`, so this reaches nobody else. In the markup rather than on
+     the page: it is for reading in the inspector while diagnosing, not for anyone to look at. #}
+  {% if build %}
+    <meta name="build:web" content="{{ build.web }}">
+    <meta name="build:service" content="{{ build.service }}">
+  {% endif %}
+
   {% if gtmContainerId %}
     <!-- Google Tag Manager -->
     <script {%- if cspNonce %} nonce="{{ cspNonce }}"{% endif %}>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push(
