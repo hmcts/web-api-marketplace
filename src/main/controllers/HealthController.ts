@@ -10,21 +10,12 @@ const healthRoutes = require('@hmcts/nodejs-healthcheck/healthcheck/routes');
 @route('/health')
 export default class HealthController {
   private readonly healthCheckConfig = {
-    checks: {
-      // TODO: replace this sample check with proper checks for your application
-      sampleCheck: healthcheck.raw(() => healthcheck.up()),
-    },
     readinessChecks: {
       shutdownCheck: healthcheck.raw(() => {
         return this.shutdownCheck() ? healthcheck.down() : healthcheck.up();
       }),
     },
   };
-
-  @GET()
-  public get(req: Request, res: Response): void {
-    return healthRoutes.configure(this.healthCheckConfig)(req, res);
-  }
 
   @route('/liveness')
   @GET()
