@@ -60,6 +60,7 @@ withNightlyPipeline(type, product, component) {
   env.PLAYWRIGHT_BROWSERS = afterServiceDeploy ? 'edge-chrome' : 'all'
   env.AMP_TEST_USER_EMAIL = 'amp-functional-user@hmctsextstg.onmicrosoft.com'
   env.AMP_TEST_ADMIN_EMAIL = 'amp-functional-admin@hmctsextstg.onmicrosoft.com'
+  env.DEPLOYMENT_ENVIRONMENT = 'aat'
   loadVaultSecrets(secrets)
   enableFullFunctionalTest(45)
   before('fullFunctionalTest') {
