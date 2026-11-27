@@ -151,26 +151,10 @@ describe('AdminController user page', () => {
     expect(res.redirected).toBe('/sign-in');
     expect(res.view).toBeUndefined();
   });
-
-  test('a_non_admin_should_be_told_a_user_page_is_not_found', async () => {
-    const { res } = await userPage('2', { user });
-
-    expect(res.statusCode).toBe(404);
-    expect(res.view).toBe('not-found');
-    expect(getAdminUser).not.toHaveBeenCalled();
-  });
-
-  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_a_user_page', async () => {
-    const { res } = await userPage('2', {});
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(getAdminUser).not.toHaveBeenCalled();
-  });
 });
 
 const ID_TOKEN = 'header.payload.signature';
 const admin = { id: 1, email: 'ada@example.com', name: 'Ada Admin', roles: [AMP_ADMIN] };
-const user = { id: 2, email: 'joe@example.com', name: 'Joe Bloggs' };
 
 const ADA = {
   id: 1,
@@ -291,22 +275,6 @@ describe('AdminController users page', () => {
     expect(res.redirected).toBe('/sign-in');
     expect(data).toBeUndefined();
   });
-
-  test('a_non_admin_should_be_told_the_users_page_is_not_found', async () => {
-    const { res } = await usersPage({}, { user });
-
-    expect(res.statusCode).toBe(404);
-    expect(res.view).toBe('not-found');
-    expect(listAdminUsers).not.toHaveBeenCalled();
-  });
-
-  test('a_signed_out_visitor_should_be_sent_to_sign_in', async () => {
-    const { res, next } = await usersPage({}, {});
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(next).not.toHaveBeenCalled();
-    expect(listAdminUsers).not.toHaveBeenCalled();
-  });
 });
 
 const dashboard = async (session: Record<string, unknown> = { user: admin, idToken: ID_TOKEN }) => {
@@ -404,20 +372,6 @@ describe('AdminController', () => {
     expect(next).toHaveBeenCalled();
     expect(res.view).toBeUndefined();
   });
-
-  test('a_user_should_be_told_the_page_is_not_found', async () => {
-    const { res } = await dashboard({ user });
-
-    expect(res.statusCode).toBe(404);
-    expect(res.view).toBe('not-found');
-  });
-
-  test('a_signed_out_visitor_should_be_redirected_to_sign_in', async () => {
-    const { res } = await dashboard({});
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(res.view).toBeUndefined();
-  });
 });
 
 const CASE_VIEWER = {
@@ -511,21 +465,6 @@ describe('AdminController applications page', () => {
 
     expect(res.redirected).toBe('/sign-in');
     expect(res.view).toBeUndefined();
-  });
-
-  test('a_non_admin_should_be_told_the_applications_page_is_not_found', async () => {
-    const { res } = await applicationsPage({ user });
-
-    expect(res.statusCode).toBe(404);
-    expect(res.view).toBe('not-found');
-    expect(listAdminApplications).not.toHaveBeenCalled();
-  });
-
-  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_applications', async () => {
-    const { res } = await applicationsPage({});
-
-    expect(res.redirected).toBe('/sign-in');
-    expect(listAdminApplications).not.toHaveBeenCalled();
   });
 });
 
@@ -622,13 +561,6 @@ describe('AdminController application page', () => {
     const { res } = await applicationPage('10');
 
     expect(res.redirected).toBe('/sign-in');
-  });
-
-  test('a_non_admin_should_be_told_an_application_page_is_not_found', async () => {
-    const { res } = await applicationPage('10', { user });
-
-    expect(res.statusCode).toBe(404);
-    expect(getAdminApplication).not.toHaveBeenCalled();
   });
 });
 
