@@ -5,7 +5,7 @@ import { SummaryRow, newReference } from './answers';
 
 /**
  * Requests this service stores itself, because service-api-marketplace has nowhere to put
- * them yet: production credentials requests, requests for a new API, and the access and
+ * them yet: requests for a new API, and the access and
  * publication requests of users the backend does not know (it refuses a user id it has
  * never seen). They are listed under My requests alongside the backend's own.
  */

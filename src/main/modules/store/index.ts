@@ -7,9 +7,8 @@ const logger = Logger.getLogger('store');
 
 /**
  * Where this service keeps the records service-api-marketplace has no endpoint for yet:
- * self-registered accounts and their email tokens, applications and their credentials,
- * and the requests only this service knows about (production credentials, new API
- * requests, and anything submitted by an account the backend has never heard of).
+ * which APIs each application subscribes to and whether its role is granted, and the
+ * requests only this service knows about.
  *
  * A stand-in, deliberately small: get, set and delete of JSON documents by key. Every
  * caller reads and writes whole documents, so swapping a service onto a real backend

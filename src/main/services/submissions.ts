@@ -16,12 +16,12 @@ import { backendUrl } from './BackendHealth';
  * submission makes a misconfiguration obvious from the log alone.
  */
 
-/** The full address a submission is sent to, so one log line names it in one piece. */
 export interface SubmitResult {
   ok: boolean;
   reference?: string;
 }
 
+/** The full address a submission is sent to, so one log line names it in one piece. */
 export function submissionEndpoint(path: string): string {
   return `${backendUrl}${path}`;
 }

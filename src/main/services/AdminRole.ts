@@ -44,11 +44,6 @@ export function requireMarketplaceAdmin(req: AppRequest, res: Response): boolean
   return false;
 }
 
-/**
- * No `requestingUserId` header: on admin paths the service takes the identity from the token,
- * because an action recorded against a header the caller wrote is not an audit record. Nothing
- * refreshes the token yet - once it expires the API answers 401 and the person signs in again.
- */
 export function adminRequestHeaders(req: AppRequest): Record<string, string> {
   const token = req.session?.idToken;
   if (!token) {

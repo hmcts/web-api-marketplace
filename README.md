@@ -286,8 +286,8 @@ call without touching the journeys:
   backend holds users but not yet requests, so every user is still `local`: their production
   credentials requests go to the data store.
 - **Applications** (`services/Applications.ts`) — registered for real through the backend's
-  `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's `oid` as
-  `requestingUserId`. The secret is shown once, on the page after creating it. The backend does
+  `/applications` (Entra) and `/apim/subscription-keys` (APIM), sending the user's ID token as a
+  bearer token. The secret is shown once, on the page after creating it. The backend does
   not yet record which subscription keys belong to an application or whether its role
   (`APPLICATIONS_ROLE`, default `app.read`) has been granted, so those are kept here against the
   client ID, and subscription keys are given temporary names under the user's prefix,
