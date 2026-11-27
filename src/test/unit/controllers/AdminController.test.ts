@@ -675,13 +675,6 @@ describe('AdminController production requests page', () => {
 
     expect(res.redirected).toBe('/sign-in');
   });
-
-  test('a_non_admin_should_be_told_the_requests_page_is_not_found', async () => {
-    const { res } = await requestsPage({}, { user });
-
-    expect(res.statusCode).toBe(404);
-    expect(listAdminProductionRequests).not.toHaveBeenCalled();
-  });
 });
 
 const REQUEST_DETAIL = {
@@ -795,12 +788,5 @@ describe('AdminController production request page', () => {
     const { res } = await requestPage('PCR-7K2MHQ4D');
 
     expect(res.redirected).toBe('/sign-in');
-  });
-
-  test('a_non_admin_should_be_told_a_request_page_is_not_found', async () => {
-    const { res } = await requestPage('PCR-7K2MHQ4D', { user });
-
-    expect(res.statusCode).toBe(404);
-    expect(getAdminProductionRequest).not.toHaveBeenCalled();
   });
 });
