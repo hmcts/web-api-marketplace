@@ -1,0 +1,5 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Unit tests for what this branch changes, so a push is checked in seconds rather than by the PR build
+yarn jest --changedSince=origin/master --passWithNoTests --silent
