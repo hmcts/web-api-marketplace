@@ -38,4 +38,30 @@ describe('Admin dashboard', () => {
     expect(html).toContain('counts-unavailable');
     expect(html).not.toContain('count-users');
   });
+
+  test('the_builds_should_be_in_the_markup_when_the_page_was_given_them', () => {
+    const build = { web: '489cd961 \u00b7 27 Nov, 08:18', service: '840eb3e \u00b7 27 Nov, 09:57' };
+
+    const html = env.render('admin.njk', { counts, build });
+
+    expect(html).toContain('<meta name="build:web" content="489cd961 \u00b7 27 Nov, 08:18">');
+    expect(html).toContain('<meta name="build:service" content="840eb3e \u00b7 27 Nov, 09:57">');
+  });
+
+  test('the_builds_should_be_readable_only_in_the_markup_and_never_on_the_page', () => {
+    const build = { web: '489cd961', service: '840eb3e' };
+
+    const html = env.render('admin.njk', { counts, build });
+
+    const body = html.slice(html.indexOf('<body'));
+
+    expect(body).not.toContain('489cd961');
+    expect(body).not.toContain('840eb3e');
+  });
+
+  test('a_page_without_the_builds_should_carry_no_build_markup', () => {
+    const html = env.render('admin.njk', { counts });
+
+    expect(html).not.toContain('name="build:');
+  });
 });
