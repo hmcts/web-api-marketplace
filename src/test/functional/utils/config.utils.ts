@@ -24,6 +24,13 @@ export interface Config {
     user?: TestAccountCredentials;
     admin?: TestAccountCredentials;
   };
+  /**
+   * Every browser, as the nightly run uses (PLAYWRIGHT_BROWSERS=all). Otherwise master runs Edge and Chrome,
+   * and preview Edge only.
+   */
+  allBrowsers: boolean;
+  /** The one browser the accessibility audits run in, or undefined when they run in every browser. */
+  accessibilityProject?: string;
 }
 
 // Most specific first: prod's web host is the bare platform.hmcts.net one
@@ -41,6 +48,9 @@ function developerPortalHostFor(webHost: string): string | undefined {
   return DEVELOPER_PORTAL_HOSTS.find(([suffix]) => webHost.endsWith(suffix))?.[1];
 }
 
+const allBrowsers = process.env.PLAYWRIGHT_BROWSERS?.trim().toLowerCase() === 'all';
+const preview = process.env.ENV?.trim().toLowerCase() === 'preview';
+
 const homePageUrl = getEnvVar('TEST_URL', 'https://localhost:3344');
 
 export const config: Config = {
@@ -52,7 +62,18 @@ export const config: Config = {
     user: credentials('AMP_TEST_USER_EMAIL', 'AMP_TEST_USER_PASSWORD'),
     admin: credentials('AMP_TEST_ADMIN_EMAIL', 'AMP_TEST_ADMIN_PASSWORD'),
   },
+  allBrowsers,
+  accessibilityProject: accessibilityProject(),
 };
+
+// axe reads the page's structure, which is the same in every browser, so one browser is enough
+// outside the nightly run: Chrome, or Edge in preview where it is the only one
+function accessibilityProject(): string | undefined {
+  if (allBrowsers) {
+    return undefined;
+  }
+  return preview ? 'edge' : 'chrome';
+}
 
 function credentials(emailVar: string, passwordVar: string): TestAccountCredentials | undefined {
   const email = process.env[emailVar]?.trim();

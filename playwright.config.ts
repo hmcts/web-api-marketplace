@@ -186,9 +186,13 @@ function resolveProjects() {
     grepInvert: /@performance/,
   }));
 
-  return process.env.ENV?.trim().toLowerCase() === 'preview'
-    ? [setupProject, edgeProject]
-    : [setupProject, edgeProject, ...standardProjects];
+  if (process.env.ENV?.trim().toLowerCase() === 'preview') {
+    return [setupProject, edgeProject];
+  }
+  // Master runs Edge and Chrome; the nightly run adds Firefox, WebKit and the tablets
+  return functionalConfig.allBrowsers
+    ? [setupProject, edgeProject, ...standardProjects]
+    : [setupProject, edgeProject, standardProjects[0]];
 }
 
 const config = defineConfig({
