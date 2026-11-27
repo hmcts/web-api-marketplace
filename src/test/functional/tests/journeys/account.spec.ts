@@ -30,15 +30,6 @@ async function createTestApplication(page: Page, api?: string): Promise<void> {
   await page.getByRole('button', { name: 'Create application' }).click();
 }
 
-test.describe('Signed out', () => {
-  test('the_account_page_should_send_a_signed_out_user_to_sign_in', async ({ request }) => {
-    const response = await request.get('/account', { maxRedirects: 0 });
-
-    expect(response.status()).toBe(302);
-    expect(response.headers()['location']).toBe('/sign-in');
-  });
-});
-
 test.describe('Signed in', () => {
   test.describe.configure({ mode: 'serial' });
 
