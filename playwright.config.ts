@@ -189,7 +189,6 @@ function resolveProjects() {
   if (process.env.ENV?.trim().toLowerCase() === 'preview') {
     return [setupProject, edgeProject];
   }
-  // Master runs Edge and Chrome; the nightly run adds Firefox, WebKit and the tablets
   return functionalConfig.allBrowsers
     ? [setupProject, edgeProject, ...standardProjects]
     : [setupProject, edgeProject, standardProjects[0]];
