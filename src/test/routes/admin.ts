@@ -130,14 +130,17 @@ describe('The registered users page', () => {
     await agent.get(`/admin/users/${adminId}`).expect(res => expect(res.status).to.equal(404));
   });
 
-  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_users_page', async () => {
-    await request(app)
-      .get('/admin/users')
-      .expect(res => {
-        expect(res.status).to.equal(302);
-        expect(res.headers.location).to.equal('/sign-in');
-      });
-  });
+  test.each(['/admin/users', '/admin/users/1'])(
+    'a_signed_out_visitor_should_be_sent_to_sign_in_from_%s',
+    async path => {
+      await request(app)
+        .get(path)
+        .expect(res => {
+          expect(res.status).to.equal(302);
+          expect(res.headers.location).to.equal('/sign-in');
+        });
+    }
+  );
 });
 
 describe('The applications pages', () => {
@@ -172,14 +175,17 @@ describe('The applications pages', () => {
     await agent.get('/admin/applications/999').expect(res => expect(res.status).to.equal(404));
   });
 
-  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_applications_page', async () => {
-    await request(app)
-      .get('/admin/applications')
-      .expect(res => {
-        expect(res.status).to.equal(302);
-        expect(res.headers.location).to.equal('/sign-in');
-      });
-  });
+  test.each(['/admin/applications', '/admin/applications/1'])(
+    'a_signed_out_visitor_should_be_sent_to_sign_in_from_%s',
+    async path => {
+      await request(app)
+        .get(path)
+        .expect(res => {
+          expect(res.status).to.equal(302);
+          expect(res.headers.location).to.equal('/sign-in');
+        });
+    }
+  );
 
   test('an_admin_page_should_carry_the_build_it_is_running', async () => {
     const agent = await signedInAs(ADMIN);
