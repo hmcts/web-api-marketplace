@@ -14,28 +14,16 @@ export interface Config {
   urls: {
     homePageUrl: string;
   };
-  /** The environment's own developer portal host, where the web app runs in a known environment. */
   developerPortalHost?: string;
-  /** The environment's APIM gateway, where consumers call the APIs, e.g. aat.api.hmcts.net. */
   apiGatewayHost?: string;
-  /**
-   * Real Entra accounts, for environments that sign in through Entra rather than the mock (AAT).
-   * Absent where their variables are not set; the signed-in journeys then skip there.
-   */
   accounts: {
     user?: TestAccountCredentials;
     admin?: TestAccountCredentials;
   };
-  /**
-   * Every browser, as the nightly run uses (PLAYWRIGHT_BROWSERS=all). Otherwise master runs Edge and Chrome,
-   * and preview Edge only.
-   */
   allBrowsers: boolean;
-  /** The one browser the accessibility audits run in, or undefined when they run in every browser. */
-  accessibilityProject?: string;
+  accessibilityAuditBrowser?: string;
 }
 
-// Most specific first: prod's web host is the bare platform.hmcts.net one
 const DEVELOPER_PORTAL_HOSTS: [string, string][] = [
   ['.sandbox.platform.hmcts.net', 'amp-portal.sandbox.api.hmcts.net'],
   ['.aat.platform.hmcts.net', 'amp-portal.aat.api.hmcts.net'],
@@ -67,12 +55,10 @@ export const config: Config = {
     admin: credentials('AMP_TEST_ADMIN_EMAIL', 'AMP_TEST_ADMIN_PASSWORD'),
   },
   allBrowsers,
-  accessibilityProject: accessibilityProject(),
+  accessibilityAuditBrowser: accessibilityAuditBrowser(),
 };
 
-// axe reads the page's structure, which is the same in every browser, so one browser is enough
-// outside the nightly run: Chrome, or Edge in preview where it is the only one
-function accessibilityProject(): string | undefined {
+function accessibilityAuditBrowser(): string | undefined {
   if (allBrowsers) {
     return undefined;
   }

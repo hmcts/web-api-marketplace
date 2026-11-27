@@ -24,7 +24,7 @@ const sessions = new Map<TestAccount, Cookies>();
  * External ID with the account's real credentials, or the mock's username form. A later test in the
  * same worker reuses that session rather than signing in again, so long as it is still signed in.
  *
- * Skips the calling test where sign in is switched off (preview), or where the environment signs
+ * Skips the calling test where sign in is switched off, or where the environment signs
  * in through Entra but has no credentials for this account.
  */
 export async function signIn(page: Page, account: TestAccount = 'user'): Promise<void> {
@@ -63,7 +63,6 @@ async function reuseSession(page: Page, account: TestAccount): Promise<boolean> 
   ) {
     return true;
   }
-  // Signed out since, for instance by the sign-out journey
   sessions.delete(account);
   await page.context().clearCookies();
   return false;
