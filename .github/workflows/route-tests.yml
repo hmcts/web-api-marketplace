@@ -1,0 +1,34 @@
+# The route tests: the app with Entra and the service stubbed.
+name: Route tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: |
+          corepack enable
+          yarn install --immutable --mode=skip-build
+
+      - name: Run the route tests
+        run: yarn test:routes
