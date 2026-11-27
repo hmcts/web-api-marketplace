@@ -1,5 +1,3 @@
-import { entraBypass } from '../../services/EntraBypass';
-
 import { assertEntraConfigured, entraConfig } from './config';
 import { SecretGetter, loadEntraClientSecret, secretClientFor } from './secret';
 
@@ -12,18 +10,11 @@ import { SecretGetter, loadEntraClientSecret, secretClientFor } from './secret';
  * Returns a line for the startup log.
  */
 export async function prepareEntra(clientFor: (vaultUrl: string) => SecretGetter = secretClientFor): Promise<string> {
-  if (entraBypass.enabled) {
-    return `BYPASS_ENTRA is on: /sign-in starts a session as ${entraBypass.claims.email} WITHOUT Entra. Local development only`;
-  }
-
-  // Noted rather than returned on, so the Entra checks below still run.
-  const ignored = entraBypass.refused ? 'BYPASS_ENTRA is set but ignored: it works only in development on a Mac. ' : '';
-
   if (!entraConfig.enabled) {
-    return `${ignored}Entra sign in is switched off (ENTRA_ENABLED=false): sign in will say it is unavailable`;
+    return 'Entra sign in is switched off (ENTRA_ENABLED=false): sign in will say it is unavailable';
   }
 
   const source = await loadEntraClientSecret(clientFor);
   assertEntraConfigured();
-  return `${ignored}Entra client secret from ${source}`;
+  return `Entra client secret from ${source}`;
 }

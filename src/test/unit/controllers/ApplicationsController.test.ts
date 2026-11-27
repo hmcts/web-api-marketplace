@@ -33,7 +33,7 @@ const { getCatalogueApis } = require('../../../main/services/ApiCatalogue');
 const Applications = require('../../../main/services/Applications');
 const { listProductionRequests } = require('../../../main/services/ProductionRequests');
 
-const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001' };
+const OWNER = { oid: LOCAL_USER.oid, userReference: 'user001', token: 'the-id-token' };
 const DRAFT = { name: 'Case Viewer', apis: ['one'] };
 const APPLICATION: Application = {
   id: 'client-1',

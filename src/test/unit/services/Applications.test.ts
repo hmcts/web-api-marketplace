@@ -25,7 +25,7 @@ jest.mock('axios');
 
 const request = axios.request as jest.MockedFunction<typeof axios.request>;
 
-const OWNER = { oid: '11111111-2222-3333-4444-555555555555', userReference: 'user001' };
+const OWNER = { oid: '11111111-2222-3333-4444-555555555555', userReference: 'user001', token: 'the-id-token' };
 const BACKEND_APP = {
   clientId: '1bf041a2-a57a-4255-b90f-d218736cda1f',
   tenantId: 'd44f885c-4fac-47bf-afde-d7d861ec4d7b',
@@ -145,7 +145,7 @@ describe('Applications', () => {
         method: 'POST',
         url: '/applications',
         data: { name: 'Case Viewer' },
-        headers: { requestingUserId: OWNER.oid },
+        headers: { Authorization: 'Bearer the-id-token' },
       });
       expect(call(1).data).toEqual({ clientId: BACKEND_APP.clientId, shortCode: 'one' });
       expect(call(2).data).toEqual({ clientId: BACKEND_APP.clientId, shortCode: 'two' });

@@ -7,10 +7,6 @@ import { AppRequest } from '../interfaces/AppRequest';
 import { entraConfig } from '../modules/entra/config';
 import { Logger } from '../modules/logging';
 import { authorizeUrl, isEntraPrompt, newPkce } from '../services/Entra';
-import { entraBypass } from '../services/EntraBypass';
-import { saveEntraUser } from '../services/EntraUsers';
-
-import { startSession } from './AuthCallbackController';
 
 const logger = Logger.getLogger('sign-in');
 
@@ -32,10 +28,6 @@ export default class SignInController {
       res.redirect('/account');
       return;
     }
-    if (entraBypass.enabled) {
-      await this.signInWithoutEntra(req, res);
-      return;
-    }
     if (!entraConfig.enabled) {
       signInProblem(req, res, 503, 'unavailable');
       return;
@@ -52,19 +44,6 @@ export default class SignInController {
     req.session.entraSignIn = { state, nonce, codeVerifier: pkce.verifier };
     logger.info(`Redirecting to Entra  state=${short(state)}  prompt=${prompt ?? 'none'}`);
     req.session.save(() => res.redirect(authorizeUrl(state, nonce, pkce.challenge, prompt)));
-  }
-
-  private async signInWithoutEntra(req: AppRequest, res: Response): Promise<void> {
-    const claims = entraBypass.claims;
-    logger.warn(`BYPASS_ENTRA: starting a session as ${claims.email} without Entra`);
-
-    try {
-      const user = await saveEntraUser(claims);
-      startSession(req, res, claims, user);
-    } catch (error) {
-      logger.error(`BYPASS_ENTRA: could not save ${claims.email}: ${(error as Error).message}`);
-      signInProblem(req, res, 503, 'unavailable');
-    }
   }
 }
 

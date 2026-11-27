@@ -7,7 +7,7 @@ jest.mock('axios');
 
 const mockedRequest = axios.request as jest.MockedFunction<typeof axios.request>;
 
-const ADMIN: Owner = { oid: 'aaaaaaaa-1111-2222-3333-444444444444', userReference: 'user001' };
+const ADMIN: Owner = { oid: 'aaaaaaaa-1111-2222-3333-444444444444', userReference: 'user001', token: 'the-id-token' };
 
 const USER = {
   id: 2,
@@ -31,7 +31,7 @@ describe('AdminUsers', () => {
     const request = mockedRequest.mock.calls[0][0];
     expect(request.method).toBe('GET');
     expect(request.url).toBe('/admin/users');
-    expect(request.headers).toMatchObject({ requestingUserId: ADMIN.oid });
+    expect(request.headers).toEqual({ Authorization: 'Bearer the-id-token' });
   });
 
   test('one_user_should_be_read_by_id', async () => {

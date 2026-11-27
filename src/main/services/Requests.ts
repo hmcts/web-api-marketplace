@@ -24,14 +24,14 @@ export interface RequestsResult {
   requests: RequestSummary[];
 }
 
-export async function getRequestsFor(userId: number, token?: string): Promise<RequestsResult> {
+export async function getRequestsFor(token?: string): Promise<RequestsResult> {
   const url = submissionEndpoint(REQUESTS_PATH);
 
   try {
     const response = await axios.get<RequestSummary[]>(url, {
       timeout: 10000,
       validateStatus: () => true,
-      headers: authHeaders(String(userId), token),
+      headers: authHeaders(token),
     });
 
     if (response.status !== 200) {

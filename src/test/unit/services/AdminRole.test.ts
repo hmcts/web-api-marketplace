@@ -12,7 +12,11 @@ import { SignedInUser } from '../../../main/services/SignIn';
 const user = (roles?: string[]): SignedInUser => ({ id: 1, email: 'ada@example.net', name: 'Ada', roles });
 
 const request = (signedInUser?: SignedInUser) =>
-  ({ method: 'GET', originalUrl: '/admin', session: signedInUser ? { user: signedInUser } : {} }) as AppRequest;
+  ({
+    method: 'GET',
+    originalUrl: '/admin',
+    session: signedInUser ? { user: signedInUser, idToken: 'the-id-token' } : {},
+  }) as AppRequest;
 
 const response = () => {
   const res = { status: jest.fn(), render: jest.fn(), redirect: jest.fn() };
@@ -59,6 +63,7 @@ describe('adminRequestHeaders', () => {
   });
 
   it('refuses to build headers for a session with no token', () => {
-    expect(() => adminRequestHeaders(request(user([AMP_ADMIN])))).toThrow(/no ID token/);
+    const req = { session: { user: user([AMP_ADMIN]) } } as AppRequest;
+    expect(() => adminRequestHeaders(req)).toThrow(/no ID token/);
   });
 });

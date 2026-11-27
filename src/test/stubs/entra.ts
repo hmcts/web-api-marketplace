@@ -67,6 +67,8 @@ export interface StubEntra {
   marketplace: StubMarketplace;
   /** The Authorization header the last backend call arrived with, so a test can see it was sent. */
   lastBackendAuthorization?: string;
+  /** The requestingUserId header the last backend call arrived with, if any. */
+  lastBackendRequestingUserId?: string;
   /** The refresh token the next token response hands out, so a test can predict the rotation. */
   nextRefreshToken: string;
   /** How long the ID tokens this tenant issues are good for; shorten it to force a refresh. */
@@ -142,17 +144,24 @@ export async function startStubEntra(): Promise<StubEntra> {
       }),
   };
 
-  async function verifiedRoles(authorization?: string): Promise<string[] | undefined> {
+  async function verifiedClaims(authorization?: string): Promise<JWTPayload | undefined> {
     const token = authorization?.match(/^Bearer (.+)$/)?.[1];
     if (!token) {
       return undefined;
     }
     try {
-      const { payload } = await jwtVerify(token, keyPair.publicKey, { issuer, audience: CLIENT_ID });
-      return Array.isArray(payload.roles) ? (payload.roles as string[]) : [];
+      return (await jwtVerify(token, keyPair.publicKey, { issuer, audience: CLIENT_ID })).payload;
     } catch {
       return undefined;
     }
+  }
+
+  async function verifiedRoles(authorization?: string): Promise<string[] | undefined> {
+    const claims = await verifiedClaims(authorization);
+    if (!claims) {
+      return undefined;
+    }
+    return Array.isArray(claims.roles) ? (claims.roles as string[]) : [];
   }
 
   async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -260,8 +269,10 @@ export async function startStubEntra(): Promise<StubEntra> {
     }
     if (req.url?.startsWith('/backend/')) {
       const path = req.url.slice('/backend'.length);
-      const userId = req.headers.requestingUserId ?? req.headers.requestinguserid;
+      const tokenUser = (await verifiedClaims(req.headers.authorization))?.oid as string | undefined;
+      const userId = tokenUser ?? req.headers.requestinguserid;
       stub.lastBackendAuthorization = req.headers.authorization;
+      stub.lastBackendRequestingUserId = req.headers.requestinguserid as string | undefined;
       const body = req.method === 'GET' || req.method === 'DELETE' ? '' : await bodyOf(req);
       const reply = (status: number, payload?: unknown) =>
         payload === undefined ? res.writeHead(status).end() : json(status, payload);
