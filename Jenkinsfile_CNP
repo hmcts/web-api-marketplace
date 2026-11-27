@@ -47,20 +47,22 @@ withPipeline(type, product, component) {
     yarnBuilder.yarn('build')
   }
 
+  // These stages run the branded Edge and Chrome the agents already have, so only ffmpeg (for the
+  // failure videos) is downloaded. The nightly run installs Firefox, WebKit and the tablet browsers.
   before('smoketest:preview') {
-    yarnBuilder.yarn('playwright install')
+    yarnBuilder.yarn('playwright install ffmpeg')
   }
 
   before('smoketest:aat') {
-    yarnBuilder.yarn('playwright install')
+    yarnBuilder.yarn('playwright install ffmpeg')
   }
 
   before('functionalTest:preview') {
-    yarnBuilder.yarn('playwright install')
+    yarnBuilder.yarn('playwright install ffmpeg')
   }
 
   before('functionalTest:aat') {
-    yarnBuilder.yarn('playwright install')
+    yarnBuilder.yarn('playwright install ffmpeg')
   }
 
   afterAlways('functionalTest:preview') {
