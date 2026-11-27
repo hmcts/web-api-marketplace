@@ -17,6 +17,11 @@ export default class HealthController {
     },
   };
 
+  @GET()
+  public get(req: Request, res: Response): void {
+    return healthRoutes.checkReadiness(this.healthCheckConfig.readinessChecks)(req, res);
+  }
+
   @route('/liveness')
   @GET()
   public liveness(_req: Request, res: Response): void {

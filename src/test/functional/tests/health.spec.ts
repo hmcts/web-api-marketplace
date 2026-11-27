@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures';
 
 test.describe('Health', () => {
-  for (const path of ['/health/liveness', '/health/readiness']) {
+  for (const path of ['/health', '/health/liveness', '/health/readiness']) {
     test(`${path}_should_report_up`, { tag: '@smoke' }, async ({ request }) => {
       const response = await request.get(path);
 
