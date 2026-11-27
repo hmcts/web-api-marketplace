@@ -16,7 +16,7 @@ interface Renewed {
   roles?: string[];
 }
 
-/** Nothing: the session keeps the person signed in and loses only what it cannot prove. */
+/** Nothing: a session left without a token is sent to sign in again. */
 const NOTHING: Renewed = {};
 
 /**
@@ -64,8 +64,7 @@ export async function refreshExpiringToken(req: AppRequest): Promise<void> {
 /**
  * The refreshed token is verified like any other: one that came from a refresh is not better for
  * having done so. A failure leaves the session without a token and without the roles that went
- * with it - the person keeps the page they are on, and anything needing a token is refused rather
- * than offered and then broken.
+ * with it, so the next page that needs sign in asks for it again.
  */
 async function renew(refreshToken: string, expectedOid: string | undefined): Promise<Renewed> {
   try {
