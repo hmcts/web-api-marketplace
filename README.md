@@ -167,6 +167,19 @@ yarn test:routes   # supertest route tests
 yarn test:functional  # playwright
 ```
 
+### Where each test runs
+
+Tags on a Playwright test decide which pipeline runs it, so moving a test is a one-word change.
+
+| Tag        | Master build (AAT)                                          | Nightly (AAT, weekdays 07:00)       |
+| ---------- | ----------------------------------------------------------- | ----------------------------------- |
+| none       | Edge and Chrome                                             | all six browsers                    |
+| `@smoke`   | first, in its own stage; the build stops if it fails        | in Chrome                           |
+| `@a11y`    | runs in Edge and Chrome, accessibility audit in Chrome only | runs and audits in all six browsers |
+| `@nightly` | not run                                                     | all six browsers                    |
+
+Preview runs Edge only. `@backend` checks that the web reaches the service.
+
 ## Structure
 
 ```

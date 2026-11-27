@@ -17,6 +17,23 @@ def component = "marketplace-web"
 
 def yarnBuilder = new uk.gov.hmcts.contino.YarnBuilder(this)
 
+// The signed-in journeys sign in as the Entra test accounts, as the master build's AAT stage does
+def secrets = [
+  'kvspsextid${env}': [
+    secret('entra-amp-user-amp-functional-user-at-hmctsextstg-onmicrosoft-com', 'AMP_TEST_USER_PASSWORD'),
+    secret('entra-amp-user-amp-functional-admin-at-hmctsextstg-onmicrosoft-com', 'AMP_TEST_ADMIN_PASSWORD'),
+  ]
+]
+
+static LinkedHashMap<String, Object> secret(String secretName, String envVar) {
+  [$class     : 'AzureKeyVaultSecret',
+   secretType : 'Secret',
+   name       : secretName,
+   version    : '',
+   envVariable: envVar
+  ]
+}
+
 withNightlyPipeline(type, product, component) {
   env.TEST_URL = params.URL_TO_TEST
 
@@ -25,6 +42,37 @@ withNightlyPipeline(type, product, component) {
   enableE2eTest()
   before('E2eTest') {
     yarnBuilder.yarn('playwright install chrome')
+  }
+
+  // Every functional test and accessibility audit in all six browsers. Master builds run Edge and
+  // Chrome only, with the accessibility audits in Chrome
+  env.PLAYWRIGHT_WORKERS = 4
+  env.PLAYWRIGHT_REPORTERS = 'list,odhin'
+  env.PLAYWRIGHT_VIDEO_MODE = 'retain-on-failure'
+  env.AMP_TEST_USER_EMAIL = 'amp-functional-user@hmctsextstg.onmicrosoft.com'
+  env.AMP_TEST_ADMIN_EMAIL = 'amp-functional-admin@hmctsextstg.onmicrosoft.com'
+  loadVaultSecrets(secrets)
+  enableFullFunctionalTest(45)
+  before('fullFunctionalTest') {
+    yarnBuilder.yarn('playwright install')
+  }
+  afterAlways('fullFunctionalTest') {
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results',
+      reportFiles           : 'odhin-report/index.html',
+      reportName            : 'Full Functional Test Report',
+    ]
+    publishHTML target: [
+      allowMissing          : true,
+      alwaysLinkToLastBuild : true,
+      keepAll               : true,
+      reportDir             : 'test-results/accessibility-report',
+      reportFiles           : 'index.html',
+      reportName            : 'Accessibility Test Report',
+    ]
   }
 
   // The app's own cookies, added to the scan's ignore list. Set here because the library does not
