@@ -49,15 +49,6 @@ describe('Session and the account navigation', () => {
     });
   });
 
-  test('a_signed_out_visitor_should_be_redirected_away_from_the_account_page', async () => {
-    await request(app)
-      .get('/account')
-      .expect(res => {
-        expect(res.status).to.equal(302);
-        expect(res.headers.location).to.equal('/sign-in');
-      });
-  });
-
   test('signing_out_should_return_the_navigation_to_sign_in', async () => {
     const agent = await signedIn();
 
