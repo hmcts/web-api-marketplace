@@ -26,6 +26,8 @@ test.describe('Admin, signed in', () => {
       await page.getByRole('link', { name: 'Admin', exact: true }).click();
 
       await expect(page.locator('h1')).toHaveText('Admin');
+      await expect(page.locator('#counts-unavailable')).toHaveCount(0);
+      await expect(page.locator('#count-users')).toBeVisible();
       await axeUtils.audit();
     }
   );
@@ -62,5 +64,6 @@ test.describe('Admin, signed in', () => {
     const response = await page.goto('/admin');
 
     expect(response?.status()).toBe(404);
+    await expect(page.locator('h1')).toHaveText('Page not found');
   });
 });
