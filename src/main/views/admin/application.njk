@@ -59,7 +59,7 @@
         {% if productionRequest %}
           {{ govukSummaryList({
             rows: [
-              { key: { text: "Reference" }, value: { text: productionRequest.reference } },
+              { key: { text: "Reference" }, value: { html: '<a class="govuk-link" href="/admin/production-requests/' + (productionRequest.reference | urlencode) + '">' + (productionRequest.reference | escape) + '</a>' } },
               { key: { text: "Status" }, value: { text: productionRequest.status } },
               { key: { text: "Submitted" }, value: { text: productionRequest.submitted } }
             ],

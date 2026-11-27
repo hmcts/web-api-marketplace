@@ -63,7 +63,7 @@
           {% set rows = [] %}
           {% for request in productionRequests %}
             {% set rows = (rows.push([
-              { text: request.reference },
+              { html: '<a class="govuk-link" href="/admin/production-requests/' + (request.reference | urlencode) + '">' + (request.reference | escape) + '</a>' },
               { text: request.applicationName },
               { text: request.status },
               { text: request.submitted }

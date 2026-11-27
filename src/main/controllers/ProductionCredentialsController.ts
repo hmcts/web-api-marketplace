@@ -8,6 +8,15 @@ import { Application, BackendError, listApplications, ownerOf } from '../service
 import { statusText } from '../services/LocalRequests';
 import { sendEmail } from '../services/Notify';
 import {
+  CALL_VOLUMES,
+  DATA_COMBINED,
+  DATA_RECIPIENTS,
+  ORGANISATION_TYPES,
+  OWN_TEAM_ONLY,
+  answerLabel,
+  storedAnswerRows,
+} from '../services/ProductionRequestAnswers';
+import {
   ProductionRequestDetail,
   ProductionRequestSubmission,
   getProductionRequest,
@@ -18,44 +27,6 @@ import { SignedInUser } from '../services/SignIn';
 import { FieldError, SummaryRow, toAnswerList, toAnswerText } from '../services/answers';
 
 const logger = Logger.getLogger('production-credentials');
-
-/** What a production request expects to send, in calls per day. */
-const CALL_VOLUMES = [
-  { value: 'low', text: 'Low', hint: { text: 'Under 1,000 calls per day' } },
-  { value: 'medium', text: 'Medium', hint: { text: '1,000 to 100,000 calls per day' } },
-  { value: 'high', text: 'High', hint: { text: 'Over 100,000 calls per day' } },
-];
-
-/** "Organisation", which helps the Data Access Team triage a request. */
-const ORGANISATION_TYPES = [
-  { value: 'hmcts', text: 'HMCTS' },
-  { value: 'moj', text: 'Ministry of Justice' },
-  { value: 'other-government', text: 'Other government department/public body' },
-  { value: 'external', text: 'Other external organisation' },
-];
-
-/**
- * "Who will have access to, or receive, the data?". Any number of options can be chosen. Choosing
- * only the first means nobody else receives the data, so nothing needs explaining; choosing any
- * other option, with or without the first, asks for an explanation.
- */
-const OWN_TEAM_ONLY = 'own-team';
-const DATA_RECIPIENTS = [
-  { value: OWN_TEAM_ONLY, text: 'Me/my immediate team only' },
-  { value: 'other-hmcts', text: 'Other HMCTS teams' },
-  { value: 'wider-moj', text: 'Wider MOJ' },
-  { value: 'other-government', text: 'Another government department/public body' },
-  { value: 'supplier', text: 'Supplier/contract/delivery partner' },
-  { value: 'external', text: 'Other external organisation' },
-  { value: 'public', text: 'The data will be published or used in a public-facing service' },
-];
-
-/** "Will you combine or link the API data with other data?". Yes or Unsure asks what it is combined with. */
-const DATA_COMBINED = [
-  { value: 'no', text: 'No' },
-  { value: 'yes', text: 'Yes' },
-  { value: 'unsure', text: 'Unsure' },
-];
 
 /** The two questions about the data being requested and what comes out of using it. */
 export const DATA_ANSWER_MAX_LENGTH = 2000;
@@ -428,63 +399,14 @@ export default class ProductionCredentialsController {
   }
 
   private storedRows(request: ProductionRequestDetail): SummaryRow[] {
-    const label = (options: { value: string; text: string }[], value: string) =>
-      options.find(option => option.value === value)?.text ?? value;
-
-    // Every triage answer is optional here: requests made before the questions were added
-    // carry none of them, and proposedOutputs is the question they carry instead.
     return [
       { key: 'Application', value: request.applicationName },
       ...(request.organisationType
-        ? [{ key: 'Organisation', value: label(ORGANISATION_TYPES, request.organisationType) }]
+        ? [{ key: 'Organisation', value: answerLabel(ORGANISATION_TYPES, request.organisationType) }]
         : []),
       { key: 'Team name (and organisation if external to HMCTS?)', value: request.organisation },
-      { key: 'Go-live date', value: this.formatDate(request.goLiveDate) },
-      { key: 'Expected call volume', value: label(CALL_VOLUMES, request.callVolume) },
-      { key: 'Data request', value: request.dataRequest },
-      ...(request.dataRecipients?.length
-        ? [
-            {
-              key: 'Who will have access to, or receive, the data?',
-              value: request.dataRecipients.map(value => label(DATA_RECIPIENTS, value)).join(', '),
-            },
-          ]
-        : []),
-      ...(request.dataRecipientsExplanation
-        ? [{ key: 'Who will receive the data and why', value: request.dataRecipientsExplanation }]
-        : []),
-      ...(request.dataCombined
-        ? [
-            {
-              key: 'Will you combine or link the API data with other data?',
-              value: label(DATA_COMBINED, request.dataCombined),
-            },
-          ]
-        : []),
-      ...(request.dataCombinedDescription
-        ? [
-            {
-              key: 'Other data and what the combined data will be used for',
-              value: request.dataCombinedDescription,
-            },
-          ]
-        : []),
-      ...(request.proposedOutputs ? [{ key: 'Proposed outputs', value: request.proposedOutputs }] : []),
+      ...storedAnswerRows(request),
     ];
-  }
-
-  private formatDate(isoDate: string): string {
-    const date = new Date(isoDate);
-
-    if (Number.isNaN(date.getTime())) {
-      return isoDate;
-    }
-    return new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(date);
   }
 
   private async formData(

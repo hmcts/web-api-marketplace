@@ -10,11 +10,18 @@ import {
   getAdminApplication,
   listAdminApplications,
 } from '../services/AdminApplications';
+import {
+  AdminProductionRequestDetail,
+  AdminProductionRequestSummary,
+  getAdminProductionRequest,
+  listAdminProductionRequests,
+} from '../services/AdminProductionRequests';
 import { requireMarketplaceAdmin } from '../services/AdminRole';
 import { AdminUser, AdminUserDetail, getAdminUser, listAdminUsers } from '../services/AdminUsers';
 import { BackendError, Owner, ownerOf } from '../services/Applications';
 import { formatDate } from '../services/Dates';
 import { statusText } from '../services/LocalRequests';
+import { ORGANISATION_TYPES, answerLabel, storedAnswerRows } from '../services/ProductionRequestAnswers';
 import { SignedInUser } from '../services/SignIn';
 
 const logger = Logger.getLogger('admin');
@@ -22,6 +29,9 @@ const logger = Logger.getLogger('admin');
 const NOT_KNOWN = 'Not known';
 const UNKNOWN_COUNT = '—';
 const ROW_ID = /^[0-9]{1,18}$/;
+const REFERENCE = /^PCR-[A-Z0-9]{8}$/;
+/** Every status a request can hold, in the order a request moves through them. */
+const STATUSES = ['SUBMITTED', 'IN_REVIEW', 'MORE_INFORMATION_NEEDED', 'APPROVED', 'DECLINED'];
 
 @route('/admin')
 export default class AdminController {
@@ -33,9 +43,14 @@ export default class AdminController {
 
     let users: AdminUser[] | undefined = [];
     let applications: AdminApplicationSummary[] | undefined;
+    let requests: AdminProductionRequestSummary[] | undefined;
     let couldNotLoad = false;
     try {
-      [users, applications] = await Promise.all([listAdminUsers(owner(req)), countableApplications(req)]);
+      [users, applications, requests] = await Promise.all([
+        listAdminUsers(owner(req)),
+        countable(req, 'applications', listAdminApplications),
+        countable(req, 'production requests', listAdminProductionRequests),
+      ]);
     } catch (error) {
       if (tokenRefused(error)) {
         signInAgain(req, res);
@@ -55,7 +70,7 @@ export default class AdminController {
       counts: {
         users: users.length,
         applications: applications?.length ?? UNKNOWN_COUNT,
-        productionRequests: UNKNOWN_COUNT,
+        productionRequests: requests?.length ?? UNKNOWN_COUNT,
       },
       couldNotLoad,
     });
@@ -244,17 +259,127 @@ export default class AdminController {
       couldNotLoad: false,
     });
   }
+
+  @route('/production-requests')
+  @GET()
+  public async productionRequests(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    if (!requireMarketplaceAdmin(req, res)) {
+      return;
+    }
+
+    const status = typeof req.query.status === 'string' && STATUSES.includes(req.query.status) ? req.query.status : '';
+    let requests: AdminProductionRequestSummary[] | undefined = [];
+    let couldNotLoad = false;
+    try {
+      requests = await listAdminProductionRequests(owner(req));
+    } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
+      logger.error(`Could not list production requests for an admin: ${(error as Error).message}`);
+      couldNotLoad = true;
+    }
+
+    if (!requests) {
+      next();
+      return;
+    }
+
+    const rows = requests
+      .filter(request => !status || request.status === status)
+      .map(request => ({
+        reference: request.reference,
+        applicationId: request.applicationId ?? undefined,
+        applicationName: request.applicationName,
+        organisation: request.organisation,
+        submitted: formatDate(request.submittedAt) ?? NOT_KNOWN,
+        status: statusText(request.status),
+      }));
+
+    res.render('admin/production-requests', {
+      status,
+      statuses: [
+        { value: '', text: 'All statuses', selected: !status },
+        ...STATUSES.map(value => ({ value, text: statusText(value), selected: value === status })),
+      ],
+      count: rows.length,
+      requests: rows,
+      couldNotLoad,
+    });
+  }
+
+  @route('/production-requests/:reference')
+  @GET()
+  public async productionRequest(req: AppRequest, res: Response, next: NextFunction): Promise<void> {
+    if (!requireMarketplaceAdmin(req, res)) {
+      return;
+    }
+
+    const reference = String(req.params.reference);
+    if (!REFERENCE.test(reference)) {
+      next();
+      return;
+    }
+
+    let found: AdminProductionRequestDetail | undefined;
+    try {
+      found = await getAdminProductionRequest(owner(req), reference);
+    } catch (error) {
+      if (tokenRefused(error)) {
+        signInAgain(req, res);
+        return;
+      }
+      logger.error(`Could not read production request ${reference} for an admin: ${(error as Error).message}`);
+      res.render('admin/production-request', { couldNotLoad: true });
+      return;
+    }
+
+    if (!found) {
+      next();
+      return;
+    }
+
+    res.render('admin/production-request', {
+      request: {
+        reference: found.reference,
+        status: statusText(found.status),
+        submitted: formatDate(found.submittedAt) ?? NOT_KNOWN,
+        requester: ownerView(found.requester),
+        organisationType: found.organisationType ? answerLabel(ORGANISATION_TYPES, found.organisationType) : undefined,
+        organisation: found.organisation,
+        applicationId: found.applicationId ?? undefined,
+        applicationName: found.applicationName,
+        apis: found.apis.join(', ') || 'None',
+      },
+      answers: storedAnswerRows({
+        goLiveDate: found.goLiveDate,
+        callVolume: found.callVolume,
+        dataRequest: found.dataRequest ?? '',
+        dataRecipients: found.dataRecipients,
+        dataRecipientsExplanation: found.dataRecipientsExplanation ?? undefined,
+        dataCombined: found.dataCombined ?? undefined,
+        dataCombinedDescription: found.dataCombinedDescription ?? undefined,
+        proposedOutputs: found.proposedOutputs ?? undefined,
+      }),
+      couldNotLoad: false,
+    });
+  }
 }
 
-/** The dashboard counts applications when it can; a failure there leaves a dash, not a broken page. */
-async function countableApplications(req: AppRequest): Promise<AdminApplicationSummary[] | undefined> {
+/** The dashboard counts what it can; a failure there leaves a dash, not a broken page. */
+async function countable<T>(
+  req: AppRequest,
+  what: string,
+  list: (owner: Owner) => Promise<T[] | undefined>
+): Promise<T[] | undefined> {
   try {
-    return await listAdminApplications(owner(req));
+    return await list(owner(req));
   } catch (error) {
     if (tokenRefused(error)) {
       throw error;
     }
-    logger.error(`Could not count applications for an admin: ${(error as Error).message}`);
+    logger.error(`Could not count ${what} for an admin: ${(error as Error).message}`);
     return undefined;
   }
 }

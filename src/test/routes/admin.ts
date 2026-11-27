@@ -202,3 +202,46 @@ describe('The applications pages', () => {
     await agent.get('/').expect(res => expect(res.text).to.not.contain('name="build:'));
   });
 });
+
+describe('The production requests pages', () => {
+  beforeEach(() => stubEntra().admins.add(ADMIN.oid));
+  afterEach(() => stubEntra().reset());
+
+  test('an_admin_should_see_the_production_requests_page', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin/production-requests').expect(res => {
+      expect(res.status).to.equal(200);
+      expect(res.text).to.contain('<h1 class="govuk-heading-xl">Production credentials requests</h1>');
+      expect(res.text).to.contain('0 requests.');
+    });
+  });
+
+  test('the_admin_page_should_link_the_production_requests_count', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin').expect(res => expect(res.text).to.contain('href="/admin/production-requests"'));
+  });
+
+  test('a_user_should_be_told_the_production_requests_pages_are_not_found', async () => {
+    const agent = await signedInAs(USER);
+
+    await agent.get('/admin/production-requests').expect(res => expect(res.status).to.equal(404));
+    await agent.get('/admin/production-requests/PCR-ABCD2345').expect(res => expect(res.status).to.equal(404));
+  });
+
+  test('an_unknown_production_request_should_be_not_found', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin/production-requests/PCR-NOTHERE1').expect(res => expect(res.status).to.equal(404));
+  });
+
+  test('a_signed_out_visitor_should_be_sent_to_sign_in_from_the_production_requests_page', async () => {
+    await request(app)
+      .get('/admin/production-requests')
+      .expect(res => {
+        expect(res.status).to.equal(302);
+        expect(res.headers.location).to.equal('/sign-in');
+      });
+  });
+});
