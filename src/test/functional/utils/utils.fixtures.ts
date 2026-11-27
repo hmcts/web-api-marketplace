@@ -16,7 +16,6 @@ export interface UtilsFixtures {
   logger: LoggerInstance;
 }
 
-/** Audits only in the browser the accessibility checks run in for this run; see config.accessibilityProject. */
 class BrowserAxeUtils extends AxeUtils {
   constructor(
     page: Page,
@@ -48,7 +47,7 @@ export const utilsFixtures = {
   },
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   axeUtils: async ({ page }, use, testInfo): Promise<void> => {
-    const browser = config.accessibilityProject;
+    const browser = config.accessibilityAuditBrowser;
     const axeUtils = new BrowserAxeUtils(page, !browser || testInfo.project.name === browser);
     await use(axeUtils);
     await axeUtils.generateReport(testInfo, 'Accessibility Test Report');
