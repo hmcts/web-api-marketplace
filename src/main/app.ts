@@ -21,6 +21,8 @@ import { Nunjucks } from './modules/nunjucks';
 import { PropertiesVolume } from './modules/properties-volume';
 import { Session } from './modules/session';
 import { configureDataStore } from './modules/store';
+import { isMarketplaceAdmin } from './services/AdminRole';
+import { builds } from './services/BuildInfo';
 import { refreshExpiringToken } from './services/TokenRefresh';
 
 const env = process.env.NODE_ENV || 'development';
@@ -81,6 +83,19 @@ app.use(((req: AppRequest, _res: express.Response, next: express.NextFunction) =
 app.use(((req: AppRequest, res: express.Response, next: express.NextFunction) => {
   res.locals.user = req.session?.user;
   next();
+}) as express.RequestHandler);
+
+// Only an admin is given the builds, so the layout can render them on the strength of having
+// them rather than repeating the role check in a template.
+app.use('/admin', ((req: AppRequest, res: express.Response, next: express.NextFunction) => {
+  if (!isMarketplaceAdmin(req.session?.user)) {
+    next();
+    return;
+  }
+  builds().then(found => {
+    res.locals.build = found;
+    next();
+  }, next);
 }) as express.RequestHandler);
 
 new Csrf(config.get<boolean>('useCSRFProtection')).enableFor(app);
