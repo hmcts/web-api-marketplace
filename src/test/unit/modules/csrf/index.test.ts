@@ -23,12 +23,13 @@ const signedIn = (): Session => ({ user: { id: 1 } });
 describe('csrfProtection', () => {
   test('a_signed_in_page_should_get_one_token_for_the_session', () => {
     const session = signedIn();
-    const { res } = call('GET', session);
 
-    const token = res.locals.csrfToken as string;
-    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(res.locals.csrfToken).toBe(token);
-    expect(session.csrfToken).toBe(token);
+    const first = call('GET', session).res.locals.csrfToken as string;
+    const second = call('GET', session).res.locals.csrfToken as string;
+
+    expect(first).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(second).toBe(first);
+    expect(session.csrfToken).toBe(first);
   });
 
   test('someone_signed_out_should_not_get_a_token', () => {
