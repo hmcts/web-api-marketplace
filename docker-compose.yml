@@ -47,6 +47,10 @@ services:
     environment:
       POSTGRES_HOST: db
       ENTRA_BYPASS: 'true'
+      ENTRA_TENANT_ID: 00000000-0000-4000-8000-00000000c1a0
+      ADMIN_AUTH_AUDIENCE: local-web-api-marketplace
+      ADMIN_AUTH_ISSUER: http://localhost:4600/00000000-0000-4000-8000-00000000c1a0
+      ADMIN_AUTH_JWK_SET_URI: http://entra-mock:4600/00000000-0000-4000-8000-00000000c1a0/jwks
     depends_on:
       db:
         condition: service_healthy

@@ -11,7 +11,7 @@ jest.mock('axios');
 
 const mockedRequest = axios.request as jest.MockedFunction<typeof axios.request>;
 
-const OWNER: Owner = { oid: 'aaaaaaaa-1111-2222-3333-444444444444', userReference: 'user001' };
+const OWNER: Owner = { oid: 'aaaaaaaa-1111-2222-3333-444444444444', userReference: 'user001', token: 'the-id-token' };
 
 const SUMMARY = { reference: 'PCR-ABCD2345', status: 'SUBMITTED', submittedAt: '2026-10-19T11:00:00' };
 
@@ -54,7 +54,7 @@ describe('ProductionRequests', () => {
 
     const [sent] = mockedRequest.mock.calls[0];
     expect(sent).toMatchObject({ method: 'GET', url: '/production-requests' });
-    expect((sent as { headers: Record<string, string> }).headers.requestingUserId).toBe(OWNER.oid);
+    expect((sent as { headers: Record<string, string> }).headers).toEqual({ Authorization: 'Bearer the-id-token' });
   });
 
   test('reading_one_should_name_it_in_the_path', async () => {
@@ -99,7 +99,7 @@ describe('ProductionRequests', () => {
 
     const [sent] = mockedRequest.mock.calls[0];
     expect(sent).toMatchObject({ method: 'POST', url: '/production-requests', data: SUBMISSION });
-    expect((sent as { headers: Record<string, string> }).headers.requestingUserId).toBe(OWNER.oid);
+    expect((sent as { headers: Record<string, string> }).headers).toEqual({ Authorization: 'Bearer the-id-token' });
   });
 
   test('a_refused_submission_should_be_raised_with_what_the_backend_said', async () => {

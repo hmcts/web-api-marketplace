@@ -97,16 +97,12 @@ export default class AuthCallbackController {
   }
 }
 
-/**
- * Shared with the Entra bypass, so both regenerate the session id the same way. The bypass
- * passes no tokens, having asked Entra for nothing.
- */
 export function startSession(
   req: AppRequest,
   res: Response,
   claims: EntraClaims,
   user: EntraUser,
-  tokens?: ExchangedTokens
+  tokens: ExchangedTokens
 ): void {
   req.session.regenerate(error => {
     if (error) {
@@ -117,9 +113,9 @@ export function startSession(
     }
 
     req.session.user = toSignedInUser(claims, user.id, user.userReference);
-    req.session.idToken = tokens?.idToken;
-    req.session.refreshToken = tokens?.refreshToken;
-    req.session.idTokenExpiresAt = tokens && expiryOf(tokens.idToken);
+    req.session.idToken = tokens.idToken;
+    req.session.refreshToken = tokens.refreshToken;
+    req.session.idTokenExpiresAt = expiryOf(tokens.idToken);
     // Every sign in lands on the account page, whichever page asked for it.
     req.session.save(() => res.redirect('/account'));
   });

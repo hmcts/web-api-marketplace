@@ -97,27 +97,26 @@ service-api-marketplace's own `docker-compose.yml` instead.
 
 ### Without Entra
 
-To work on the pages behind sign in without setting Entra up at all:
+To work on the pages behind sign in without the sandbox tenant, sign in through the local Entra
+mock instead. It issues real signed ID tokens, so the web and the service work exactly as they do
+against Entra:
 
 ```bash
-BYPASS_ENTRA=true npm run start:dev
+yarn entra-mock    # once: the mock on http://localhost:4600
+yarn start:local
 ```
 
-`/sign-in` then starts a session as John Doe (`john.doe@example.com`) without leaving the
-service. No Entra settings are needed at all: the secret is never read, so there is no
-`ENTRA_CLIENT_SECRET` to export and no Key Vault to be a reader of. The user is still saved
-in service-api-marketplace exactly as a real sign in saves it, so applications and requests
-work normally. To sign in through Entra again, drop the variable — anything but the exact
-value `true` leaves it off.
+Sign in as any user in `docker/entra-mock.json`, such as `local@amp.com`, or
+`functional-admin@amp.com` for the admin pages.
 
-It also needs `NODE_ENV` to be exactly `development`, which `start:dev` sets. `npm start`
-sets `production`, so the bypass is off there however the variable is set — as it is in
-every deployed environment, none of which sets `NODE_ENV` at all. The startup log says
-which you have:
+The service must verify the mock's tokens. Run it with:
 
-```
-BYPASS_ENTRA is on: /sign-in starts a session as john.doe@example.com WITHOUT Entra. Local development only
-BYPASS_ENTRA is set but ignored: it works only in development, and this is not. ...
+```bash
+ENTRA_TENANT_ID=00000000-0000-4000-8000-00000000c1a0 \
+ADMIN_AUTH_AUDIENCE=local-web-api-marketplace \
+ADMIN_AUTH_ISSUER=http://localhost:4600/00000000-0000-4000-8000-00000000c1a0 \
+ADMIN_AUTH_JWK_SET_URI=http://localhost:4600/00000000-0000-4000-8000-00000000c1a0/jwks \
+ENTRA_BYPASS=true ./gradlew bootRun
 ```
 
 Or let the server read the secret from Key Vault as it starts, with `DefaultAzureCredential`
@@ -136,7 +135,7 @@ registration hmcts/external-entra-id manages in the sandbox tenant and whose sec
 The client ID and the secret must belong to the same app registration, or Entra answers
 `AADSTS7000215` (invalid client secret). An `ENTRA_CLIENT_SECRET` that is already set wins.
 
-The server refuses to start without `ENTRA_CLIENT_SECRET`, unless `BYPASS_ENTRA` is on.
+The server refuses to start without `ENTRA_CLIENT_SECRET`.
 Export it; do not put it in a file in this repo. Locally everything else defaults to the HMCTS sandbox tenant (`entra` in
 `config/development.json`, loaded only when `NODE_ENV` is `development`). Deployed
 environments run as `production` and have no defaults: they refuse to start until every
@@ -272,8 +271,7 @@ reaches this service. The flow is OpenID Connect's authorization code flow:
 
 Signing out ends Entra's session too, then comes back to the home page.
 
-`BYPASS_ENTRA=true` skips steps 1 to 3 and starts the session at step 4, as a fixed user
-(`services/EntraBypass.ts`). Development only — see [Without Entra](#without-entra).
+Locally, the same steps run against the Entra mock — see [Without Entra](#without-entra).
 
 The tests sign in against a stub tenant (`src/test/stubs/entra.ts`) that issues really
 signed tokens, so the same requests and checks run as in production. Only Entra's own pages

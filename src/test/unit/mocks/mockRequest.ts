@@ -8,7 +8,8 @@ import { AppRequest } from '../../../main/interfaces/AppRequest';
  * regenerate clears the stored data, save and destroy report success.
  */
 export const mockSession = (data: Partial<SessionData> = {}): Session & Partial<SessionData> => {
-  const session: Record<string, unknown> = { ...data };
+  const session: Record<string, unknown> =
+    data.user && !('idToken' in data) ? { idToken: 'the-id-token', ...data } : { ...data };
 
   session.regenerate = (callback: (err?: unknown) => void) => {
     delete session.user;
