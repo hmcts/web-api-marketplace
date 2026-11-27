@@ -16,6 +16,8 @@ export interface Config {
   };
   /** The environment's own developer portal host, where the web app runs in a known environment. */
   developerPortalHost?: string;
+  /** The environment's APIM gateway, where consumers call the APIs, e.g. aat.api.hmcts.net. */
+  apiGatewayHost?: string;
   /**
    * Real Entra accounts, for environments that sign in through Entra rather than the mock (AAT).
    * Absent where their variables are not set; the signed-in journeys then skip there.
@@ -58,6 +60,8 @@ export const config: Config = {
     homePageUrl,
   },
   developerPortalHost: developerPortalHostFor(new URL(homePageUrl).hostname),
+  // Each environment's portal is amp-portal.<its gateway>
+  apiGatewayHost: developerPortalHostFor(new URL(homePageUrl).hostname)?.replace(/^amp-portal\./, ''),
   accounts: {
     user: credentials('AMP_TEST_USER_EMAIL', 'AMP_TEST_USER_PASSWORD'),
     admin: credentials('AMP_TEST_ADMIN_EMAIL', 'AMP_TEST_ADMIN_PASSWORD'),
