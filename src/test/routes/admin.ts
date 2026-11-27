@@ -180,6 +180,21 @@ describe('The applications pages', () => {
         expect(res.headers.location).to.equal('/sign-in');
       });
   });
+
+  test('an_admin_page_should_carry_the_build_it_is_running', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/admin').expect(res => {
+      expect(res.text).to.contain('name="build:web"');
+      expect(res.text).to.contain('name="build:service"');
+    });
+  });
+
+  test('a_page_outside_admin_should_carry_no_build', async () => {
+    const agent = await signedInAs(ADMIN);
+
+    await agent.get('/').expect(res => expect(res.text).to.not.contain('name="build:'));
+  });
 });
 
 describe('The production requests pages', () => {
