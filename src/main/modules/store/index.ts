@@ -104,6 +104,13 @@ export function useDataStore(store: DataStore): void {
  * sessions are there: more than one replica serves this service, and memory is per
  * replica.
  */
+/**
+ * Azure Cache for Redis closes a connection that has been idle for 10 minutes, which the client
+ * reports as "Socket closed unexpectedly" before reconnecting, failing any request caught in between.
+ * A ping every 5 minutes keeps each connection in use, well inside that limit.
+ */
+export const REDIS_PING_INTERVAL_MS = 300_000;
+
 export function configureDataStore(redis: RedisOptions): void {
   const { host, port, key, tls } = redis;
 
@@ -117,6 +124,7 @@ export function configureDataStore(redis: RedisOptions): void {
     url: `${tls ? 'rediss' : 'redis'}://${host}:${port}`,
     password: key || undefined,
     socket: tls ? { tls: true, servername: host } : {},
+    pingInterval: REDIS_PING_INTERVAL_MS,
   });
 
   client.on('error', error => logger.error(`Redis connection error: ${error.message}`));
